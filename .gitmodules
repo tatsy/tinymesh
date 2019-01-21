@@ -1,0 +1,3 @@
+[submodule "src/tinymesh/ext/tinyobjloader"]
+	path = src/tinymesh/ext/tinyobjloader
+	url = https://github.com/syoyo/tinyobjloader
