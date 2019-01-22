@@ -16,7 +16,7 @@ public:
     Face();
 
 private:
-    std::weak_ptr<Halfedge> m_he;
+    Halfedge *m_he;
 
     friend class Mesh;
 };
