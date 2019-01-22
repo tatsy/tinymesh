@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
-    tinymesh::simplify(mesh);
+    tinymesh::simplify(mesh, 20);
 
     // Save
     mesh.save("output.obj");

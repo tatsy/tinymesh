@@ -58,7 +58,7 @@ void Mesh::load(const std::string &filename) {
     // Clear
     m_verts.clear();
     m_hes.clear();
-    m_faces.clear();
+    //m_faces.clear();
     m_indices.clear();
 
     // Traverse triangles
@@ -74,7 +74,7 @@ void Mesh::load(const std::string &filename) {
 
             if (uniqueVertices.count(v) == 0) {
                 uniqueVertices[v] = static_cast<uint32_t>(m_verts.size());
-                m_verts.push_back(std::make_unique<Vertex>(v));
+                m_verts.push_back(std::make_shared<Vertex>(v));
             }
 
             m_indices.push_back(uniqueVertices[v]);
@@ -84,9 +84,9 @@ void Mesh::load(const std::string &filename) {
     // Setup halfedge structure
     std::unordered_map<Vertex*, std::vector<Halfedge*>> perVertexHEs;
     for (int i = 0; i < m_indices.size(); i += 3) {
-        auto he0 = std::make_unique<Halfedge>();
-        auto he1 = std::make_unique<Halfedge>();
-        auto he2 = std::make_unique<Halfedge>();
+        auto he0 = std::make_shared<Halfedge>();
+        auto he1 = std::make_shared<Halfedge>();
+        auto he2 = std::make_shared<Halfedge>();
 
         he0->m_start = m_verts[m_indices[i + 0]].get();
         he0->m_end = m_verts[m_indices[i + 1]].get();
@@ -109,7 +109,7 @@ void Mesh::load(const std::string &filename) {
         m_verts[m_indices[i + 1]]->m_he = he1.get();
         m_verts[m_indices[i + 2]]->m_he = he2.get();
 
-        auto face = std::make_unique<Face>();
+        auto face = std::make_shared<Face>();
         face->m_he = he0.get();
 
         he0->m_face = face.get();
@@ -124,10 +124,10 @@ void Mesh::load(const std::string &filename) {
         perVertexHEs[m_verts[m_indices[i + 1]].get()].push_back(he1.get());
         perVertexHEs[m_verts[m_indices[i + 2]].get()].push_back(he2.get());
 
-        m_hes.push_back(std::move(he0));
-        m_hes.push_back(std::move(he1));
-        m_hes.push_back(std::move(he2));
-        m_faces.push_back(std::move(face));
+        m_hes.push_back(he0);
+        m_hes.push_back(he1);
+        m_hes.push_back(he2);
+        m_faces.push_back(face);
     }
 
     // Set opposite half edges
@@ -159,42 +159,43 @@ void Mesh::save(const std::string &filename) {
 }
 
 Mesh::VertexIterator Mesh::v_begin() {
-    return Mesh::VertexIterator(m_verts[0].get());
+    return Mesh::VertexIterator(m_verts);
 }
 
 Mesh::VertexIterator Mesh::v_end() {
-    return Mesh::VertexIterator(nullptr);
+    return Mesh::VertexIterator(m_verts, m_verts.size());
 }
 
 // ----------
 // VertexIterator
 // ----------
 
-Mesh::VertexIterator::VertexIterator(Vertex *vtx)
-    : m_vtx{ vtx } {
+Mesh::VertexIterator::VertexIterator(std::vector<std::shared_ptr<Vertex>> &vertices, int index)
+    : m_verts{ vertices }
+    , m_index{ index } {
 }
 
 bool Mesh::VertexIterator::operator!=(const Mesh::VertexIterator &it) const {
-    return m_vtx != it.m_vtx;
+    return m_index != it.m_index;
 }
 
 Vertex &Mesh::VertexIterator::operator*() {
-    return *m_vtx;
+    return *m_verts[m_index];
 }
 
 Vertex *Mesh::VertexIterator::operator->() const {
-    return m_vtx;
+    return m_verts[m_index].get();
 }
 
 Mesh::VertexIterator &Mesh::VertexIterator::operator++() {
-    m_vtx++;
+    ++m_index;
     return *this;
 }
 
 Mesh::VertexIterator Mesh::VertexIterator::operator++(int) {
-    Vertex *tmp = m_vtx;
-    m_vtx++;
-    return Mesh::VertexIterator(tmp);
+    int prev = m_index;
+    ++m_index;
+    return Mesh::VertexIterator(m_verts, prev);
 }
 
 }  // namespace tinymesh

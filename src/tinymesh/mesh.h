@@ -10,9 +10,6 @@
 #include <memory>
 
 #include "common.h"
-#include "vertex.h"
-#include "halfedge.h"
-#include "face.h"
 
 namespace tinymesh {
 
@@ -33,9 +30,9 @@ public:
     size_t num_vertices() { return m_verts.size(); }
 
 private:
-    std::vector<std::unique_ptr<Vertex>> m_verts;
-    std::vector<std::unique_ptr<Halfedge>> m_hes;
-    std::vector<std::unique_ptr<Face>> m_faces;
+    std::vector<std::shared_ptr<Vertex>> m_verts;
+    std::vector<std::shared_ptr<Halfedge>> m_hes;
+    std::vector<std::shared_ptr<Face>> m_faces;
     std::vector<uint32_t> m_indices;
 
     friend class Mesh::VertexIterator;
@@ -43,7 +40,7 @@ private:
 
 class TINYMESH_EXPORTS Mesh::VertexIterator {
 public:
-    explicit VertexIterator(Vertex *vtx);
+    explicit VertexIterator(std::vector<std::shared_ptr<Vertex>> &m_vtx, int index = 0);
     bool operator!=(const VertexIterator &it) const;
     Vertex &operator*();
     Vertex *operator->() const;
@@ -51,7 +48,8 @@ public:
     VertexIterator operator++(int);
 
 private:
-    Vertex *m_vtx;
+    std::vector<std::shared_ptr<Vertex>> &m_verts;
+    int m_index;
 };
 
 }  // namespace tinymesh
