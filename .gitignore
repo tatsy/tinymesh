@@ -4,3 +4,5 @@ cmake-build-release/*
 
 data/*
 build/*
+
+.DS_Store
