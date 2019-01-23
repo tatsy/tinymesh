@@ -5,5 +5,5 @@ cmake-build-release/*
 data/*
 build/*
 
-
 *.TMP
+.DS_Store
