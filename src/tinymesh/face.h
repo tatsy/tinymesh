@@ -23,6 +23,7 @@ public:
 
 private:
     Halfedge *m_he;
+    int m_index;
 
     friend class Mesh;
 };

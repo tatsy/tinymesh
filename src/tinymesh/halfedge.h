@@ -18,22 +18,24 @@ public:
     Halfedge(Halfedge &&he) noexcept;
     virtual ~Halfedge() = default;
 
+    double length() const;
+
     Halfedge &operator=(const Halfedge &he) = default;
     Halfedge &operator=(Halfedge &&he) noexcept = default;
 
-    Vertex *v_start() const { return m_start; }
-    Vertex *v_end() const { return m_end; }
+    Vertex *src() const { return m_src; }
+    Vertex *dst() const { return m_next->m_src; }
     Halfedge *next() const { return m_next; }
-    Halfedge *prev() const { return m_prev; }
-    Halfedge *opposite() const { return m_opposite; }
+    Halfedge *prev() const { return m_next->m_next; }
+    Halfedge *rev() const { return m_rev; }
+    int index() const { return m_index; }
 
 private:
-    Vertex *m_start;
-    Vertex *m_end;
+    Vertex *m_src;
     Halfedge *m_next;
-    Halfedge *m_prev;
-    Halfedge *m_opposite;
+    Halfedge *m_rev;
     Face *m_face;
+    int m_index;
 
     friend class Mesh;
 };

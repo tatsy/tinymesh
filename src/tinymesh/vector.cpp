@@ -6,6 +6,14 @@ namespace tinymesh {
 Vector::Vector() {}
 Vector::Vector(double x) : x{ x }, y{ x }, z{ x } {}
 Vector::Vector(double x, double y, double z) : x{ x }, y{ y }, z{ z } {}
+Vector::Vector(const Vector &v) : x{ v.x }, y{ v.y }, z{ v.z } {}
+
+Vector &Vector::operator=(const Vector &v) {
+    this->x = v.x;
+    this->y = v.y;
+    this->z = v.z;
+    return *this;
+}
 
 bool Vector::operator==(const Vector &v) const {
     return x == v.x && y == v.y && z == v.z;
@@ -93,3 +101,11 @@ tinymesh::Vector operator*(double s, const tinymesh::Vector &v) {
     u *= s;
     return u;
 }
+
+tinymesh::Vector operator/(const tinymesh::Vector &v, double s) {
+    using tinymesh::Vector;
+    Vector u = v;
+    u /= s;
+    return u;
+}
+

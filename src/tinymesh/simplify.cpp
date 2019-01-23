@@ -4,16 +4,75 @@
 #include "mesh.h"
 #include "vector.h"
 #include "vertex.h"
+#include "halfedge.h"
+#include "smooth.h"
 
 namespace tinymesh {
 
 void simplify(Mesh &mesh, int maxiter) {
-    int index;
-    const int nv = mesh.num_vertices();
-    std::vector<Vector> centroids(nv);
-    std::vector<Vector> normals(nv);
+    printf("*** Original ***\n");
+    printf("#vert: %d\n", (int)mesh.num_vertices());
+    printf("#face: %d\n", (int)mesh.num_faces());
 
     for (int k = 0; k < maxiter; k++) {
+        // Compute average edge length
+        double L = 0.0;
+        int count = 0;
+        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
+            L += it->length();
+            count += 1;
+        }
+        L /= count;
+        printf("Avg edge length: %f\n", L);
+
+        // Split long edges
+        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
+            if (it->length() > 1.333 * L) {
+                mesh.splitHE(it.ptr());
+            }
+        }
+
+        printf("*** After split ***\n");
+        printf("#vert: %d\n", (int)mesh.num_vertices());
+        printf("#face: %d\n", (int)mesh.num_faces());
+
+        // Collapse short edges
+        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
+            if (it->length() < 0.8 * L) {
+                if (mesh.collapseHE(it.ptr())) {
+                    --it;
+                }
+            }
+        }
+
+        printf("*** After collapse ***\n");
+        printf("#vert: %d\n", (int)mesh.num_vertices());
+        printf("#face: %d\n", (int)mesh.num_faces());
+
+        // Flip edges
+        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
+            Vertex *v0 = it->src();
+            Vertex *v1 = it->dst();
+            Vertex *v2 = it->next()->dst();
+            Vertex *v3 = it->rev()->next()->dst();
+            const int d0 = v0->degree();
+            const int d1 = v1->degree();
+            const int d2 = v2->degree();
+            const int d3 = v3->degree();
+
+            const int score = std::abs(d0 - 6) + std::abs(d1 - 6) + std::abs(d2 - 6) + std::abs(d3 - 6);
+            const int after = std::abs(d0 - 1 - 6) + std::abs(d1 - 1 - 6) + std::abs(d2 + 1 - 6) + std::abs(d3 + 1 - 6);
+            if (score > after) {
+                mesh.flipHE(it.ptr());
+            }
+        }
+
+        // Volonoi tessellation
+        int index;
+        const int nv = mesh.num_vertices();
+        std::vector<Vector> centroids(nv);
+        std::vector<Vector> normals(nv);
+
         // Compute centroids and tangent planes
         index = 0;
         for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
@@ -31,8 +90,9 @@ void simplify(Mesh &mesh, int maxiter) {
                 const int j = (i + 1) % pts.size();
                 Vector e1 = pts[i] - org;
                 Vector e2 = pts[j] - org;
+                Vector g = (org + pts[i] + pts[j]) / 3.0;
 
-                cent += pts[i];
+                cent += g;
                 norm += e1.cross(e2);
             }
             cent /= pts.size();
@@ -52,7 +112,12 @@ void simplify(Mesh &mesh, int maxiter) {
             it->setPt(pt + e);
             index += 1;
         }
+
+        // Laplacian smoothing
+        smooth(mesh, 0.5);
     }
+
+    mesh.verify();
 }
 
 }  // namespace tinymesh

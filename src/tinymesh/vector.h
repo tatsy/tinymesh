@@ -14,6 +14,9 @@ public:
     Vector();
     explicit Vector(double x);
     Vector(double x, double y, double z);
+    Vector(const Vector &v);
+
+    Vector &operator=(const Vector &v);
 
     bool operator==(const Vector &v) const;
     bool operator!=(const Vector &v) const;
@@ -30,7 +33,7 @@ public:
 
     void normalize();
 
-    double x, y, z;
+    double x = 0.0, y = 0.0, z = 0.0;
 };
 
 }  // namespace tinymesh
@@ -39,5 +42,6 @@ TINYMESH_EXPORTS tinymesh::Vector operator+(const tinymesh::Vector &v1, const ti
 TINYMESH_EXPORTS tinymesh::Vector operator-(const tinymesh::Vector &v1, const tinymesh::Vector &v2);
 TINYMESH_EXPORTS tinymesh::Vector operator*(const tinymesh::Vector &v, double s);
 TINYMESH_EXPORTS tinymesh::Vector operator*(double s, const tinymesh::Vector &v);
+TINYMESH_EXPORTS tinymesh::Vector operator/(const tinymesh::Vector &v, double s);
 
 #endif  // TINYMESH_VECTOR_H

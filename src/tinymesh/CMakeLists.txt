@@ -4,6 +4,8 @@ file(GLOB SOURCE_FILES "*.cpp" "*.h")
 include_directories(${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader)
 set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader/tiny_obj_loader.h)
 set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader/tiny_obj_loader.cc)
+set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source/tinyply.h)
+set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source/tinyply.cpp)
 
 if (BUILD_STATIC_LIB)
     add_library(${BUILD_TARGET} STATIC ${SOURCE_FILES})

@@ -21,13 +21,15 @@ public:
 
 public:
     Vertex();
-    Vertex(const Vertex &p) = default;
-    Vertex(Vertex &&p) noexcept = default;
+    Vertex(const Vertex &v);
+    Vertex(Vertex &&p) noexcept;
     explicit Vertex(const Vector &v);
     virtual ~Vertex() = default;
 
-    Vertex &operator=(const Vertex &p) = default;
-    Vertex &operator=(Vertex &&p) noexcept = default;
+    Vertex &operator=(const Vertex &p);
+    Vertex &operator=(Vertex &&p) noexcept;
+
+    int degree();
 
     VertexIterator v_begin();
     VertexIterator v_end();
@@ -39,10 +41,12 @@ public:
     Vector pt() const { return m_pt; }
     void setPt(const Vector &pt) { m_pt = pt; }
 
+    int index() const { return m_index; }
+
 private:
     Vector m_pt;
-    Halfedge *m_he;
-    Face *m_face;
+    Halfedge *m_he = nullptr;
+    int m_index = -1;
 
     friend class Mesh;
 };
@@ -56,6 +60,7 @@ public:
     VertexIterator(Halfedge *he);
     bool operator!=(const VertexIterator &it) const;
     Vertex &operator*();
+    Vertex *ptr() const;
     Vertex *operator->() const;
     VertexIterator &operator++();
     VertexIterator operator++(int);
@@ -73,6 +78,7 @@ public:
     InHalfedgeIterator(Halfedge *he);
     bool operator!=(const InHalfedgeIterator &it) const;
     Halfedge &operator*();
+    Halfedge *ptr() const;
     Halfedge *operator->() const;
     InHalfedgeIterator &operator++();
     InHalfedgeIterator operator++(int);
@@ -90,6 +96,7 @@ public:
     OutHalfedgeIterator(Halfedge *he);
     bool operator!=(const OutHalfedgeIterator &it) const;
     Halfedge &operator*();
+    Halfedge *ptr() const;
     Halfedge *operator->() const;
     OutHalfedgeIterator &operator++();
     OutHalfedgeIterator operator++(int);
