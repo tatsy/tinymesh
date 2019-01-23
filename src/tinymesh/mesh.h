@@ -24,7 +24,7 @@ public:
     Mesh(const std::string &filename);
     void load(const std::string &filename);
     void save(const std::string &filename);
-    void flipHE(Halfedge *he);
+    bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
 

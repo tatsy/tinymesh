@@ -14,6 +14,8 @@ void simplify(Mesh &mesh, int maxiter) {
     printf("#vert: %d\n", (int)mesh.num_vertices());
     printf("#face: %d\n", (int)mesh.num_faces());
 
+    std::vector<Halfedge*> hes;
+
     for (int k = 0; k < maxiter; k++) {
         // Compute average edge length
         double L = 0.0;
@@ -26,9 +28,18 @@ void simplify(Mesh &mesh, int maxiter) {
         printf("Avg edge length: %f\n", L);
 
         // Split long edges
+        hes.clear();
         for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            if (it->length() > 1.333 * L) {
-                mesh.splitHE(it.ptr());
+            hes.push_back(it.ptr());
+        }
+
+        for (Halfedge *he : hes) {
+            if (!he || he->index() >= mesh.num_halfedges()) {
+                continue;
+            }
+
+            if (he->length() > 1.333 * L) {
+                mesh.splitHE(he);
             }
         }
 
@@ -37,10 +48,18 @@ void simplify(Mesh &mesh, int maxiter) {
         printf("#face: %d\n", (int)mesh.num_faces());
 
         // Collapse short edges
+        hes.clear();
         for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            if (it->length() < 0.8 * L) {
-                if (mesh.collapseHE(it.ptr())) {
-                    --it;
+            hes.push_back(it.ptr());
+        }
+
+        for (Halfedge *he : hes) {
+            if (!he || he->index() >= mesh.num_halfedges()) {
+                continue;
+            }
+
+            if (he->length() < 0.65 * L) {
+                if (mesh.collapseHE(he)) {
                 }
             }
         }
@@ -68,53 +87,55 @@ void simplify(Mesh &mesh, int maxiter) {
         }
 
         // Volonoi tessellation
-        int index;
-        const int nv = mesh.num_vertices();
-        std::vector<Vector> centroids(nv);
-        std::vector<Vector> normals(nv);
+        for (int l = 0; l < 10; l++) {
+            int index;
+            const int nv = mesh.num_vertices();
+            std::vector<Vector> centroids(nv);
+            std::vector<Vector> normals(nv);
 
-        // Compute centroids and tangent planes
-        index = 0;
-        for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
-            // Collect surrounding vertices
-            Vector org = it->pt();
-            std::vector<Vector> pts;
-            for (auto vit = it->v_begin(); vit != it->v_end(); ++vit) {
-                pts.push_back(vit->pt());
+            // Compute centroids and tangent planes
+            index = 0;
+            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
+                // Collect surrounding vertices
+                Vector org = it->pt();
+                std::vector<Vector> pts;
+                for (auto vit = it->v_begin(); vit != it->v_end(); ++vit) {
+                    pts.push_back(vit->pt());
+                }
+
+                // Compute centroids, tangents, and binormals
+                Vector cent(0.0);
+                Vector norm(0.0);
+                for (int i = 0; i < pts.size(); i++) {
+                    const int j = (i + 1) % pts.size();
+                    Vector e1 = pts[i] - org;
+                    Vector e2 = pts[j] - org;
+                    Vector g = (org + pts[i] + pts[j]) / 3.0;
+
+                    cent += g;
+                    norm += e1.cross(e2);
+                }
+                cent /= pts.size();
+                norm.normalize();
+
+                centroids[index] = cent;
+                normals[index] = norm;
+                index += 1;
             }
 
-            // Compute centroids, tangents, and binormals
-            Vector cent(0.0);
-            Vector norm(0.0);
-            for (int i = 0; i < pts.size(); i++) {
-                const int j = (i + 1) % pts.size();
-                Vector e1 = pts[i] - org;
-                Vector e2 = pts[j] - org;
-                Vector g = (org + pts[i] + pts[j]) / 3.0;
-
-                cent += g;
-                norm += e1.cross(e2);
+            // Update vertex positions
+            index = 0;
+            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
+                const Vector pt = it->pt();
+                Vector e = centroids[index] - pt;
+                e -= normals[index] * e.dot(normals[index]);
+                it->setPt(pt + e);
+                index += 1;
             }
-            cent /= pts.size();
-            norm.normalize();
 
-            centroids[index] = cent;
-            normals[index] = norm;
-            index += 1;
         }
-
-        // Update vertex positions
-        index = 0;
-        for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
-            const Vector pt = it->pt();
-            Vector e = centroids[index] - pt;
-            e -= normals[index] * e.dot(normals[index]);
-            it->setPt(pt + e);
-            index += 1;
-        }
-
         // Laplacian smoothing
-        smooth(mesh, 0.5);
+        //smooth(mesh, 0.1);
     }
 
     mesh.verify();

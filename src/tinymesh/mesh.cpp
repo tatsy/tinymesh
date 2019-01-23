@@ -256,12 +256,15 @@ bool Mesh::splitHE(Halfedge *he) {
     addHalfedge(he_10);
     addHalfedge(he_11);
     addHalfedge(he_12);
+
+    return true;
 }
 
 bool Mesh::collapseHE(Halfedge* he) {
     Halfedge *rev = he->m_rev;
     const int d0 = he->src()->degree();
     const int d1 = rev->src()->degree();
+    // Merge vertex to the one with smaller degree
     if (d0 > d1) {
         std::swap(he, rev);
     }
@@ -270,7 +273,7 @@ bool Mesh::collapseHE(Halfedge* he) {
     Vertex *v1 = he->prev()->src();
     Vertex *v2 = rev->src();
     Vertex *v3 = rev->prev()->src();
-    if (v0->degree() <= 4 || v1->degree() <= 4 || v2->degree() <= 4 || v3->degree() <= 4) {
+    if (v0->degree() <= 3 || v1->degree() <= 4 || v2->degree() <= 3 || v3->degree() <= 4) {
         return false;
     }
 
@@ -295,14 +298,14 @@ bool Mesh::collapseHE(Halfedge* he) {
     he->m_src->m_he = he->prev()->rev();
 
     // Update origins of all outward halfedges
-    Vertex *remove_vert = rev->m_src;
-    Vertex *new_origin = he->m_src;
+    Vertex *v_remove = rev->m_src;
+    Vertex *v_remain = he->m_src;
     for (auto it = he->m_src->ohe_begin(); it != he->m_src->ohe_end(); ++it) {
-        it->m_src = new_origin;
+        it->m_src = v_remain;
     }
 
     for (auto it = rev->m_src->ohe_begin(); it != rev->m_src->ohe_end(); ++it) {
-        it->m_src = new_origin;
+        it->m_src = v_remain;
     }
 
     // Update opposite halfedges
@@ -327,7 +330,7 @@ bool Mesh::collapseHE(Halfedge* he) {
     removeFace(f1);
 
     // Remove vertices
-    removeVertex(remove_vert);
+    removeVertex(v_remove);
 
     // Remove halfedges
     removeHalfedge(he->m_next->m_next);
@@ -340,10 +343,18 @@ bool Mesh::collapseHE(Halfedge* he) {
     return true;
 }
 
-void Mesh::flipHE(Halfedge* he) {    
+bool Mesh::flipHE(Halfedge* he) {    
     Halfedge *rev = he->m_rev;
     if (!rev) {
         FatalError("Flip is called boundary halfedge!");
+    }
+
+    Vertex *u0 = he->src();
+    Vertex *u1 = he->prev()->src();
+    Vertex *u2 = rev->src();
+    Vertex *u3 = rev->prev()->src();
+    if (u0->degree() <= 4 || u2->degree() <= 4) {
+        return false;
     }
 
     // Get surrounding vertices, halfedges and faces
@@ -386,16 +397,18 @@ void Mesh::flipHE(Halfedge* he) {
     rev->m_face = f1;
     he0->m_face = f1;
     he3->m_face = f1;
+
+    return true;
 }
 
 void Mesh::verify() const {
-    for (int i = 0; i < m_verts.size(); i++) {
-        Vertex *v = m_verts[i].get();
-        if (v->index() != i) {
-            fprintf(stderr, "Vertex index does not match array index: v[%d].index = %d\n", i, v->index());
-        }
-        verifyVertex(v);
-    }
+    //for (int i = 0; i < m_verts.size(); i++) {
+    //    Vertex *v = m_verts[i].get();
+    //    if (v->index() != i) {
+    //        fprintf(stderr, "Vertex index does not match array index: v[%d].index = %d\n", i, v->index());
+    //    }
+    //    verifyVertex(v);
+    //}
 
     //for (int i = 0; i < m_hes.size(); i++) {
     //    auto he = m_hes[i];
@@ -436,8 +449,6 @@ void Mesh::verifyVertex(Vertex* v) const {
         fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p.x, p.y, p.z);
     }    
 }
-
-
 
 Mesh::VertexIterator Mesh::v_begin() {
     return Mesh::VertexIterator(m_verts);
@@ -513,11 +524,11 @@ Vertex &Mesh::VertexIterator::operator*() {
 }
 
 Vertex *Mesh::VertexIterator::operator->() const {
-    return m_verts[m_index].get();
+    return m_index < m_verts.size() ? m_verts[m_index].get() : nullptr;
 }
 
 Vertex* Mesh::VertexIterator::ptr() const {
-    return m_verts[m_index].get();
+    return m_index < m_verts.size() ? m_verts[m_index].get() : nullptr;
 }
 
 Mesh::VertexIterator &Mesh::VertexIterator::operator++() {
@@ -560,11 +571,11 @@ Halfedge &Mesh::HalfedgeIterator::operator*() {
 }
 
 Halfedge* Mesh::HalfedgeIterator::operator->() const {
-    return m_hes[m_index].get();
+    return m_index < m_hes.size() ? m_hes[m_index].get() : nullptr;
 }
 
 Halfedge* Mesh::HalfedgeIterator::ptr() const {
-    return m_hes[m_index].get();
+    return m_index < m_hes.size() ? m_hes[m_index].get() : nullptr;
 }
 
 Mesh::HalfedgeIterator &Mesh::HalfedgeIterator::operator++() {
