@@ -1,3 +1,6 @@
+# ----------
+# Add example module
+# ----------
 function(ADD_EXAMPLE EXPNAME)
     set(options)
     set(oneValueArgs)
@@ -27,5 +30,8 @@ function(ADD_EXAMPLE EXPNAME)
     endif()
 endfunction(ADD_EXAMPLE)
 
+# ----------
+# Add example directories
+# ----------
 add_example(hello_tinymesh)
 add_example(simplify)

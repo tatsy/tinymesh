@@ -6,7 +6,7 @@
 #define TINYMESH_H
 
 #include "mesh.h"
-#include "simplify.h"
 #include "remesh.h"
+#include "simplify.h"
 
 #endif  // TINYMESH_H

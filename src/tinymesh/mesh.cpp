@@ -441,7 +441,7 @@ void Mesh::verify() const {
 
 void Mesh::verifyVertex(Vertex* v) const {
     if (v->index() >= m_verts.size()) {
-        fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), m_verts.size());
+        fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)m_verts.size());
     }
 
     Vector p = v->pt();
@@ -464,6 +464,14 @@ Mesh::HalfedgeIterator Mesh::he_begin() {
 
 Mesh::HalfedgeIterator Mesh::he_end() {
     return Mesh::HalfedgeIterator(m_hes, m_hes.size());
+}
+
+Mesh::FaceIterator Mesh::f_begin() {
+    return Mesh::FaceIterator(m_faces);
+}
+
+Mesh::FaceIterator Mesh::f_end() {
+    return Mesh::FaceIterator(m_faces, m_faces.size());
 }
 
 void Mesh::addVertex(Vertex *v) {
@@ -598,6 +606,53 @@ Mesh::HalfedgeIterator Mesh::HalfedgeIterator::operator--(int) {
     int prev = m_index;
     --m_index;
     return Mesh::HalfedgeIterator(m_hes, prev);
+}
+
+// ----------
+// FaceIterator
+// ----------
+
+Mesh::FaceIterator::FaceIterator(std::vector<std::shared_ptr<Face>> &faces, int index)
+    : m_faces{ faces }
+    , m_index{ index } {
+}
+
+bool Mesh::FaceIterator::operator!=(const FaceIterator &it) const {
+    return m_index != it.m_index;
+}
+
+Face &Mesh::FaceIterator::operator*() {
+    return *m_faces[m_index];
+}
+
+Face *Mesh::FaceIterator::operator->() const {
+    return m_index < m_faces.size() ? m_faces[m_index].get() : nullptr;
+}
+
+Face *Mesh::FaceIterator::ptr() const {
+    return m_index < m_faces.size() ? m_faces[m_index].get() : nullptr;
+}
+
+Mesh::FaceIterator &Mesh::FaceIterator::operator++() {
+    ++m_index;
+    return *this;
+}
+
+Mesh::FaceIterator Mesh::FaceIterator::operator++(int) {
+    int prev = m_index;
+    ++m_index;
+    return Mesh::FaceIterator(m_faces, prev);
+}
+
+Mesh::FaceIterator &Mesh::FaceIterator::operator--() {
+    --m_index;
+    return *this;
+}
+
+Mesh::FaceIterator Mesh::FaceIterator::operator--(int) {
+    int prev = m_index;
+    --m_index;
+    return Mesh::FaceIterator(m_faces, prev);
 }
 
 }  // namespace tinymesh

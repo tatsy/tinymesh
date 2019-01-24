@@ -13,6 +13,10 @@ namespace tinymesh {
 
 class TINYMESH_EXPORTS Face {
 public:
+    // Forward declaration
+    class VertexIterator;
+
+public:
     Face();
     Face(const Face &face) = default;
     Face(Face &&face) noexcept = default;
@@ -21,11 +25,28 @@ public:
     Face &operator=(const Face &face) = default;
     Face &operator=(Face &&face) noexcept = default;
 
+    VertexIterator v_begin();
+    VertexIterator v_end();
+
 private:
     Halfedge *m_he;
     int m_index;
 
     friend class Mesh;
+};
+
+class TINYMESH_EXPORTS Face::VertexIterator {
+public:
+    explicit VertexIterator(Halfedge *he);
+    bool operator!=(const VertexIterator &it) const;
+    Vertex &operator*();
+    Vertex *operator->() const;
+    Vertex *ptr() const;
+    VertexIterator &operator++();
+    VertexIterator operator++(int);
+
+private:
+    Halfedge *m_he, *m_init;
 };
 
 }  // namespace tinymesh

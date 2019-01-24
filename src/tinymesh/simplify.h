@@ -9,7 +9,7 @@
 
 namespace tinymesh {
 
-TINYMESH_EXPORTS void simplify(Mesh &mesh, int maxiter = 5);
+TINYMESH_EXPORTS void simplify(Mesh &mesh, double ratio = 0.5, int num_remains = -1);
 
 }  // namespace tinymesh
 

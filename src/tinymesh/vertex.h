@@ -57,7 +57,7 @@ private:
 
 class Vertex::VertexIterator {
 public:
-    VertexIterator(Halfedge *he);
+    explicit VertexIterator(Halfedge *he);
     bool operator!=(const VertexIterator &it) const;
     Vertex &operator*();
     Vertex *ptr() const;
@@ -75,7 +75,7 @@ private:
 
 class Vertex::InHalfedgeIterator {
 public:
-    InHalfedgeIterator(Halfedge *he);
+    explicit InHalfedgeIterator(Halfedge *he);
     bool operator!=(const InHalfedgeIterator &it) const;
     Halfedge &operator*();
     Halfedge *ptr() const;

@@ -18,6 +18,7 @@ public:
     // Forward declaration
     class VertexIterator;
     class HalfedgeIterator;
+    class FaceIterator;
 
 public:
     Mesh();
@@ -34,6 +35,8 @@ public:
     VertexIterator v_end();
     HalfedgeIterator he_begin();
     HalfedgeIterator he_end();
+    FaceIterator f_begin();
+    FaceIterator f_end();
 
     size_t num_vertices() { return m_verts.size(); }
     size_t num_halfedges() { return m_hes.size(); }
@@ -88,6 +91,23 @@ public:
 
 private:
     std::vector<std::shared_ptr<Halfedge>> &m_hes;
+    int m_index;
+};
+
+class TINYMESH_EXPORTS Mesh::FaceIterator {
+public:
+    explicit FaceIterator(std::vector<std::shared_ptr<Face>> &faces, int index = 0);
+    bool operator!=(const FaceIterator &it) const;
+    Face &operator*();
+    Face *operator->() const;
+    Face *ptr() const;
+    FaceIterator &operator++();
+    FaceIterator operator++(int);
+    FaceIterator &operator--();
+    FaceIterator operator--(int);
+
+private:
+    std::vector<std::shared_ptr<Face>> &m_faces;
     int m_index;
 };
 
