@@ -2,6 +2,8 @@
 #include "simplify.h"
 
 #include <vector>
+#include <queue>
+#include <set>
 
 #include "mesh.h"
 #include "face.h"
@@ -53,14 +55,44 @@ struct UnionFindTree {
 namespace tinymesh {
 
 struct QEMNode {
-    QEMNode(double value, int ii, int jj, const Vector &v) {
+    QEMNode(double value, Halfedge *he, const Vector &v)
+        : value{ value }
+        , he{ he }
+        , v{ v } {
+    }
 
+    bool operator<(const QEMNode &n) const {
+        return value < n.value;
     }
 
     double value;
-    int ii, jj;
+    Halfedge *he;
     Vector v;
 };
+
+double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Vertex &v2, Vector *v) {
+    Matrix Q = Matrix::identity(4, 4);
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            Q.set(i, j, m1.get(i, j) + m2.get(i, j));
+        }
+    }
+
+    Matrix v_bar;
+    const double D = Q.det();
+    if (D < 1.0e-8) {
+        Vector m = 0.5 * (v1.pt() + v2.pt());
+        v_bar = Matrix(4, 1, (double[]){m.x, m.y, m.z, 1.0});
+    } else {
+        v_bar = Q.solve(Matrix(4, 1, (double[]){0.0, 0.0, 0.0, 1.0}));
+    }
+
+    const double qem = (v_bar.T() * ((m1 + m2) * v_bar)).get(0, 0);
+    if (v) {
+        *v = Vector(v_bar.get(0, 0), v_bar.get(1, 0), v_bar.get(2, 0));
+    }
+    return qem;
+}
 
 void simplify(Mesh &mesh, double ratio, int nRemain) {
     static const double Eps = 1.0e-12;
@@ -109,111 +141,137 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
         Qs[vs[2]->index()] += w * Q;
     }
 
-//    // Push QEMs
-//    pque = PriorityQueue()
-//    for i, he in enumerate(mesh.halfedges):
-//    v1 = he.vertex_from
-//    v2 = he.vertex_to
-//    i1 = v1.index
-//    i2 = v2.index
-//    Q1 = Qs[i1]
-//    Q2 = Qs[i2]
-//    qem, v_bar = compute_QEM(Q1, Q2, v1, v2)
-//    pque.push(QEMNode(qem, i1, i2, v_bar))
-//
-//    if show_progress:
-//        progress_bar(i, len(mesh.halfedges))
-//
-//    if show_progress:
-//        progress_bar(len(mesh.halfedges), len(mesh.halfedges))
-//
-//    removed = 0
-//    uftree = UnionFindTree(nv)
-//    while removed < n_remove:
-//
-//    # Find edge with minimum QEM
-//    try:
-//    qn = pque.pop()
-//    except Exception as e:
-//    break
-//
-//    ii, jj, v_bar = qn.ii, qn.jj, qn.vec
-//    assert ii != jj
-//
-//    v_i = mesh.vertices[ii]
-//    v_j = mesh.vertices[jj]
-//    if v_i is None or v_j is None:
-//
-//    # None vertex is already removed
-//    continue
-//
-//    if not v_i.is_boundary and v_j.is_boundary:
-//    ii, jj = jj, ii
-//    v_i = mesh.vertices[ii]
-//    v_j = mesh.vertices[jj]
-//
-//# Vertex with degree less than 4 should not be contracted
-//    if v_i.degree() <= 3 or v_j.degree() <= 3:
-//    continue
-//
-//# Check face flip
-//    is_flip = False
-//    for f in chain(v_i.faces(), v_j.faces()):
-//    vs = list(f.vertices())
-//    assert len(vs) == 3
-//
-//    if any([ v is v_i for v in vs ]) and any([ v is v_j for v in vs ]):
-//# This is collpased face
-//    continue
-//
-//    ps = [ v.position for v in vs ]
-//    norm_before = (ps[1] - ps[0]).cross(ps[2] - ps[0])\
-//
-//    is_found = False
-//    for i, v in enumerate(vs):
-//    if v is v_i or v is v_j:
-//    ps[i] = v_bar
-//    is_found = True
-//    break
-//
-//    assert is_found
-//
-//    norm_after = (ps[1] - ps[0]).cross(ps[2] - ps[0])
-//
-//    cos = norm_before.dot(norm_after) / (norm_before.norm() * norm_after.norm() + EPS)
-//    if cos <= 1.0e-20:
-//    is_flip = True
-//    break
-//
-//    if is_flip:
-//        continue
-//
-//# Check face degeneration
-//    neighbor_v_i = set([ v.index for v in v_i.vertices() ])
-//    neighbor_v_j = set([ v.index for v in v_j.vertices() ])
-//    neighbor_both = neighbor_v_i.intersection(neighbor_v_j)
-//
-//    is_degenerate = False
-//    for i in neighbor_both:
-//    if mesh.vertices[i].degree() < 4:
-//    is_degenerate = True
-//    break
-//
-//    if is_degenerate:
-//        continue
-//
-//# Collapse halfedge
-//    try:
-//    mesh.collapse_halfedge(v_j, v_i, v_bar)
-//    uftree.merge(v_i.index, v_j.index)
-//    assert v_i.index == uftree.root(v_j.index)
-//    except Exception as e:
-//    print(e.message)
-//    continue
-//# raise e
-//
-//    assert mesh.vertices[v_i.index] is not None
-//    assert mesh.vertices[v_j.index] is None
+    // Push QEMs
+    std::priority_queue<QEMNode> que;
+    for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
+        Vertex *v1 = it->src();
+        Vertex *v2 = it->dst();
+        int i1 = v1->index();
+        int i2 = v2->index();
+        Matrix &q1 = Qs[i1];
+        Matrix &q2 = Qs[i2];
+        Vector v;
+        const double qem = computeQEM(q1, q2, *v1, *v2, &v);
+        que.push(QEMNode(qem, i1, i2, v));
+    }
+
+    int removed = 0;
+    auto uftree = UnionFindTree(nv);
+    while (removed < nRemove) {
+        QEMNode qn = que.top();
+        que.pop();
+
+        const int ii = qn.he->src()->index();
+        const int jj = qn.he->src()->index();
+        const Vector v_bar = qn.v;
+
+        Vertex *v_i = mesh.vertex(ii);
+        Vertex *v_j = mesh.vertex(jj);
+
+        // Either end vertex is already contracted
+        if (!v_i || !v_j) {
+            continue;
+        }
+
+        // Vertices with degree < 4 cannot be contracted
+        if (v_i->degree() <= 3 || v_j->degree() <= 3) {
+            continue;
+        }
+
+        // Check face flip
+        bool isFlip = false;
+        std::vector<Face*> faces;
+        for (auto it = v_i->f_begin(); it != v_i->f_end(); ++it) {
+            faces.push_back(it.ptr());
+        }
+
+        for (auto it = v_j->f_begin(); it != v_j->f_end(); ++it) {
+            faces.push_back(it.ptr());
+        }
+
+        for (Face *f : faces) {
+            bool has_i = false;
+            bool has_j = false;
+            std::vector<Vertex*> vs;
+            std::vector<Vector> ps;
+            for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+                vs.push_back(it.ptr());
+                ps.push_back(it->pt());
+                if (it.ptr() == v_i) {
+                    has_i = true;
+                }
+                if (it.ptr() == v_j) {
+                    has_j = true;
+                }
+            }
+
+            if (!has_i || !has_j) {
+                // This is contracted face
+                continue;
+            }
+
+            const Vector n0 = (ps[2] - ps[0]).cross(ps[1] - ps[0]);
+            bool isFound = false;
+            for (int i = 0; i < vs.size(); i++) {
+                if (vs[i] == v_i || vs[i] == v_j) {
+                    ps[i] = v_bar;
+                    isFound = true;
+                    break;
+                }
+            }
+
+            if (!isFound) {
+                FatalError("Contractible vertex not found!");
+            }
+
+            const Vector n1 = (ps[2] - ps[0]).cross(ps[1] - ps[0]);
+
+            const double cos = n0.dot(n1) / (n0.length() * n1.length());
+            if (cos <= 1.0e-12) {
+                isFlip = true;
+            }
+        }
+
+        // Face flips if target vertex is contracted
+        if (isFlip) {
+            continue;
+        }
+
+        // Check face degeneration
+        std::set<Vertex*> s_i;
+        for (auto it = v_i->v_begin(); it != v_i->v_end(); ++it) {
+            s_i.insert(it.ptr());
+        }
+        std::vector<Vertex*> neighbors;
+        for (auto it = v_j->v_begin(); it != v_j->v_end(); ++it) {
+            if (s_i.count(it.ptr()) != 0) {
+                neighbors.push_back(it.ptr());
+            }
+        }
+
+        bool isDegenerate = false;
+        for (Vertex *v : neighbors) {
+            if (v->degree() < 4) {
+                isDegenerate = true;
+                break;
+            }
+        }
+
+        if (isDegenerate) {
+            continue;
+        }
+
+        // Collapse halfedge
+        mesh.collapseHE(qn.he);
+        uftree.merge(ii, jj);
+        assert(ii == uftree.root(jj));
+
+        assert(mesh.vertex(ii) != nullptr);
+        assert(mesh.vertex(jj) == nullptr);
+
+        // Check triangle shapes
+    }
+
 //
 //# Check triangle shapes
 //    is_update = True
@@ -243,15 +301,6 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
 //    if a1 + a2 > math.pi:
 //    mesh.flip_halfedge(he)
 //    is_update = True
-//    break
-//
-//# Progress
-//    removed += 1
-//    if show_progress:
-//        if removed == n_remove or removed % max(1, n_remove // 1000) == 0:
-//    progress_bar(removed, n_remove)
-//
-//    if removed == n_remove:
 //    break
 //
 //# Update matrix Q
@@ -287,15 +336,7 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
 //
 //    pque.push(QEMNode(qem, v1.index, v2.index, v_bar))
 //
-//    print('')
-//    if removed < n_remove:
-//    print('Target number is not reached!')
-//
-//    print('{} vertices removed!'.format(removed))
-//    print('{:.2f} sec elapsed!'.format(time.clock() - start_time))
-//
-//# Compact vertices and update indices for faces
-//    mesh.clean()
+
 }
 
 }  // namespace tinymesh

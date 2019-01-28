@@ -73,6 +73,14 @@ Vertex::OutHalfedgeIterator Vertex::ohe_end() {
     return Vertex::OutHalfedgeIterator(nullptr);
 }
 
+Vertex::FaceIterator Vertex::f_begin() {
+    return Vertex::FaceIterator(m_he);
+}
+
+Vertex::FaceIterator Vertex::f_end() {
+    return Vertex::FaceIterator(nullptr);
+}
+
 // ----------
 // VertexIterator
 // ----------
@@ -197,6 +205,48 @@ Vertex::OutHalfedgeIterator Vertex::OutHalfedgeIterator::operator++(int) {
         m_he = nullptr;
     }
     return Vertex::OutHalfedgeIterator(tmp);
+}
+
+// ----------
+// FaceIterator
+// ----------
+
+Vertex::FaceIterator::FaceIterator(tinymesh::Halfedge *he)
+    : m_he{ he }
+    , m_init{ he } {
+}
+
+bool Vertex::FaceIterator::operator!=(const Vertex::FaceIterator &it) const {
+    return m_he != it.m_he;
+}
+
+Face &Vertex::FaceIterator::operator*() {
+    return *m_he;
+}
+
+Face *Vertex::FaceIterator::ptr() const {
+    return m_he->face();
+}
+
+Face *Vertex::FaceIterator::operator->() const {
+    return m_he->face();
+}
+
+Vertex::FaceIterator &Vertex::FaceIterator::operator++() {
+    m_he = m_he->rev()->next();
+    if (m_he == m_init) {
+        m_he = nullptr;
+    }
+    return *this;
+}
+
+Vertex::FaceIterator Vertex::FaceIterator::operator++(int) {
+    Halfedge *tmp = m_he;
+    m_he = m_he->rev()->next();
+    if (m_he == m_init) {
+        m_he = nullptr;
+    }
+    return Vertex::FaceIterator(tmp);
 }
 
 }  // naemspace tinymesh

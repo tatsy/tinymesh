@@ -18,6 +18,7 @@ public:
     class VertexIterator;
     class InHalfedgeIterator;
     class OutHalfedgeIterator;
+    class FaceIterator;
 
 public:
     Vertex();
@@ -37,6 +38,8 @@ public:
     InHalfedgeIterator ihe_end();
     OutHalfedgeIterator ohe_begin();
     OutHalfedgeIterator ohe_end();
+    FaceIterator f_begin();
+    FaceIterator f_end();
 
     Vector pt() const { return m_pt; }
     void setPt(const Vector &pt) { m_pt = pt; }
@@ -100,6 +103,24 @@ public:
     Halfedge *operator->() const;
     OutHalfedgeIterator &operator++();
     OutHalfedgeIterator operator++(int);
+
+private:
+    Halfedge *m_he, *m_init;
+};
+
+// ----------
+// FaceIterator
+// ----------
+
+class Vertex::FaceIterator {
+public:
+    FaceIterator(Halfedge *he);
+    bool operator!=(const FaceIterator &it) const;
+    Face &operator*();
+    Face *ptr() const;
+    Face *operator->() const;
+    FaceIterator &operator++();
+    FaceIterator operator++(int);
 
 private:
     Halfedge *m_he, *m_init;

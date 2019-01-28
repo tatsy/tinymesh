@@ -28,6 +28,7 @@ public:
     Halfedge *next() const { return m_next; }
     Halfedge *prev() const { return m_next->m_next; }
     Halfedge *rev() const { return m_rev; }
+    Face *face() const { return m_face; }
     int index() const { return m_index; }
 
 private:
