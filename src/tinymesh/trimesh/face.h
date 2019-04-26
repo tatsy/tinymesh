@@ -7,11 +7,11 @@
 
 #include <memory>
 
-#include "common.h"
+#include "core/common.h"
 
 namespace tinymesh {
 
-class TINYMESH_EXPORTS Face {
+class TINYMESH_API Face {
 public:
     // Forward declaration
     class VertexIterator;
@@ -35,7 +35,7 @@ private:
     friend class Mesh;
 };
 
-class TINYMESH_EXPORTS Face::VertexIterator {
+class TINYMESH_API Face::VertexIterator {
 public:
     explicit VertexIterator(Halfedge *he);
     bool operator!=(const VertexIterator &it) const;

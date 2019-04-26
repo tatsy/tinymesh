@@ -16,7 +16,7 @@ Halfedge::Halfedge(tinymesh::Halfedge &&he) noexcept {
 }
 
 double Halfedge::length() const {
-    return (src()->pt() - dst()->pt()).length();
+    return ::length(src()->pt() - dst()->pt());
 }
 
 

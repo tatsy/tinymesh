@@ -1,5 +1,4 @@
 #include <iostream>
-#include <tinymesh/mesh.h>
 
 #include "tinymesh/tinymesh.h"
 
@@ -13,7 +12,7 @@ int main(int argc, char **argv) {
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
-    tinymesh::simplify(mesh, 7);
+    tinymesh::remesh(mesh, 7);
 
     // Save
     mesh.save("output.obj");

@@ -5,8 +5,16 @@
 #ifndef TINYMESH_H
 #define TINYMESH_H
 
-#include "mesh.h"
-#include "remesh.h"
-#include "simplify.h"
+#include "core/common.h"
+#include "core/vec.h"
+
+#include "trimesh/mesh.h"
+#include "trimesh/vertex.h"
+#include "trimesh/halfedge.h"
+#include "trimesh/face.h"
+
+#include "geoproc/remesh.h"
+#include "geoproc/simplify.h"
+#include "geoproc/smooth.h"
 
 #endif  // TINYMESH_H

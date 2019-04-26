@@ -10,7 +10,7 @@ namespace tinymesh {
 // ----------
 
 Vertex::Vertex() {}
-Vertex::Vertex(const Vector &v) : m_pt{ v } {}
+Vertex::Vertex(const Vec &v) : m_pt{ v } {}
 
 Vertex::Vertex(const Vertex &v)
     : Vertex{} {
@@ -34,7 +34,7 @@ Vertex &Vertex::operator=(Vertex &&v) noexcept {
     this->m_he = v.m_he;
     this->m_index = v.m_index;
 
-    v.m_pt = Vector();
+    v.m_pt = Vec();
     v.m_he = nullptr;
     v.m_index = -1;
     return *this;    
@@ -221,7 +221,7 @@ bool Vertex::FaceIterator::operator!=(const Vertex::FaceIterator &it) const {
 }
 
 Face &Vertex::FaceIterator::operator*() {
-    return *m_he;
+    return *m_he->face();
 }
 
 Face *Vertex::FaceIterator::ptr() const {

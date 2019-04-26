@@ -17,19 +17,19 @@ Matrix::Matrix(int rows, int cols)
     m_values = std::make_unique<double[]>(rows * cols);
 }
 
-Matrix::Matrix(int rows, int cols, double *m)
+Matrix::Matrix(int rows, int cols, double* const m)
     : m_rows{ rows }
     , m_cols{ cols } {
     m_values = std::make_unique<double[]>(rows * cols);
-    std::memcpy(m_values.get(), m, sizeof(double) * rows * cols);
+    std::memcpy(m_values.get(), m, sizeof(double)* rows* cols);
 }
 
-Matrix::Matrix(const Matrix &m)
+Matrix::Matrix(const Matrix& m)
     : Matrix{} {
     this->operator=(m);
 }
 
-Matrix::Matrix(Matrix &&m) noexcept
+Matrix::Matrix(Matrix&& m) noexcept
     : Matrix{} {
     this->operator=(std::move(m));
 }
@@ -37,7 +37,7 @@ Matrix::Matrix(Matrix &&m) noexcept
 Matrix::~Matrix() {
 }
 
-Matrix &Matrix::operator=(const Matrix &m) {
+Matrix& Matrix::operator=(const Matrix& m) {
     this->m_rows = m.m_rows;
     this->m_cols = m.m_cols;
     this->m_values = std::make_unique<double[]>(m_rows * m_cols);
@@ -45,14 +45,14 @@ Matrix &Matrix::operator=(const Matrix &m) {
     return *this;
 }
 
-Matrix &Matrix::operator=(Matrix &&m) noexcept {
+Matrix& Matrix::operator=(Matrix&& m) noexcept {
     this->m_rows = m.m_rows;
     this->m_cols = m.m_cols;
     this->m_values = std::move(m.m_values);
     return *this;
 }
 
-Matrix &Matrix::operator+=(const Matrix &m) {
+Matrix& Matrix::operator+=(const Matrix& m) {
     if (m_rows != m.m_rows || m_cols != m.m_cols) {
         FatalError("Matrix size does not match!");
     }
@@ -66,7 +66,7 @@ Matrix &Matrix::operator+=(const Matrix &m) {
     return *this;
 }
 
-Matrix &Matrix::operator*=(double s) {
+Matrix& Matrix::operator*=(double s) {
     for (int i = 0; i < m_rows * m_cols; i++) {
         m_values[i] *= s;
     }
@@ -82,7 +82,7 @@ double Matrix::det() const {
     return ret;
 }
 
-Matrix Matrix::solve(const Matrix &b) const {
+Matrix Matrix::solve(const Matrix& b) const {
     if (m_rows != m_cols) {
         FatalError("Matrix is not square. Cannot factorize.");
     }
@@ -100,7 +100,7 @@ Matrix Matrix::solve(const Matrix &b) const {
 
     // Compute determinant
     double d = 1.0;
-    for(int i=0; i<m; i++) {
+    for (int i = 0; i < m; i++) {
         d *= LU.get(i, i);
     }
 
@@ -110,26 +110,26 @@ Matrix Matrix::solve(const Matrix &b) const {
 
     // Reorder entries following pivot selections
     Matrix x(m_rows, b.m_cols);
-    for(int i = 0; i < m; i++) {
-        for(int j = 0; j < n; j++) {
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
             x.set(i, j, b.get(order[i], j));
         }
     }
 
     // solve for L
-    for(int j = 0; j < m; j++) {
-        for(int i = j + 1; i < m; i++) {
-            for(int k = 0; k < n; k++) {
+    for (int j = 0; j < m; j++) {
+        for (int i = j + 1; i < m; i++) {
+            for (int k = 0; k < n; k++) {
                 x.set(i, k, x.get(i, k) - x.get(j, k) * LU.get(i, j));
             }
         }
     }
 
     // solve for U
-    for(int j = m - 1; j >= 0; j--) {
-        for(int k = 0; k < n; k++) {
+    for (int j = m - 1; j >= 0; j--) {
+        for (int k = 0; k < n; k++) {
             x.set(j, k, x.get(j, k) / LU.get(j, j));
-            for(int i = 0; i < j; i++) {
+            for (int i = 0; i < j; i++) {
                 x.set(i, k, x.get(i, k) - x.get(j, k) * LU.get(i, j));
             }
         }
@@ -173,27 +173,28 @@ Matrix Matrix::constant(int rows, int cols, double value) {
     return std::move(m);
 }
 
-Matrix Matrix::factorLU(int *order) const {
+Matrix Matrix::factorLU(int* order) const {
     if (m_rows != m_cols) {
         FatalError("Matrix is not square. Cannot factorize.");
     }
 
     int n = m_rows;
     Matrix LU = (*this);
-    for(int i=0; i<n; i++) {
+    for (int i = 0; i < n; i++) {
         if (order) {
             order[i] = i;
         }
     }
 
-    for(int k=0; k<n; k++) {
+    for (int k = 0; k < n; k++) {
+        /*
         // Pivot selection
         double maxval = 0.0;
-        int pivot  = k;
-        for(int i=k; i<n; i++) {
-            if(maxval < std::abs(LU.get(i, k))) {
+        int pivot = k;
+        for (int i = k; i < n; i++) {
+            if (maxval < std::abs(LU.get(i, k))) {
                 maxval = std::abs(LU.get(i, k));
-                pivot  = i;
+                pivot = i;
             }
         }
 
@@ -202,8 +203,8 @@ Matrix Matrix::factorLU(int *order) const {
             std::swap(order[k], order[pivot]);
         }
 
-        if(pivot != k) {
-            for(int j=0; j<n; j++) {
+        if (pivot != k) {
+            for (int j = 0; j < n; j++) {
                 double tmp = LU.get(k, j);
                 LU.set(k, j, LU.get(pivot, j));
                 LU.set(pivot, j, tmp);
@@ -212,14 +213,15 @@ Matrix Matrix::factorLU(int *order) const {
 
         // 要素の消去
         double iukk = 1.0 / LU.get(k, k);
-        for(int i=k+1; i<n; i++) {
+        for (int i = k + 1; i < n; i++) {
             double v = LU.get(i, k) * iukk;
             LU.set(i, k, v);
-            for(int j=k+1; j<n; j++) {
+            for (int j = k + 1; j < n; j++) {
                 double v = LU.get(i, j) - LU.get(i, k) * LU.get(k, j);
                 LU.set(i, j, v);
             }
         }
+        */
     }
 
     return std::move(LU);
@@ -227,25 +229,25 @@ Matrix Matrix::factorLU(int *order) const {
 
 }  // namespace tinymesh
 
-tinymesh::Matrix operator+(const tinymesh::Matrix &m1, const tinymesh::Matrix &m2) {
+tinymesh::Matrix operator+(const tinymesh::Matrix & m1, const tinymesh::Matrix & m2) {
     tinymesh::Matrix ret = m1;
     ret += m2;
     return std::move(ret);
 }
 
-tinymesh::Matrix operator*(const tinymesh::Matrix &m, double s) {
+tinymesh::Matrix operator*(const tinymesh::Matrix & m, double s) {
     tinymesh::Matrix ret = m;
     ret *= s;
     return std::move(ret);
 }
 
-tinymesh::Matrix operator*(double s, const tinymesh::Matrix &m) {
+tinymesh::Matrix operator*(double s, const tinymesh::Matrix & m) {
     tinymesh::Matrix ret = m;
     ret *= s;
     return std::move(ret);
 }
 
-tinymesh::Matrix operator*(const tinymesh::Matrix &m1, const tinymesh::Matrix &m2) {
+tinymesh::Matrix operator*(const tinymesh::Matrix & m1, const tinymesh::Matrix & m2) {
     if (m1.cols() != m2.rows()) {
         FatalError("Matrix sizes are invalid: m1.cols (%d) !=  m2.rows (%d)", m1.cols(), m2.rows());
     }

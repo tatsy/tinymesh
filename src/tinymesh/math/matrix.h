@@ -7,15 +7,15 @@
 
 #include <memory>
 
-#include "common.h"
+#include "core/common.h"
 
 namespace tinymesh {
 
-class TINYMESH_EXPORTS Matrix {
+class TINYMESH_API Matrix {
 public:
     Matrix();
     Matrix(int rows, int cols);
-    Matrix(int rows, int cols, double *m);
+    Matrix(int rows, int cols, double *const m);
     Matrix(const Matrix &m);
     Matrix(Matrix &&m) noexcept;
     virtual ~Matrix();
@@ -55,9 +55,9 @@ private:
 
 }  // namespace tinymesh
 
-TINYMESH_EXPORTS tinymesh::Matrix operator+(const tinymesh::Matrix &m1, const tinymesh::Matrix &m2);
-TINYMESH_EXPORTS tinymesh::Matrix operator*(const tinymesh::Matrix &m, double s);
-TINYMESH_EXPORTS tinymesh::Matrix operator*(double s, const tinymesh::Matrix &m);
-TINYMESH_EXPORTS tinymesh::Matrix operator*(const tinymesh::Matrix &m1, const tinymesh::Matrix &m2);
+TINYMESH_API tinymesh::Matrix operator+(const tinymesh::Matrix &m1, const tinymesh::Matrix &m2);
+TINYMESH_API tinymesh::Matrix operator*(const tinymesh::Matrix &m, double s);
+TINYMESH_API tinymesh::Matrix operator*(double s, const tinymesh::Matrix &m);
+TINYMESH_API tinymesh::Matrix operator*(const tinymesh::Matrix &m1, const tinymesh::Matrix &m2);
 
 #endif  // TINYMESH_MATRIX_H

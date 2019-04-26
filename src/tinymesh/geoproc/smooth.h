@@ -5,11 +5,11 @@
 #ifndef TINYMESH_SMOOTH_H
 #define TINYMESH_SMOOTH_H
 
-#include "mesh.h"
+#include "trimesh/mesh.h"
 
 namespace tinymesh {
 
-TINYMESH_EXPORTS void smooth(Mesh &mesh, double strength = 0.5);
+TINYMESH_API void smooth(Mesh &mesh, double strength = 0.5);
 
 }  // namespace tinymesh
 

@@ -7,11 +7,11 @@
 
 #include <memory>
 
-#include "common.h"
+#include "core/common.h"
 
 namespace tinymesh {
 
-class TINYMESH_EXPORTS Halfedge {
+class TINYMESH_API Halfedge {
 public:
     Halfedge();
     Halfedge(const Halfedge &he);

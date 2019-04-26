@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
-project(tinymesh)
+project(TinyMesh)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+include(Macros)
 
 # ----------
 # Options
 # ----------
 option(BUILD_STATIC_LIB "Build static link library" OFF)
-option(BUILD_UI "Build user interface." OFF)
 option(BUILD_EXAMPLES "Build examples." OFF)
+option(BUILD_TESTS "Build unit tests." OFF)
 
 if (NOT MSVC)
     set(CMAKE_CXX_STANDARD 17)
@@ -41,6 +44,8 @@ set(CMAKE_DEBUG_POSTFIX "-debug")
 # ----------
 # OS specific settings
 # ----------
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if (APPLE)
     set(CMAKE_MACOSX_RPATH 1)
 endif()
@@ -49,6 +54,12 @@ endif()
 # Traverse subdirectories
 # ----------
 add_subdirectory(src)
+
 if (BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+if (BUILD_TESTS)
+    find_package(GoogleTest REQUIRED)
+    add_subdirectory(tests)
 endif()

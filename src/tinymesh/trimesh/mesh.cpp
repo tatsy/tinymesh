@@ -7,26 +7,11 @@
 #include <functional>
 #include <unordered_map>
 
-#include "vector.h"
-#include "vertex.h"
-#include "halfedge.h"
-#include "face.h"
+#include "core/vec.h"
+#include "trimesh/vertex.h"
+#include "trimesh/halfedge.h"
+#include "trimesh/face.h"
 #include "tiny_obj_loader.h"
-
-namespace std {
-
-template <>
-struct hash<tinymesh::Vector> {
-    size_t operator()(const tinymesh::Vector &v) const {
-        size_t h = 0;
-        h = std::hash<double>()(v.x) ^ (h << 1);
-        h = std::hash<double>()(v.y) ^ (h << 1);
-        h = std::hash<double>()(v.z) ^ (h << 1);
-        return h;
-    }
-};
-
-}
 
 namespace tinymesh {
 
@@ -49,7 +34,7 @@ void Mesh::load(const std::string &filename) {
     std::string errMsg;
     bool success = tinyobj::LoadObj(&attrib, &shapes, &mats, &warnMsg, &errMsg, filename.c_str());
     if (!errMsg.empty()) {
-        Warning("%s", errMsg.c_str());
+        Warn("%s", errMsg.c_str());
     }
 
     if (!success) {
@@ -63,14 +48,14 @@ void Mesh::load(const std::string &filename) {
     m_indices.clear();
 
     // Traverse triangles
-    std::unordered_map<Vector, uint32_t> uniqueVertices;
+    std::unordered_map<Vec, uint32_t> uniqueVertices;
     for (const auto &shape : shapes) {
         for (const auto &index : shape.mesh.indices) {
-            Vector v;
+            Vec v;
             if (index.vertex_index >= 0) {
-                v = Vector(attrib.vertices[index.vertex_index * 3 + 0],
-                           attrib.vertices[index.vertex_index * 3 + 1],
-                           attrib.vertices[index.vertex_index * 3 + 2]);
+                v = Vec(attrib.vertices[index.vertex_index * 3 + 0],
+                        attrib.vertices[index.vertex_index * 3 + 1],
+                        attrib.vertices[index.vertex_index * 3 + 2]);
             }
 
             if (uniqueVertices.count(v) == 0) {
@@ -189,7 +174,7 @@ bool Mesh::splitHE(Halfedge *he) {
     auto f1 = new Face();
 
     // Prepare new vertex
-    const Vector newPt = 0.5 * (he->src()->pt() + he->dst()->pt());
+    const Vec newPt = 0.5 * (he->src()->pt() + he->dst()->pt());
     auto v_new = new Vertex(newPt);
 
     // Setup connection between new components
@@ -444,7 +429,7 @@ void Mesh::verifyVertex(Vertex* v) const {
         fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)m_verts.size());
     }
 
-    Vector p = v->pt();
+    Vec p = v->pt();
     if (std::isinf(p.x) || std::isnan(p.x) || std::isinf(p.y) || std::isnan(p.y) || std::isinf(p.z) || std::isnan(p.z)) {
         fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p.x, p.y, p.z);
     }    

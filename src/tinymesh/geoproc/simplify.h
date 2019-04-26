@@ -5,11 +5,11 @@
 #ifndef TINYMESH_SIMPLIFY_H
 #define TINYMESH_SIMPLIFY_H
 
-#include "common.h"
+#include "core/common.h"
 
 namespace tinymesh {
 
-TINYMESH_EXPORTS void simplify(Mesh &mesh, double ratio = 0.5, int num_remains = -1);
+TINYMESH_API void simplify(Mesh &mesh, double ratio = 0.5, int num_remains = -1);
 
 }  // namespace tinymesh
 

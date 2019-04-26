@@ -5,11 +5,11 @@
 #ifndef TINYMESH_REMESH_H
 #define TINYMESH_REMESH_H
 
-#include "common.h"
+#include "core/common.h"
 
 namespace tinymesh {
 
-TINYMESH_EXPORTS void simplify(Mesh &mesh, int maxiter = 5);
+TINYMESH_API void remesh(Mesh &mesh, int maxiter = 5);
 
 }  // namespace tinymesh
 

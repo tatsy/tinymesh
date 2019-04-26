@@ -1,15 +1,14 @@
 #define TINYMESH_API_EXPORT
 #include "remesh.h"
 
-#include "mesh.h"
-#include "vector.h"
-#include "vertex.h"
-#include "halfedge.h"
-#include "smooth.h"
+#include "core/vec.h"
+#include "trimesh/mesh.h"
+#include "trimesh/vertex.h"
+#include "trimesh/halfedge.h"
 
 namespace tinymesh {
 
-void simplify(Mesh &mesh, int maxiter) {
+void remesh(Mesh &mesh, int maxiter) {
     printf("*** Original ***\n");
     printf("#vert: %d\n", (int)mesh.num_vertices());
     printf("#face: %d\n", (int)mesh.num_faces());
@@ -90,33 +89,33 @@ void simplify(Mesh &mesh, int maxiter) {
         for (int l = 0; l < 10; l++) {
             int index;
             const int nv = mesh.num_vertices();
-            std::vector<Vector> centroids(nv);
-            std::vector<Vector> normals(nv);
+            std::vector<Vec> centroids(nv);
+            std::vector<Vec> normals(nv);
 
             // Compute centroids and tangent planes
             index = 0;
             for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
                 // Collect surrounding vertices
-                Vector org = it->pt();
-                std::vector<Vector> pts;
+                Vec org = it->pt();
+                std::vector<Vec> pts;
                 for (auto vit = it->v_begin(); vit != it->v_end(); ++vit) {
                     pts.push_back(vit->pt());
                 }
 
                 // Compute centroids, tangents, and binormals
-                Vector cent(0.0);
-                Vector norm(0.0);
+                Vec cent(0.0);
+                Vec norm(0.0);
                 for (int i = 0; i < pts.size(); i++) {
                     const int j = (i + 1) % pts.size();
-                    Vector e1 = pts[i] - org;
-                    Vector e2 = pts[j] - org;
-                    Vector g = (org + pts[i] + pts[j]) / 3.0;
+                    Vec e1 = pts[i] - org;
+                    Vec e2 = pts[j] - org;
+                    Vec g = (org + pts[i] + pts[j]) / 3.0;
 
                     cent += g;
-                    norm += e1.cross(e2);
+                    norm += cross(e1, e2);
                 }
                 cent /= pts.size();
-                norm.normalize();
+                norm = normalize(norm);
 
                 centroids[index] = cent;
                 normals[index] = norm;
@@ -126,9 +125,9 @@ void simplify(Mesh &mesh, int maxiter) {
             // Update vertex positions
             index = 0;
             for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
-                const Vector pt = it->pt();
-                Vector e = centroids[index] - pt;
-                e -= normals[index] * e.dot(normals[index]);
+                const Vec pt = it->pt();
+                Vec e = centroids[index] - pt;
+                e -= normals[index] * dot(e, normals[index]);
                 it->setPt(pt + e);
                 index += 1;
             }

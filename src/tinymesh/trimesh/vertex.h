@@ -7,12 +7,12 @@
 
 #include <memory>
 
-#include "common.h"
-#include "vector.h"
+#include "core/common.h"
+#include "core/vec.h"
 
 namespace tinymesh {
 
-class TINYMESH_EXPORTS Vertex {
+class TINYMESH_API Vertex {
 public:
     // Forward declaration
     class VertexIterator;
@@ -24,7 +24,7 @@ public:
     Vertex();
     Vertex(const Vertex &v);
     Vertex(Vertex &&p) noexcept;
-    explicit Vertex(const Vector &v);
+    explicit Vertex(const Vec &v);
     virtual ~Vertex() = default;
 
     Vertex &operator=(const Vertex &p);
@@ -41,13 +41,13 @@ public:
     FaceIterator f_begin();
     FaceIterator f_end();
 
-    Vector pt() const { return m_pt; }
-    void setPt(const Vector &pt) { m_pt = pt; }
+    Vec pt() const { return m_pt; }
+    void setPt(const Vec &pt) { m_pt = pt; }
 
     int index() const { return m_index; }
 
 private:
-    Vector m_pt;
+    Vec m_pt;
     Halfedge *m_he = nullptr;
     int m_index = -1;
 

@@ -4,13 +4,14 @@
 #include <vector>
 #include <queue>
 #include <set>
+#include <array>
 
-#include "mesh.h"
-#include "face.h"
-#include "halfedge.h"
-#include "vertex.h"
-#include "vector.h"
-#include "matrix.h"
+#include "core/vec.h"
+#include "math/matrix.h"
+#include "trimesh/mesh.h"
+#include "trimesh/face.h"
+#include "trimesh/halfedge.h"
+#include "trimesh/vertex.h"
 
 namespace {
 
@@ -55,7 +56,7 @@ struct UnionFindTree {
 namespace tinymesh {
 
 struct QEMNode {
-    QEMNode(double value, Halfedge *he, const Vector &v)
+    QEMNode(double value, Halfedge *he, const Vec &v)
         : value{ value }
         , he{ he }
         , v{ v } {
@@ -67,10 +68,10 @@ struct QEMNode {
 
     double value;
     Halfedge *he;
-    Vector v;
+    Vec v;
 };
 
-double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Vertex &v2, Vector *v) {
+double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Vertex &v2, Vec *v) {
     Matrix Q = Matrix::identity(4, 4);
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
@@ -81,15 +82,17 @@ double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Ve
     Matrix v_bar;
     const double D = Q.det();
     if (D < 1.0e-8) {
-        Vector m = 0.5 * (v1.pt() + v2.pt());
-        v_bar = Matrix(4, 1, (double[]){m.x, m.y, m.z, 1.0});
+        Vec m = 0.5 * (v1.pt() + v2.pt());
+        double elems[4] = {m.x, m.y, m.z, 1.0};
+        v_bar = Matrix(4, 1, elems);
     } else {
-        v_bar = Q.solve(Matrix(4, 1, (double[]){0.0, 0.0, 0.0, 1.0}));
+        double elems[4] = {0.0, 0.0, 0.0, 1.0};
+        v_bar = Q.solve(Matrix(4, 1, elems));
     }
 
     const double qem = (v_bar.T() * ((m1 + m2) * v_bar)).get(0, 0);
     if (v) {
-        *v = Vector(v_bar.get(0, 0), v_bar.get(1, 0), v_bar.get(2, 0));
+        *v = Vec(v_bar.get(0, 0), v_bar.get(1, 0), v_bar.get(2, 0));
     }
     return qem;
 }
@@ -117,24 +120,27 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
         }
 
         if (vs.size() != 3) {
-            Warning("Non trianglar mesh is detected!");
+            Warn("Non trianglar mesh is detected!");
             return;
         }
 
-        Vector norm = (vs[1]->pt() - vs[0]->pt()).cross(vs[2]->pt() - vs[0]->pt());
-        const double w = norm.length();
+        Vec norm = cross(vs[1]->pt() - vs[0]->pt(), vs[2]->pt() - vs[0]->pt());
+        const double w = length(norm);
         norm /= (w + Eps);
 
         const double nx = norm.x;
         const double ny = norm.y;
         const double nz = norm.z;
-        const double d = -norm.dot(vs[0]->pt());
-        Matrix Q = Matrix(4, 4, (double[]){
+        const double d = -dot(norm, vs[0]->pt());
+
+        double elems[] = {
             nx * nx, nx * ny, nx * nz, nx * d,
             ny * nx, ny * ny, ny * nz, ny * d,
             nz * nx, nz * ny, nz * nz, nz * d,
              d * nx,  d * ny,  d * nz,  d * d,
-        });
+        };
+
+        Matrix Q = Matrix(4, 4, elems);
 
         Qs[vs[0]->index()] += w * Q;
         Qs[vs[1]->index()] += w * Q;
@@ -150,9 +156,9 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
         int i2 = v2->index();
         Matrix &q1 = Qs[i1];
         Matrix &q2 = Qs[i2];
-        Vector v;
+        Vec v;
         const double qem = computeQEM(q1, q2, *v1, *v2, &v);
-        que.push(QEMNode(qem, i1, i2, v));
+        que.push(QEMNode(qem, it.ptr(), v));
     }
 
     int removed = 0;
@@ -163,7 +169,7 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
 
         const int ii = qn.he->src()->index();
         const int jj = qn.he->src()->index();
-        const Vector v_bar = qn.v;
+        const Vec v_bar = qn.v;
 
         Vertex *v_i = mesh.vertex(ii);
         Vertex *v_j = mesh.vertex(jj);
@@ -193,7 +199,7 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
             bool has_i = false;
             bool has_j = false;
             std::vector<Vertex*> vs;
-            std::vector<Vector> ps;
+            std::vector<Vec> ps;
             for (auto it = f->v_begin(); it != f->v_end(); ++it) {
                 vs.push_back(it.ptr());
                 ps.push_back(it->pt());
@@ -210,7 +216,7 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
                 continue;
             }
 
-            const Vector n0 = (ps[2] - ps[0]).cross(ps[1] - ps[0]);
+            const Vec n0 = cross(ps[2] - ps[0], ps[1] - ps[0]);
             bool isFound = false;
             for (int i = 0; i < vs.size(); i++) {
                 if (vs[i] == v_i || vs[i] == v_j) {
@@ -224,9 +230,9 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
                 FatalError("Contractible vertex not found!");
             }
 
-            const Vector n1 = (ps[2] - ps[0]).cross(ps[1] - ps[0]);
+            const Vec n1 = cross(ps[2] - ps[0], ps[1] - ps[0]);
 
-            const double cos = n0.dot(n1) / (n0.length() * n1.length());
+            const double cos = dot(n0, n1) / (length(n0) * length(n1));
             if (cos <= 1.0e-12) {
                 isFlip = true;
             }
@@ -264,22 +270,20 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
         // Collapse halfedge
         mesh.collapseHE(qn.he);
         uftree.merge(ii, jj);
-        assert(ii == uftree.root(jj));
 
-        assert(mesh.vertex(ii) != nullptr);
-        assert(mesh.vertex(jj) == nullptr);
+        Assertion(ii == uftree.root(jj), "Merge operation is not succeeded!");
+        Assertion(mesh.vertex(ii) != nullptr, "Invalid null vertex is found!");
+        Assertion(mesh.vertex(jj) == nullptr, "Invalid non-null vartex is found!");
 
         // Check triangle shapes
+        //bool isUpdate = true;
+        //update_vertices = [ v_i ] #list(chain([ v_i ], v_i.vertices()))
+        //while is_update:
+        //    is_update = False
+        //for he in v_i.halfedges():
+        //if he.face is None or he.opposite.face is None:
     }
 
-//
-//# Check triangle shapes
-//    is_update = True
-//    update_vertices = [ v_i ] #list(chain([ v_i ], v_i.vertices()))
-//    while is_update:
-//        is_update = False
-//    for he in v_i.halfedges():
-//    if he.face is None or he.opposite.face is None:
 //# Boundary halfedge
 //    continue
 //

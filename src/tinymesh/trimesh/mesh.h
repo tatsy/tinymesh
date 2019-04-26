@@ -9,11 +9,11 @@
 #include <vector>
 #include <memory>
 
-#include "common.h"
+#include "core/common.h"
 
 namespace tinymesh {
 
-class TINYMESH_EXPORTS Mesh {
+class TINYMESH_API Mesh {
 public:
     // Forward declaration
     class VertexIterator;
@@ -25,9 +25,12 @@ public:
     Mesh(const std::string &filename);
     void load(const std::string &filename);
     void save(const std::string &filename);
+
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
+
+    Vertex *vertex(int i) { return m_verts[i].get(); }
 
     void verify() const;
 
@@ -60,7 +63,7 @@ private:
     friend class Mesh::VertexIterator;
 };
 
-class TINYMESH_EXPORTS Mesh::VertexIterator {
+class TINYMESH_API Mesh::VertexIterator {
 public:
     explicit VertexIterator(std::vector<std::shared_ptr<Vertex>> &verts, int index = 0);
     bool operator!=(const VertexIterator &it) const;
@@ -77,7 +80,7 @@ private:
     int m_index;
 };
 
-class TINYMESH_EXPORTS Mesh::HalfedgeIterator {
+class TINYMESH_API Mesh::HalfedgeIterator {
 public:
     explicit HalfedgeIterator(std::vector<std::shared_ptr<Halfedge>> &hes, int index = 0);
     bool operator!=(const HalfedgeIterator &it) const;
@@ -94,7 +97,7 @@ private:
     int m_index;
 };
 
-class TINYMESH_EXPORTS Mesh::FaceIterator {
+class TINYMESH_API Mesh::FaceIterator {
 public:
     explicit FaceIterator(std::vector<std::shared_ptr<Face>> &faces, int index = 0);
     bool operator!=(const FaceIterator &it) const;
