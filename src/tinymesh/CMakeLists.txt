@@ -6,6 +6,7 @@ set(BUILD_TARGET ${TINYMESH_LIBRARY})
 include_directories(${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader)
 set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader/tiny_obj_loader.h)
 set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader/tiny_obj_loader.cc)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source)
 set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source/tinyply.h)
 set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source/tinyply.cpp)
 
@@ -25,6 +26,7 @@ else()
 endif()
 
 target_include_directories(${BUILD_TARGET} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+target_link_libraries(${BUILD_TARGET} ${CXX_FS_LIBRARY})
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")

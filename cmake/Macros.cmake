@@ -30,7 +30,7 @@ function(ADD_EXAMPLE EXPNAME)
     add_executable(${EXPNAME} ${SOURCE_FILES} ${SHADER_FILES})
     add_dependencies(${EXPNAME} ${TINYMESH_LIBRARY})
 
-    target_link_libraries(${EXPNAME} ${TINYMESH_LIBRARY})
+    target_link_libraries(${EXPNAME} ${TINYMESH_LIBRARY} ${CXX_FS_LIBRARY})
 
     set_target_properties(${EXPNAME} PROPERTIES FOLDER "Examples")
     set_target_properties(${EXPNAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})

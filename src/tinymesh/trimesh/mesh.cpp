@@ -1,17 +1,22 @@
 #define TINYMESH_API_EXPORT
 #include "mesh.h"
 
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <functional>
 #include <unordered_map>
+#include <experimental/filesystem>
+
+namespace fs = std::experimental::filesystem;
 
 #include "core/vec.h"
 #include "trimesh/vertex.h"
 #include "trimesh/halfedge.h"
 #include "trimesh/face.h"
 #include "tiny_obj_loader.h"
+#include "tinyply.h"
 
 namespace tinymesh {
 
@@ -26,46 +31,18 @@ Mesh::Mesh(const std::string &filename) {
 }
 
 void Mesh::load(const std::string &filename) {
-    // Open
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> mats;
-    std::string warnMsg;
-    std::string errMsg;
-    bool success = tinyobj::LoadObj(&attrib, &shapes, &mats, &warnMsg, &errMsg, filename.c_str());
-    if (!errMsg.empty()) {
-        Warn("%s", errMsg.c_str());
-    }
-
-    if (!success) {
-        FatalError("Failed to load *.obj file: %s", filename.c_str());
+    const std::string ext = fs::path(filename.c_str()).extension();
+    if (ext == ".obj") {
+        loadOBJ(filename);
+    } else if (ext == ".ply") {
+        loadPLY(filename);
+    } else {
+        FatalError("Unsupported file extension: %s", ext.c_str());
     }
 
     // Clear
-    m_verts.clear();
     m_hes.clear();
     m_faces.clear();
-    m_indices.clear();
-
-    // Traverse triangles
-    std::unordered_map<Vec, uint32_t> uniqueVertices;
-    for (const auto &shape : shapes) {
-        for (const auto &index : shape.mesh.indices) {
-            Vec v;
-            if (index.vertex_index >= 0) {
-                v = Vec(attrib.vertices[index.vertex_index * 3 + 0],
-                        attrib.vertices[index.vertex_index * 3 + 1],
-                        attrib.vertices[index.vertex_index * 3 + 2]);
-            }
-
-            if (uniqueVertices.count(v) == 0) {
-                uniqueVertices[v] = static_cast<uint32_t>(m_verts.size());
-                m_verts.push_back(std::make_shared<Vertex>(v));
-            }
-
-            m_indices.push_back(uniqueVertices[v]);
-        }
-    }
 
     // Setup halfedge structure
     std::unordered_map<Vertex*, std::vector<Halfedge*>> perVertexHEs;
@@ -147,6 +124,124 @@ void Mesh::save(const std::string &filename) {
     }
 
     writer.close();
+}
+
+void Mesh::loadOBJ(const std::string &filename) {
+    // Open
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> mats;
+    std::string warnMsg;
+    std::string errMsg;
+    bool success = tinyobj::LoadObj(&attrib, &shapes, &mats, &warnMsg, &errMsg, filename.c_str());
+    if (!errMsg.empty()) {
+        Warn("%s", errMsg.c_str());
+    }
+
+    if (!success) {
+        FatalError("Failed to load *.obj file: %s", filename.c_str());
+    }
+
+    // Traverse triangles
+    m_verts.clear();
+    m_indices.clear();
+    std::unordered_map<Vec, uint32_t> uniqueVertices;
+    for (const auto &shape : shapes) {
+        for (const auto &index : shape.mesh.indices) {
+            Vec v;
+            if (index.vertex_index >= 0) {
+                v = Vec(attrib.vertices[index.vertex_index * 3 + 0],
+                        attrib.vertices[index.vertex_index * 3 + 1],
+                        attrib.vertices[index.vertex_index * 3 + 2]);
+            }
+
+            if (uniqueVertices.count(v) == 0) {
+                uniqueVertices[v] = static_cast<uint32_t>(m_verts.size());
+                m_verts.push_back(std::make_shared<Vertex>(v));
+            }
+
+            m_indices.push_back(uniqueVertices[v]);
+        }
+    }
+}
+
+void Mesh::loadPLY(const std::string &filename) {
+    using tinyply::PlyFile;
+    using tinyply::PlyData;
+
+    try {
+        // Open
+        std::ifstream reader(filename.c_str(), std::ios::binary);
+        if (reader.fail()) {
+            FatalError("Failed to open file: %s", filename.c_str());
+        }
+
+        // Read header
+        PlyFile file;
+        file.parse_header(reader);
+
+        // Request vertex data
+        std::shared_ptr<PlyData> vert_data, norm_data, uv_data, face_data;
+        try {
+            vert_data = file.request_properties_from_element("vertex", { "x", "y", "z" });
+        } catch (std::exception &e) {
+            std::cerr << "tinyply exception: " << e.what() << std::endl;
+        }
+
+        try {
+            norm_data = file.request_properties_from_element("vertex", { "nx", "ny", "nz" });
+        } catch (std::exception &e) {
+            std::cerr << "tinyply exception: " << e.what() << std::endl;
+        }
+
+        try {
+            uv_data = file.request_properties_from_element("vertex", { "u", "v" });
+        } catch (std::exception &e) {
+            std::cerr << "tinyply exception: " << e.what() << std::endl;
+        }
+
+        try {
+            face_data = file.request_properties_from_element("face", { "vertex_indices" }, 3);
+        } catch (std::exception &e) {
+            std::cerr << "tinyply exception: " << e.what() << std::endl;
+        }
+
+        // Read vertex data
+        file.read(reader);
+
+        // Copy vertex data
+        const size_t numVerts = vert_data->count;
+        std::vector<float> raw_vertices, raw_normals, raw_uv;
+        if (vert_data) {
+            raw_vertices.resize(numVerts * 3);
+            std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
+        }
+
+        const size_t numFaces = face_data->count;
+        std::vector<uint32_t> raw_indices(numFaces * 3);
+        std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
+
+        std::unordered_map<Vec, uint32_t> uniqueVertices;
+        m_verts.clear();
+        for (uint32_t i : raw_indices) {
+            Vec pos;
+
+            if (vert_data) {
+                pos = Vec(raw_vertices[i * 3 + 0],
+                          raw_vertices[i * 3 + 1],
+                          raw_vertices[i * 3 + 2]);
+            }
+
+            if (uniqueVertices.count(pos) == 0) {
+                uniqueVertices[pos] = static_cast<uint32_t>(m_verts.size());
+                m_verts.push_back(std::make_shared<Vertex>(pos));
+            }
+
+            m_indices.push_back(uniqueVertices[pos]);
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "Caught tinyply exception: " << e.what() << std::endl;
+    }
 }
 
 bool Mesh::splitHE(Halfedge *he) {

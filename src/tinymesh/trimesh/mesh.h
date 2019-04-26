@@ -46,6 +46,9 @@ public:
     size_t num_faces() { return m_faces.size(); }
 
 private:
+    void loadOBJ(const std::string &filename);
+    void loadPLY(const std::string &filename);
+
     void addVertex(Vertex *v);
     void addHalfedge(Halfedge *he);
     void addFace(Face *f);
