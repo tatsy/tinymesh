@@ -1,0 +1,23 @@
+language: cpp
+sudo: required
+compiler:
+  - gcc
+
+install:
+  - mkdir build && cd build
+  - cmake -D BUILD_EXAMPLE=ON -D BUILD_TESTS=ON .. 
+  - cmake --build . --parallel 4
+
+script:
+  - ctest . --output-on-failure
+
+branches:
+  only:
+    - master
+    - dev
+
+notifications:
+  email:
+    recipients: tatsy.mail@gmail.com
+    on_success: change
+    on_failure: always
