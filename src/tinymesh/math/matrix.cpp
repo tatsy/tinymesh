@@ -1,6 +1,7 @@
 #define TINYMESH_API_EXPORT
 #include "matrix.h"
 
+#include <cstring>
 #include <algorithm>
 
 namespace tinymesh {

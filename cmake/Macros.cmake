@@ -50,13 +50,14 @@ function(add_test_folder FOLDER_NAME)
          "${FOLDER_NAME}/*.cpp" "${FOLDER_NAME}/*.hpp"
          "${FOLDER_NAME}/*.c" "${FOLDER_NAME}/*.h")
     include_directories(${TINYMESH_INCLUDE_DIR} ${GTEST_INCLUDE_DIRS})
+    add_definitions(-DGTEST_LANG_CXX11)
     add_executable(${FOLDER_NAME} ${SOURCE_FILES})
     target_link_libraries(${FOLDER_NAME} ${TINYMESH_LIBRARY} ${GTEST_LIBRARIES})
+    target_include_directories(${FOLDER_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
     set_target_properties(${FOLDER_NAME} PROPERTIES FOLDER "Tests")
     set_target_properties(${FOLDER_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     source_group("Source Files" FILES ${SOURCE_FILES})
 
-    add_test(NAME "testing" COMMAND ${FOLDER_NAME})
-    add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose --gtest_shuffle DEPENDS ${FOLDER_NAME})
+    add_test(NAME ${FOLDER_NAME} COMMAND ${FOLDER_NAME})
 endfunction(add_test_folder)

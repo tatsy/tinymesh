@@ -1,0 +1,10 @@
+#ifdef _MSC_VER
+#pragma once
+#endif
+
+#ifndef TEST_CONFIG_H
+#define TEST_CONFIG_H
+
+static const char *DATA_DIRECTORY = "@CMAKE_SOURCE_DIR@/data/";
+
+#endif  // TEST_CONFIG_H

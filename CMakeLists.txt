@@ -61,5 +61,6 @@ endif()
 
 if (BUILD_TESTS)
     find_package(GoogleTest REQUIRED)
+    enable_testing()
     add_subdirectory(tests)
 endif()

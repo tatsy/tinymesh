@@ -24,7 +24,7 @@ else()
     add_library(${BUILD_TARGET} SHARED ${SOURCE_FILES})
 endif()
 
-target_include_directories(${BUILD_TARGET} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(${BUILD_TARGET} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")

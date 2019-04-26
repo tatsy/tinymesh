@@ -1,9 +1,12 @@
 .idea/*
 cmake-build-debug/*
 cmake-build-release/*
+Testing/*
 
 data/*
 build/*
 
 *.TMP
 .DS_Store
+
+test_config.h
