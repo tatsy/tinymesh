@@ -437,6 +437,14 @@ bool Mesh::flipHE(Halfedge* he) {
         return false;
     }
 
+    // Cannot flip halfedge if ends vertices of flipped
+    // halfedge are already the ends of other edges.
+    for (auto it = u1->v_begin(); it != u1->v_end(); ++it) {
+        if (it.ptr() == u3) {
+            return false;
+        }
+    }
+
     // Get surrounding vertices, halfedges and faces
     Halfedge *he0 = he->m_next;
     Halfedge *he1 = he->m_next->m_next;
@@ -481,53 +489,67 @@ bool Mesh::flipHE(Halfedge* he) {
     return true;
 }
 
-void Mesh::verify() const {
-    //for (int i = 0; i < m_verts.size(); i++) {
-    //    Vertex *v = m_verts[i].get();
-    //    if (v->index() != i) {
-    //        fprintf(stderr, "Vertex index does not match array index: v[%d].index = %d\n", i, v->index());
-    //    }
-    //    verifyVertex(v);
-    //}
+bool Mesh::verify() const {
+    bool success = true;
+    for (int i = 0; i < m_verts.size(); i++) {
+        Vertex *v = m_verts[i].get();
+        if (v->index() != i) {
+            fprintf(stderr, "Vertex index does not match array index: v[%d].index = %d\n", i, v->index());
+            success = false;
+        }
+        success &= verifyVertex(v);
+    }
 
-    //for (int i = 0; i < m_hes.size(); i++) {
-    //    auto he = m_hes[i];
-    //    if (he->index() != i) {
-    //        fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
-    //    }
+    for (int i = 0; i < m_hes.size(); i++) {
+        auto he = m_hes[i];
+        if (he->index() != i) {
+            fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
+            success = false;
+        }
 
-    //    verifyVertex(he->src());
-    //    verifyVertex(he->dst());
-    //}
+        if (!he->isBorder() && he.get() != he->rev()->rev()) {
+            fprintf(stderr, "Halfedge opposition conflict: %p != %p\n", he.get(), he->rev()->rev());
+            success = false;
+        }
 
-    //for (int i = 0; i < m_faces.size(); i++) {
-    //    auto f = m_faces[i];
-    //    if (f->m_index != i) {
-    //        printf("v: %d %d\n", f->m_index, i);
-    //    }
+        success &= verifyVertex(he->src());
+        success &= verifyVertex(he->dst());
+    }
 
-    //    if (f->m_he->m_index >= m_hes.size()) {
-    //        printf("v: %d %d\n", f->m_he->m_index, m_hes.size());
-    //    }
+//    for (int i = 0; i < m_faces.size(); i++) {
+//        auto f = m_faces[i];
+//        if (f->m_index != i) {
+//            printf("v: %d %d\n", f->m_index, i);
+//        }
+//
+//        if (f->m_he->m_index >= m_hes.size()) {
+//            printf("v: %d %d\n", f->m_he->m_index, m_hes.size());
+//        }
+//
+//        const int i0 = f->m_he->src()->index();
+//        const int i1 = f->m_he->next()->src()->index();
+//        const int i2 = f->m_he->prev()->src()->index();
+//        if (i0 >= m_verts.size() || i1 >= m_verts.size() || i2 >= m_verts.size()) {
+//            printf("%d %d %d, %d\n", i0, i1, i2, m_verts.size());
+//        }
+//    }
 
-    //    const int i0 = f->m_he->src()->index();
-    //    const int i1 = f->m_he->next()->src()->index();
-    //    const int i2 = f->m_he->prev()->src()->index();
-    //    if (i0 >= m_verts.size() || i1 >= m_verts.size() || i2 >= m_verts.size()) {
-    //        printf("%d %d %d, %d\n", i0, i1, i2, m_verts.size());
-    //    }
-    //}
+    return success;
 }
 
-void Mesh::verifyVertex(Vertex* v) const {
+bool Mesh::verifyVertex(Vertex* v) const {
+    bool success = true;
     if (v->index() >= m_verts.size()) {
         fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)m_verts.size());
+        success = false;
     }
 
     Vec p = v->pt();
     if (std::isinf(p.x) || std::isnan(p.x) || std::isinf(p.y) || std::isnan(p.y) || std::isinf(p.z) || std::isnan(p.z)) {
         fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p.x, p.y, p.z);
-    }    
+        success = false;
+    }
+    return success;
 }
 
 Mesh::VertexIterator Mesh::v_begin() {

@@ -37,17 +37,23 @@ TEST_F(MeshBasicTest, MeshInvaidLoad) {
 TEST_P(MeshTest, MeshLoad) {
     Mesh mesh;
     mesh.load(filename);
+    ASSERT_TRUE(mesh.verify());
 
     ASSERT_GT(mesh.num_vertices(), 0);
     ASSERT_GT(mesh.num_faces(), 0);
     ASSERT_GT(mesh.num_halfedges(), 0);
+
+    const int nVerts = mesh.num_vertices();
+    for (int i = 0; i < nVerts; i++) {
+        ASSERT_GT(mesh.vertex(i)->degree(), 0);
+    }
 }
 
 std::vector<std::string> filenames = {
     "box.obj",
     "sphere.obj",
     "torus.obj",
-    "bunny.ply"
+    "bunny.ply",
 };
 
 INSTANTIATE_TEST_CASE_P(, MeshTest, ::testing::ValuesIn(filenames));

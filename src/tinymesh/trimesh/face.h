@@ -29,7 +29,7 @@ public:
     VertexIterator v_end();
 
 private:
-    Halfedge *m_he;
+    Halfedge *m_he = nullptr;
     int m_index;
 
     friend class Mesh;

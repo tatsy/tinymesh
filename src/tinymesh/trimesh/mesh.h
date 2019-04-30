@@ -32,7 +32,7 @@ public:
 
     Vertex *vertex(int i) { return m_verts[i].get(); }
 
-    void verify() const;
+    bool verify() const;
 
     VertexIterator v_begin();
     VertexIterator v_end();
@@ -56,7 +56,7 @@ private:
     void removeHalfedge(Halfedge *he);
     void removeFace(Face *f);
 
-    void verifyVertex(Vertex *v) const;
+    bool verifyVertex(Vertex *v) const;
 
     std::vector<std::shared_ptr<Vertex>> m_verts;
     std::vector<std::shared_ptr<Halfedge>> m_hes;

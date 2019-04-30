@@ -19,6 +19,7 @@ public:
     virtual ~Halfedge() = default;
 
     double length() const;
+    bool isBorder() { return m_rev == nullptr; }
 
     Halfedge &operator=(const Halfedge &he) = default;
     Halfedge &operator=(Halfedge &&he) noexcept = default;
@@ -32,10 +33,10 @@ public:
     int index() const { return m_index; }
 
 private:
-    Vertex *m_src;
-    Halfedge *m_next;
-    Halfedge *m_rev;
-    Face *m_face;
+    Vertex *m_src = nullptr;
+    Halfedge *m_next = nullptr;
+    Halfedge *m_rev = nullptr;
+    Face *m_face = nullptr;
     int m_index;
 
     friend class Mesh;
