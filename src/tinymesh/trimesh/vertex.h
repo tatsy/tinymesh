@@ -41,15 +41,15 @@ public:
     FaceIterator f_begin();
     FaceIterator f_end();
 
-    Vec pt() const { return m_pt; }
-    void setPt(const Vec &pt) { m_pt = pt; }
+    Vec pos() const { return pos_; }
+    void setPos(const Vec &pos) { pos_ = pos; }
 
-    int index() const { return m_index; }
+    int index() const { return index_; }
 
 private:
-    Vec m_pt;
-    Halfedge *m_he = nullptr;
-    int m_index = -1;
+    Vec pos_;
+    Halfedge *halfedge_ = nullptr;
+    int index_ = -1;
 
     friend class Mesh;
 };
@@ -69,7 +69,7 @@ public:
     VertexIterator operator++(int);
 
 private:
-    Halfedge *m_he, *m_init;
+    Halfedge *halfedge_, *iter_;
 };
 
 // ----------
@@ -87,7 +87,7 @@ public:
     InHalfedgeIterator operator++(int);
 
 private:
-    Halfedge *m_he, *m_init;
+    Halfedge *halfedge_, *iter_;
 };
 
 // ----------
@@ -105,7 +105,7 @@ public:
     OutHalfedgeIterator operator++(int);
 
 private:
-    Halfedge *m_he, *m_init;
+    Halfedge *halfedge_, *iter_;
 };
 
 // ----------
@@ -123,7 +123,7 @@ public:
     FaceIterator operator++(int);
 
 private:
-    Halfedge *m_he, *m_init;
+    Halfedge *halfedge_, *iter_;
 };
 
 }  // namespace tinymesh

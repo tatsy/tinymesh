@@ -53,7 +53,7 @@ std::vector<std::string> filenames = {
     "box.obj",
     "sphere.obj",
     "torus.obj",
-    "bunny.ply",
+    "plane.obj",
 };
 
 INSTANTIATE_TEST_CASE_P(, MeshTest, ::testing::ValuesIn(filenames));

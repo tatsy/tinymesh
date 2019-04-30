@@ -30,7 +30,7 @@ public:
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
 
-    Vertex *vertex(int i) { return m_verts[i].get(); }
+    Vertex *vertex(int i) { return vertices_[i].get(); }
 
     bool verify() const;
 
@@ -41,9 +41,9 @@ public:
     FaceIterator f_begin();
     FaceIterator f_end();
 
-    size_t num_vertices() { return m_verts.size(); }
-    size_t num_halfedges() { return m_hes.size(); }
-    size_t num_faces() { return m_faces.size(); }
+    size_t num_vertices() { return vertices_.size(); }
+    size_t num_halfedges() { return halfedges_.size(); }
+    size_t num_faces() { return faces_.size(); }
 
 private:
     void loadOBJ(const std::string &filename);
@@ -58,10 +58,10 @@ private:
 
     bool verifyVertex(Vertex *v) const;
 
-    std::vector<std::shared_ptr<Vertex>> m_verts;
-    std::vector<std::shared_ptr<Halfedge>> m_hes;
-    std::vector<std::shared_ptr<Face>> m_faces;
-    std::vector<uint32_t> m_indices;
+    std::vector<std::shared_ptr<Vertex>> vertices_;
+    std::vector<std::shared_ptr<Halfedge>> halfedges_;
+    std::vector<std::shared_ptr<Face>> faces_;
+    std::vector<uint32_t> indices_;
 
     friend class Mesh::VertexIterator;
 };
@@ -79,8 +79,8 @@ public:
     VertexIterator operator--(int);
 
 private:
-    std::vector<std::shared_ptr<Vertex>> &m_verts;
-    int m_index;
+    std::vector<std::shared_ptr<Vertex>> &vertices_;
+    int index_;
 };
 
 class TINYMESH_API Mesh::HalfedgeIterator {
@@ -96,8 +96,8 @@ public:
     HalfedgeIterator operator--(int);
 
 private:
-    std::vector<std::shared_ptr<Halfedge>> &m_hes;
-    int m_index;
+    std::vector<std::shared_ptr<Halfedge>> &halfedges_;
+    int index_;
 };
 
 class TINYMESH_API Mesh::FaceIterator {
@@ -113,8 +113,8 @@ public:
     FaceIterator operator--(int);
 
 private:
-    std::vector<std::shared_ptr<Face>> &m_faces;
-    int m_index;
+    std::vector<std::shared_ptr<Face>> &faces_;
+    int index_;
 };
 
 }  // namespace tinymesh

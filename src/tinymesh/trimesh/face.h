@@ -28,9 +28,12 @@ public:
     VertexIterator v_begin();
     VertexIterator v_end();
 
+    bool isBoundary() const { return isBoundary_; }
+
 private:
-    Halfedge *m_he = nullptr;
-    int m_index;
+    Halfedge *halfedge_ = nullptr;
+    int index_;
+    bool isBoundary_ = false;
 
     friend class Mesh;
 };
@@ -46,7 +49,7 @@ public:
     VertexIterator operator++(int);
 
 private:
-    Halfedge *m_he, *m_init;
+    Halfedge *halfedge_, *iter_;
 };
 
 }  // namespace tinymesh

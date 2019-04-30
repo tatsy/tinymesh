@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <set>
+#include <map>
 #include <functional>
 #include <unordered_map>
 #include <experimental/filesystem>
@@ -17,6 +18,8 @@ namespace fs = std::experimental::filesystem;
 #include "trimesh/face.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
+
+using IndexPair = std::pair<uint32_t, uint32_t>;
 
 namespace tinymesh {
 
@@ -31,6 +34,12 @@ Mesh::Mesh(const std::string &filename) {
 }
 
 void Mesh::load(const std::string &filename) {
+    // Clear existing elements
+    halfedges_.clear();
+    vertices_.clear();
+    faces_.clear();
+
+    // Load new mesh
     const std::string ext = fs::path(filename.c_str()).extension();
     if (ext == ".obj") {
         loadOBJ(filename);
@@ -40,67 +49,152 @@ void Mesh::load(const std::string &filename) {
         FatalError("Unsupported file extension: %s", ext.c_str());
     }
 
-    // Clear
-    m_hes.clear();
-    m_faces.clear();
-
-    // Setup halfedge structure
-    std::unordered_map<Vertex*, std::vector<Halfedge*>> perVertexHEs;
-    for (int i = 0; i < m_indices.size(); i += 3) {
-        auto he0 = std::make_shared<Halfedge>();
-        auto he1 = std::make_shared<Halfedge>();
-        auto he2 = std::make_shared<Halfedge>();
-
-        he0->m_src = m_verts[m_indices[i + 0]].get();
-        he1->m_src = m_verts[m_indices[i + 1]].get();
-        he2->m_src = m_verts[m_indices[i + 2]].get();
-
-        he0->m_next = he1.get();
-        he1->m_next = he2.get();
-        he2->m_next = he0.get();
-
-        m_verts[m_indices[i + 0]]->m_he = he0.get();
-        m_verts[m_indices[i + 1]]->m_he = he1.get();
-        m_verts[m_indices[i + 2]]->m_he = he2.get();
-
-        auto face = std::make_shared<Face>();
-        face->m_he = he0.get();
-
-        he0->m_face = face.get();
-        he1->m_face = face.get();
-        he2->m_face = face.get();
-
-        perVertexHEs[m_verts[m_indices[i + 0]].get()].push_back(he0.get());
-        perVertexHEs[m_verts[m_indices[i + 1]].get()].push_back(he1.get());
-        perVertexHEs[m_verts[m_indices[i + 2]].get()].push_back(he2.get());
-
-        m_hes.push_back(he0);
-        m_hes.push_back(he1);
-        m_hes.push_back(he2);
-        m_faces.push_back(face);
+    // Put vertex indices
+    for (int i = 0; i < vertices_.size(); i++) {
+        vertices_[i]->index_ = i;
     }
 
-    // Set opposite half edges
-    for (const auto &he0 : m_hes) {
-        for (Halfedge *he1 : perVertexHEs[he0->dst()]) {
-            if (he0->src() == he1->dst() && he0->dst() == he1->src()) {
-                he0->m_rev = he1;
+    // Check if all triangles consist of three distinct vertices
+    for (int i = 0; i < indices_.size(); i += 3) {
+        if (indices_[i] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] || indices_[i + 1] == indices_[i + 2]) {
+            FatalError("Each triangle must have three distinct vertices!");
+        }
+    }
+
+    // Setup halfedge structure
+    static const int degree = 3;
+    std::map<IndexPair, Halfedge*> pairToHalfedge;
+    std::map<uint32_t, uint32_t> vertexDegree;
+    for (int i = 0; i < indices_.size(); i += degree) {
+        // Traverse face vertices
+        auto face = std::make_shared<Face>();
+        std::vector<Halfedge*> faceHalfedges;
+        for (int j = 0; j < degree; j++) {
+            const uint32_t a = indices_[i + j];
+            if (vertexDegree.find(a) == vertexDegree.end()) {
+                vertexDegree[a] = 1;
+            } else {
+                vertexDegree[a] += 1;
+            }
+
+            const uint32_t b = indices_[i + (j + 1) % degree];
+            IndexPair ab(a, b);
+            auto he = std::make_shared<Halfedge>();
+
+            if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
+                FatalError("Duplicated halfedges are found!");
+            }
+
+            halfedges_.push_back(he);
+            pairToHalfedge[ab] = he.get();
+
+            vertices_[a]->halfedge_ = he.get();
+            he->src_ = vertices_[a].get();
+            he->face_ = face.get();
+            face->halfedge_ = he.get();
+
+            faceHalfedges.push_back(he.get());
+
+            // Set opposite halfedge if exists
+            IndexPair ba(b, a);
+            auto iba = pairToHalfedge.find(ba);
+            if (iba != pairToHalfedge.end()) {
+                Halfedge *rev = iba->second;
+
+                he->rev_ = rev;
+                rev->rev_ = he.get();
+            } else {
+                he->rev_ = nullptr;
+            }
+        }
+        faces_.push_back(face);
+
+        // Set next halfedges
+        for (int j = 0; j < degree; j++) {
+            const int k = (j + 1) % degree;
+            faceHalfedges[j]->next_ = faceHalfedges[k];
+        }
+    }
+
+    // For convenience, advance halfedge of each boundary vertex to one that is on the boundary
+    for (auto v : vertices_) {
+        Halfedge *he = v->halfedge_;
+        do {
+            if (he->rev_ == nullptr) {
+                v->halfedge_ = he;
                 break;
+            }
+
+            he = he->rev_->next_;
+        } while (he != v->halfedge_);
+    }
+
+    // Construct new faces (possibly non-triangle) for each boundary components
+    for (auto he : halfedges_) {
+        if (he->rev_ == nullptr) {
+            auto face = std::make_shared<Face>();
+            faces_.push_back(face);
+            face->isBoundary_ = true;
+
+            std::vector<Halfedge*> boundaryHalfedges;
+            Halfedge *it = he.get();
+            do {
+                auto rev = std::make_shared<Halfedge>();
+                halfedges_.push_back(rev);
+                boundaryHalfedges.push_back(rev.get());
+
+                it->rev_ = rev.get();
+                rev->rev_ = it;
+                rev->face_ = face.get();
+                rev->src_ = it->next_->src_;
+
+                // Advance it to the next halfedge along the current boundary loop
+                it = it->next_;
+                while (it != he.get() && it->rev_ != nullptr) {
+                    it = it->rev_->next_;
+                }
+            } while (it != he.get());
+
+            face->halfedge_ = boundaryHalfedges.front();
+
+            const int degree = boundaryHalfedges.size();
+            printf("deg = %d\n", degree);
+            for (int j = 0; j < degree; j++) {
+                const int k = (j - 1 + degree) % degree;
+                boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
             }
         }
     }
 
-    // Put indices
-    for (int i = 0; i < m_verts.size(); i++) {
-        m_verts[i]->m_index = i;
+    // Check if the mesh is non-manifold
+    for (auto v : vertices_) {
+        if (v->halfedge_ == nullptr) {
+            FatalError("Some vertices are not referenced by any polygon!");
+        }
+
+        uint32_t count = 0;
+        Halfedge *he = v->halfedge_;
+        do {
+            if (!he->face()->isBoundary()) {
+                count += 1;
+            }
+
+            he = he->rev()->next();
+        } while (he != v->halfedge_);
+
+        if (count != vertexDegree[v->index()]) {
+            FatalError("At least one of the vertices is non-manifold!");
+        }
     }
 
-    for (int i = 0; i < m_hes.size(); i++) {
-        m_hes[i]->m_index = i;
+    // Put halfedge indices
+    for (int i = 0; i < halfedges_.size(); i++) {
+        halfedges_[i]->index_ = i;
     }
 
-    for (int i = 0; i < m_faces.size(); i++) {
-        m_faces[i]->m_index = i;
+    // Put face indices
+    for (int i = 0; i < faces_.size(); i++) {
+        faces_[i]->index_ = i;
     }
 }
 
@@ -110,15 +204,19 @@ void Mesh::save(const std::string &filename) {
         FatalError("Failed to open file: %s", filename.c_str());
     }
 
-    for (const auto &v : m_verts) {
-        writer << "v " << v->pt().x << " " << v->pt().y << " " << v->pt().z << std::endl;
+    for (const auto &v : vertices_) {
+        writer << "v " << v->pos().x << " " << v->pos().y << " " << v->pos().z << std::endl;
     }
 
-    for (const auto &f : m_faces) {
-        const int i0 = f->m_he->src()->index();
-        const int i1 = f->m_he->next()->src()->index();
-        const int i2 = f->m_he->prev()->src()->index();
-        if (i0 < m_verts.size() && i1 <= m_verts.size() && i2 <= m_verts.size()) {
+    for (const auto &f : faces_) {
+        if (f->isBoundary()) {
+            continue;
+        }
+
+        const int i0 = f->halfedge_->src()->index();
+        const int i1 = f->halfedge_->next()->src()->index();
+        const int i2 = f->halfedge_->prev()->src()->index();
+        if (i0 < vertices_.size() && i1 <= vertices_.size() && i2 <= vertices_.size()) {
             writer << "f " << (i0 + 1) << " " << (i1 + 1) << " " << (i2 + 1) << std::endl;
         }
     }
@@ -143,8 +241,8 @@ void Mesh::loadOBJ(const std::string &filename) {
     }
 
     // Traverse triangles
-    m_verts.clear();
-    m_indices.clear();
+    vertices_.clear();
+    indices_.clear();
     std::unordered_map<Vec, uint32_t> uniqueVertices;
     for (const auto &shape : shapes) {
         for (const auto &index : shape.mesh.indices) {
@@ -156,11 +254,11 @@ void Mesh::loadOBJ(const std::string &filename) {
             }
 
             if (uniqueVertices.count(v) == 0) {
-                uniqueVertices[v] = static_cast<uint32_t>(m_verts.size());
-                m_verts.push_back(std::make_shared<Vertex>(v));
+                uniqueVertices[v] = static_cast<uint32_t>(vertices_.size());
+                vertices_.push_back(std::make_shared<Vertex>(v));
             }
 
-            m_indices.push_back(uniqueVertices[v]);
+            indices_.push_back(uniqueVertices[v]);
         }
     }
 }
@@ -222,7 +320,7 @@ void Mesh::loadPLY(const std::string &filename) {
         std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
 
         std::unordered_map<Vec, uint32_t> uniqueVertices;
-        m_verts.clear();
+        vertices_.clear();
         for (uint32_t i : raw_indices) {
             Vec pos;
 
@@ -233,11 +331,11 @@ void Mesh::loadPLY(const std::string &filename) {
             }
 
             if (uniqueVertices.count(pos) == 0) {
-                uniqueVertices[pos] = static_cast<uint32_t>(m_verts.size());
-                m_verts.push_back(std::make_shared<Vertex>(pos));
+                uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
+                vertices_.push_back(std::make_shared<Vertex>(pos));
             }
 
-            m_indices.push_back(uniqueVertices[pos]);
+            indices_.push_back(uniqueVertices[pos]);
         }
     } catch (const std::exception &e) {
         std::cerr << "Caught tinyply exception: " << e.what() << std::endl;
@@ -269,26 +367,26 @@ bool Mesh::splitHE(Halfedge *he) {
     auto f1 = new Face();
 
     // Prepare new vertex
-    const Vec newPt = 0.5 * (he->src()->pt() + he->dst()->pt());
-    auto v_new = new Vertex(newPt);
+    const Vec newPos = 0.5 * (he->src()->pos() + he->dst()->pos());
+    auto v_new = new Vertex(newPos);
 
     // Setup connection between new components
-    he_00->m_next = he_01;
-    he_01->m_next = he_02;
-    he_02->m_next = he_00;
-    he_10->m_next = he_11;
-    he_11->m_next = he_12;
-    he_12->m_next = he_10;
+    he_01->next_ = he_02;
+    he_02->next_ = he_00;
+    he_00->next_ = he_01;
+    he_10->next_ = he_11;
+    he_11->next_ = he_12;
+    he_12->next_ = he_10;
 
-    he_00->m_face = f0;
-    he_01->m_face = f0;
-    he_02->m_face = f0;
-    f0->m_he = he_00;
+    he_00->face_ = f0;
+    he_01->face_ = f0;
+    he_02->face_ = f0;
+    f0->halfedge_ = he_00;
 
-    he_10->m_face = f1;
-    he_11->m_face = f1;
-    he_12->m_face = f1;
-    f1->m_he = he_10;
+    he_10->face_ = f1;
+    he_11->face_ = f1;
+    he_12->face_ = f1;
+    f1->halfedge_ = he_10;
 
     // Update opposite halfedges
     Halfedge *whe0 = he->prev()->rev()->prev();
@@ -296,35 +394,35 @@ bool Mesh::splitHE(Halfedge *he) {
     Halfedge *whe1 = rev->next()->rev()->next();
     Halfedge *wre1 = whe1->rev();
 
-    whe0->m_rev = he_01;
-    wre0->m_rev = he_02;
-    whe1->m_rev = he_12;
-    wre1->m_rev = he_11;
+    whe0->rev_ = he_01;
+    wre0->rev_ = he_02;
+    whe1->rev_ = he_12;
+    wre1->rev_ = he_11;
 
-    he_01->m_rev = whe0;
-    he_02->m_rev = wre0;
-    he_12->m_rev = whe1;
-    he_11->m_rev = wre1;
+    he_01->rev_ = whe0;
+    he_02->rev_ = wre0;
+    he_12->rev_ = whe1;
+    he_11->rev_ = wre1;
 
-    he_00->m_rev = he_10;
-    he_10->m_rev = he_00;
+    he_00->rev_ = he_10;
+    he_10->rev_ = he_00;
 
     // Update halfedge origins
-    he_00->m_src = v0;
-    he_01->m_src = v_new;
-    he_02->m_src = whe0->m_src;
-    he_10->m_src = v_new;
-    he_11->m_src = v0;
-    he_12->m_src = wre1->m_src;
+    he_00->src_ = v0;
+    he_01->src_ = v_new;
+    he_02->src_ = whe0->src_;
+    he_10->src_ = v_new;
+    he_11->src_ = v0;
+    he_12->src_ = wre1->src_;
 
-    he->m_src = v_new;
-    he->prev()->rev()->m_src = v_new;
-    rev->next()->m_src = v_new;
-    whe1->m_src = v_new;
+    he->src_ = v_new;
+    he->prev()->rev()->src_ = v_new;
+    rev->next()->src_ = v_new;
+    whe1->src_ = v_new;
 
     // Update halfedges for vertices
-    v0->m_he = he_00;
-    v_new->m_he = he_10;
+    v0->halfedge_ = he_00;
+    v_new->halfedge_ = he_10;
 
     // Add new components to the list
     addFace(f0);
@@ -341,7 +439,7 @@ bool Mesh::splitHE(Halfedge *he) {
 }
 
 bool Mesh::collapseHE(Halfedge* he) {
-    Halfedge *rev = he->m_rev;
+    Halfedge *rev = he->rev_;
     const int d0 = he->src()->degree();
     const int d1 = rev->src()->degree();
     // Merge vertex to the one with smaller degree
@@ -349,6 +447,12 @@ bool Mesh::collapseHE(Halfedge* he) {
         std::swap(he, rev);
     }
 
+    // Skip halfedge at the boundary
+    if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
+        return false;
+    }
+
+    // Check degrees of end points
     Vertex *v0 = he->src();
     Vertex *v1 = he->prev()->src();
     Vertex *v2 = rev->src();
@@ -375,37 +479,37 @@ bool Mesh::collapseHE(Halfedge* he) {
     }
 
     // Update halfedge of origin
-    he->m_src->m_he = he->prev()->rev();
+    he->src()->halfedge_ = he->prev()->rev();
 
     // Update origins of all outward halfedges
-    Vertex *v_remove = rev->m_src;
-    Vertex *v_remain = he->m_src;
-    for (auto it = he->m_src->ohe_begin(); it != he->m_src->ohe_end(); ++it) {
-        it->m_src = v_remain;
+    Vertex *v_remove = rev->src_;
+    Vertex *v_remain = he->src_;
+    for (auto it = he->src_->ohe_begin(); it != he->src_->ohe_end(); ++it) {
+        it->src_ = v_remain;
     }
 
-    for (auto it = rev->m_src->ohe_begin(); it != rev->m_src->ohe_end(); ++it) {
-        it->m_src = v_remain;
+    for (auto it = rev->src_->ohe_begin(); it != rev->src_->ohe_end(); ++it) {
+        it->src_ = v_remain;
     }
 
     // Update opposite halfedges
-    Halfedge *he0 = he->m_next->m_rev;
-    Halfedge *he1 = he->m_next->m_next->m_rev;
-    he0->m_rev = he1;
-    he1->m_rev = he0;
+    Halfedge *he0 = he->next_->rev_;
+    Halfedge *he1 = he->next_->next_->rev_;
+    he0->rev_ = he1;
+    he1->rev_ = he0;
 
-    Halfedge *he2 = rev->m_next->m_rev;
-    Halfedge *he3 = rev->m_next->m_next->m_rev;
-    he2->m_rev = he3;
-    he3->m_rev = he2;
+    Halfedge *he2 = rev->next_->rev_;
+    Halfedge *he3 = rev->next_->next_->rev_;
+    he2->rev_ = he3;
+    he3->rev_ = he2;
 
     // Update halfedge for wing-vertices
-    he->prev()->src()->m_he = he->m_next->m_rev;
-    rev->prev()->src()->m_he = rev->m_next->m_rev;
+    he->prev()->src()->halfedge_ = he->next_->rev_;
+    rev->prev()->src()->halfedge_ = rev->next_->rev_;
 
     // Remove faces
-    Face *f0 = he->m_face;
-    Face *f1 = rev->m_face;
+    Face *f0 = he->face_;
+    Face *f1 = rev->face_;
     removeFace(f0);
     removeFace(f1);
 
@@ -413,18 +517,18 @@ bool Mesh::collapseHE(Halfedge* he) {
     removeVertex(v_remove);
 
     // Remove halfedges
-    removeHalfedge(he->m_next->m_next);
-    removeHalfedge(he->m_next);
+    removeHalfedge(he->next_->next_);
+    removeHalfedge(he->next_);
     removeHalfedge(he);
-    removeHalfedge(rev->m_next->m_next);
-    removeHalfedge(rev->m_next);
+    removeHalfedge(rev->next_->next_);
+    removeHalfedge(rev->next_);
     removeHalfedge(rev);
 
     return true;
 }
 
 bool Mesh::flipHE(Halfedge* he) {    
-    Halfedge *rev = he->m_rev;
+    Halfedge *rev = he->rev_;
     if (!rev) {
         FatalError("Flip is called boundary halfedge!");
     }
@@ -446,53 +550,53 @@ bool Mesh::flipHE(Halfedge* he) {
     }
 
     // Get surrounding vertices, halfedges and faces
-    Halfedge *he0 = he->m_next;
-    Halfedge *he1 = he->m_next->m_next;
-    Halfedge *he2 = rev->m_next;
-    Halfedge *he3 = rev->m_next->m_next;
+    Halfedge *he0 = he->next_;
+    Halfedge *he1 = he->next_->next_;
+    Halfedge *he2 = rev->next_;
+    Halfedge *he3 = rev->next_->next_;
 
-    Vertex *v0 = he0->m_src;
-    Vertex *v1 = he1->m_src;
-    Vertex *v2 = he2->m_src;
-    Vertex *v3 = he3->m_src;
+    Vertex *v0 = he0->src_;
+    Vertex *v1 = he1->src_;
+    Vertex *v2 = he2->src_;
+    Vertex *v3 = he3->src_;
 
-    Face *f0 = he->m_face;
-    Face *f1 = rev->m_face;
+    Face *f0 = he->face_;
+    Face *f1 = rev->face_;
 
     // Update halfedges of start/end vertices
-    v0->m_he = he0;
-    v2->m_he = he2;
+    v0->halfedge_ = he0;
+    v2->halfedge_ = he2;
 
-    // Update halfedge's start and end
-    he->m_src = v3;
-    rev->m_src = v1;
+    // Uate_ halfedge's start and end
+    he->src_ = v3;
+    rev->src_ = v1;
 
     // Update face circulation
-    he->m_next = he1;
-    he1->m_next = he2;
-    he2->m_next = he;
-    rev->m_next = he3;
-    he3->m_next = he0;
-    he0->m_next = rev;
+    he->next_ = he1;
+    he1->next_ = he2;
+    he2->next_ = he;
+    rev->next_ = he3;
+    he3->next_ = he0;
+    he0->next_ = rev;
 
     // Update faces
-    f0->m_he = he;
-    he->m_face = f0;
-    he1->m_face = f0;
-    he2->m_face = f0;
+    f0->halfedge_ = he;
+    he->face_ = f0;
+    he1->face_ = f0;
+    he2->face_ = f0;
 
-    f1->m_he = rev;
-    rev->m_face = f1;
-    he0->m_face = f1;
-    he3->m_face = f1;
+    f1->halfedge_ = rev;
+    rev->face_ = f1;
+    he0->face_ = f1;
+    he3->face_ = f1;
 
     return true;
 }
 
 bool Mesh::verify() const {
     bool success = true;
-    for (int i = 0; i < m_verts.size(); i++) {
-        Vertex *v = m_verts[i].get();
+    for (int i = 0; i < vertices_.size(); i++) {
+        Vertex *v = vertices_[i].get();
         if (v->index() != i) {
             fprintf(stderr, "Vertex index does not match array index: v[%d].index = %d\n", i, v->index());
             success = false;
@@ -500,8 +604,8 @@ bool Mesh::verify() const {
         success &= verifyVertex(v);
     }
 
-    for (int i = 0; i < m_hes.size(); i++) {
-        auto he = m_hes[i];
+    for (int i = 0; i < halfedges_.size(); i++) {
+        auto he = halfedges_[i];
         if (he->index() != i) {
             fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
             success = false;
@@ -516,21 +620,21 @@ bool Mesh::verify() const {
         success &= verifyVertex(he->dst());
     }
 
-//    for (int i = 0; i < m_faces.size(); i++) {
-//        auto f = m_faces[i];
-//        if (f->m_index != i) {
-//            printf("v: %d %d\n", f->m_index, i);
+//    for (int i = 0; i < faces_.size(); i++) {
+//        auto f = faces_[i];
+//        if (f->index_ != i) {
+//            printf("v: %d %d\n", f->index_, i);
 //        }
 //
-//        if (f->m_he->m_index >= m_hes.size()) {
-//            printf("v: %d %d\n", f->m_he->m_index, m_hes.size());
+//        if (f->m_he->index_ >= halfedges_.size()) {
+//            printf("v: %d %d\n", f->m_he->index_, halfedges_.size());
 //        }
 //
 //        const int i0 = f->m_he->src()->index();
 //        const int i1 = f->m_he->next()->src()->index();
 //        const int i2 = f->m_he->prev()->src()->index();
-//        if (i0 >= m_verts.size() || i1 >= m_verts.size() || i2 >= m_verts.size()) {
-//            printf("%d %d %d, %d\n", i0, i1, i2, m_verts.size());
+//        if (i0 >= vertices_.size() || i1 >= vertices_.size() || i2 >= vertices_.size()) {
+//            printf("%d %d %d, %d\n", i0, i1, i2, vertices_.size());
 //        }
 //    }
 
@@ -539,12 +643,12 @@ bool Mesh::verify() const {
 
 bool Mesh::verifyVertex(Vertex* v) const {
     bool success = true;
-    if (v->index() >= m_verts.size()) {
-        fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)m_verts.size());
+    if (v->index() >= vertices_.size()) {
+        fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)vertices_.size());
         success = false;
     }
 
-    Vec p = v->pt();
+    Vec p = v->pos();
     if (std::isinf(p.x) || std::isnan(p.x) || std::isinf(p.y) || std::isnan(p.y) || std::isinf(p.z) || std::isnan(p.z)) {
         fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p.x, p.y, p.z);
         success = false;
@@ -553,66 +657,66 @@ bool Mesh::verifyVertex(Vertex* v) const {
 }
 
 Mesh::VertexIterator Mesh::v_begin() {
-    return Mesh::VertexIterator(m_verts);
+    return Mesh::VertexIterator(vertices_);
 }
 
 Mesh::VertexIterator Mesh::v_end() {
-    return Mesh::VertexIterator(m_verts, m_verts.size());
+    return Mesh::VertexIterator(vertices_, vertices_.size());
 }
 
 Mesh::HalfedgeIterator Mesh::he_begin() {
-    return Mesh::HalfedgeIterator(m_hes);
+    return Mesh::HalfedgeIterator(halfedges_);
 }
 
 Mesh::HalfedgeIterator Mesh::he_end() {
-    return Mesh::HalfedgeIterator(m_hes, m_hes.size());
+    return Mesh::HalfedgeIterator(halfedges_, halfedges_.size());
 }
 
 Mesh::FaceIterator Mesh::f_begin() {
-    return Mesh::FaceIterator(m_faces);
+    return Mesh::FaceIterator(faces_);
 }
 
 Mesh::FaceIterator Mesh::f_end() {
-    return Mesh::FaceIterator(m_faces, m_faces.size());
+    return Mesh::FaceIterator(faces_, faces_.size());
 }
 
 void Mesh::addVertex(Vertex *v) {
-    v->m_index = m_verts.size();
-    m_verts.emplace_back(v);
+    v->index_ = vertices_.size();
+    vertices_.emplace_back(v);
 }
 
 void Mesh::addHalfedge(Halfedge *he) {
-    he->m_index = m_hes.size();
-    m_hes.emplace_back(he);
+    he->index_ = halfedges_.size();
+    halfedges_.emplace_back(he);
 }
 
 void Mesh::addFace(Face *f) {
-    f->m_index = m_faces.size();
-    m_faces.emplace_back(f);
+    f->index_ = faces_.size();
+    faces_.emplace_back(f);
 }
 
 void Mesh::removeVertex(Vertex* v) {
-    if (v->m_index < m_verts.size() - 1) {
-        std::swap(m_verts[v->m_index], m_verts[m_verts.size() - 1]);
-        std::swap(m_verts[v->m_index]->m_index , m_verts[m_verts.size() - 1]->m_index);
+    if (v->index_ < vertices_.size() - 1) {
+        std::swap(vertices_[v->index_], vertices_[vertices_.size() - 1]);
+        std::swap(vertices_[v->index_]->index_ , vertices_[vertices_.size() - 1]->index_);
     } 
-    m_verts.resize(m_verts.size() - 1);
+    vertices_.resize(vertices_.size() - 1);
 }
 
 void Mesh::removeHalfedge(Halfedge *he) {
-    if (he->m_index < m_hes.size() - 1) {
-        std::swap(m_hes[he->m_index], m_hes[m_hes.size() - 1]);
-        std::swap(m_hes[he->m_index]->m_index, m_hes[m_hes.size() - 1]->m_index);
+    if (he->index_ < halfedges_.size() - 1) {
+        std::swap(halfedges_[he->index_], halfedges_[halfedges_.size() - 1]);
+        std::swap(halfedges_[he->index_]->index_, halfedges_[halfedges_.size() - 1]->index_);
     }
-    m_hes.resize(m_hes.size() - 1);
+    halfedges_.resize(halfedges_.size() - 1);
 }
 
 void Mesh::removeFace(Face *f) {
-    if (f->m_index < m_faces.size() - 1) {
-        std::swap(m_faces[f->m_index], m_faces[m_faces.size() - 1]);
-        std::swap(m_faces[f->m_index]->m_index, m_faces[m_faces.size() - 1]->m_index);
+    if (f->index_ < faces_.size() - 1) {
+        std::swap(faces_[f->index_], faces_[faces_.size() - 1]);
+        std::swap(faces_[f->index_]->index_, faces_[faces_.size() - 1]->index_);
     }
-    m_faces.resize(m_faces.size() - 1);
+    faces_.resize(faces_.size() - 1);
 }
 
 
@@ -621,46 +725,46 @@ void Mesh::removeFace(Face *f) {
 // ----------
 
 Mesh::VertexIterator::VertexIterator(std::vector<std::shared_ptr<Vertex>> &vertices, int index)
-    : m_verts{ vertices }
-    , m_index{ index } {
+    : vertices_{ vertices }
+    , index_{ index } {
 }
 
 bool Mesh::VertexIterator::operator!=(const Mesh::VertexIterator &it) const {
-    return m_index != it.m_index;
+    return index_ != it.index_;
 }
 
 Vertex &Mesh::VertexIterator::operator*() {
-    return *m_verts[m_index];
+    return *vertices_[index_];
 }
 
 Vertex *Mesh::VertexIterator::operator->() const {
-    return m_index < m_verts.size() ? m_verts[m_index].get() : nullptr;
+    return index_ < vertices_.size() ? vertices_[index_].get() : nullptr;
 }
 
 Vertex* Mesh::VertexIterator::ptr() const {
-    return m_index < m_verts.size() ? m_verts[m_index].get() : nullptr;
+    return index_ < vertices_.size() ? vertices_[index_].get() : nullptr;
 }
 
 Mesh::VertexIterator &Mesh::VertexIterator::operator++() {
-    ++m_index;
+    ++index_;
     return *this;
 }
 
 Mesh::VertexIterator Mesh::VertexIterator::operator++(int) {
-    int prev = m_index;
-    ++m_index;
-    return Mesh::VertexIterator(m_verts, prev);
+    int prev = index_;
+    ++index_;
+    return Mesh::VertexIterator(vertices_, prev);
 }
 
 Mesh::VertexIterator &Mesh::VertexIterator::operator--() {
-    --m_index;
+    --index_;
     return *this;
 }
 
 Mesh::VertexIterator Mesh::VertexIterator::operator--(int) {
-    int prev = m_index;
-    --m_index;
-    return Mesh::VertexIterator(m_verts, prev);
+    int prev = index_;
+    --index_;
+    return Mesh::VertexIterator(vertices_, prev);
 }
 
 // ----------
@@ -668,46 +772,46 @@ Mesh::VertexIterator Mesh::VertexIterator::operator--(int) {
 // ----------
 
 Mesh::HalfedgeIterator::HalfedgeIterator(std::vector<std::shared_ptr<Halfedge>>& hes, int index)
-    : m_hes{ hes }
-    , m_index{ index } {    
+    : halfedges_{ hes }
+    , index_{ index } {    
 }
 
 bool Mesh::HalfedgeIterator::operator!=(const HalfedgeIterator& it) const {
-    return m_index != it.m_index;
+    return index_ != it.index_;
 }
 
 Halfedge &Mesh::HalfedgeIterator::operator*() {
-    return *m_hes[m_index];
+    return *halfedges_[index_];
 }
 
 Halfedge* Mesh::HalfedgeIterator::operator->() const {
-    return m_index < m_hes.size() ? m_hes[m_index].get() : nullptr;
+    return index_ < halfedges_.size() ? halfedges_[index_].get() : nullptr;
 }
 
 Halfedge* Mesh::HalfedgeIterator::ptr() const {
-    return m_index < m_hes.size() ? m_hes[m_index].get() : nullptr;
+    return index_ < halfedges_.size() ? halfedges_[index_].get() : nullptr;
 }
 
 Mesh::HalfedgeIterator &Mesh::HalfedgeIterator::operator++() {
-    ++m_index;
+    ++index_;
     return *this;
 }
 
 Mesh::HalfedgeIterator Mesh::HalfedgeIterator::operator++(int) {
-    int prev = m_index;
-    ++m_index;
-    return Mesh::HalfedgeIterator(m_hes, prev);
+    int prev = index_;
+    ++index_;
+    return Mesh::HalfedgeIterator(halfedges_, prev);
 }
 
 Mesh::HalfedgeIterator &Mesh::HalfedgeIterator::operator--() {
-    --m_index;
+    --index_;
     return *this;
 }
 
 Mesh::HalfedgeIterator Mesh::HalfedgeIterator::operator--(int) {
-    int prev = m_index;
-    --m_index;
-    return Mesh::HalfedgeIterator(m_hes, prev);
+    int prev = index_;
+    --index_;
+    return Mesh::HalfedgeIterator(halfedges_, prev);
 }
 
 // ----------
@@ -715,46 +819,46 @@ Mesh::HalfedgeIterator Mesh::HalfedgeIterator::operator--(int) {
 // ----------
 
 Mesh::FaceIterator::FaceIterator(std::vector<std::shared_ptr<Face>> &faces, int index)
-    : m_faces{ faces }
-    , m_index{ index } {
+    : faces_{ faces }
+    , index_{ index } {
 }
 
 bool Mesh::FaceIterator::operator!=(const FaceIterator &it) const {
-    return m_index != it.m_index;
+    return index_ != it.index_;
 }
 
 Face &Mesh::FaceIterator::operator*() {
-    return *m_faces[m_index];
+    return *faces_[index_];
 }
 
 Face *Mesh::FaceIterator::operator->() const {
-    return m_index < m_faces.size() ? m_faces[m_index].get() : nullptr;
+    return index_ < faces_.size() ? faces_[index_].get() : nullptr;
 }
 
 Face *Mesh::FaceIterator::ptr() const {
-    return m_index < m_faces.size() ? m_faces[m_index].get() : nullptr;
+    return index_ < faces_.size() ? faces_[index_].get() : nullptr;
 }
 
 Mesh::FaceIterator &Mesh::FaceIterator::operator++() {
-    ++m_index;
+    ++index_;
     return *this;
 }
 
 Mesh::FaceIterator Mesh::FaceIterator::operator++(int) {
-    int prev = m_index;
-    ++m_index;
-    return Mesh::FaceIterator(m_faces, prev);
+    int prev = index_;
+    ++index_;
+    return Mesh::FaceIterator(faces_, prev);
 }
 
 Mesh::FaceIterator &Mesh::FaceIterator::operator--() {
-    --m_index;
+    --index_;
     return *this;
 }
 
 Mesh::FaceIterator Mesh::FaceIterator::operator--(int) {
-    int prev = m_index;
-    --m_index;
-    return Mesh::FaceIterator(m_faces, prev);
+    int prev = index_;
+    --index_;
+    return Mesh::FaceIterator(faces_, prev);
 }
 
 }  // namespace tinymesh

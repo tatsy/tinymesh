@@ -5,26 +5,38 @@
 #include "trimesh/mesh.h"
 #include "trimesh/vertex.h"
 #include "trimesh/halfedge.h"
+#include "trimesh/face.h"
+#include "geoproc/smooth.h"
 
 namespace tinymesh {
 
 void remesh(Mesh &mesh, int maxiter) {
-    printf("*** Original ***\n");
-    printf("#vert: %d\n", (int)mesh.num_vertices());
-    printf("#face: %d\n", (int)mesh.num_faces());
-
+    int count;
+    double Lavg, Lvar, Lstd;
     std::vector<Halfedge*> hes;
 
     for (int k = 0; k < maxiter; k++) {
+        printf("*** Original #%d ***\n", k + 1);
+        printf("#vert: %d\n", (int)mesh.num_vertices());
+        printf("#face: %d\n", (int)mesh.num_faces());
+
         // Compute average edge length
-        double L = 0.0;
-        int count = 0;
+        Lavg = 0.0;
+        Lvar = 0.0;
+
+        count = 0;
         for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            L += it->length();
+            const double l = it->length();
+            Lavg += l;
+            Lvar += l * l;
             count += 1;
         }
-        L /= count;
-        printf("Avg edge length: %f\n", L);
+
+        Lavg = Lavg / count;
+        Lvar = Lvar / count - Lavg * Lavg;
+        Lstd = std::sqrt(Lvar);
+        printf("Avg: %f\n", Lavg);
+        printf("Var: %f\n", Lvar);
 
         // Split long edges
         hes.clear();
@@ -32,12 +44,20 @@ void remesh(Mesh &mesh, int maxiter) {
             hes.push_back(it.ptr());
         }
 
+        std::random_shuffle(hes.begin(), hes.end());
+
         for (Halfedge *he : hes) {
-            if (!he || he->index() >= mesh.num_halfedges()) {
+            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
                 continue;
             }
 
-            if (he->length() > 1.333 * L) {
+            if (he->index() >= mesh.num_halfedges()) {
+                continue;
+            }
+
+            const double l = he->length();
+            const double p = (l - Lavg) / Lstd;
+            if (p > 1.25) {
                 mesh.splitHE(he);
             }
         }
@@ -46,20 +66,44 @@ void remesh(Mesh &mesh, int maxiter) {
         printf("#vert: %d\n", (int)mesh.num_vertices());
         printf("#face: %d\n", (int)mesh.num_faces());
 
+        // Compute average edge length
+        Lavg = 0.0;
+        Lvar = 0.0;
+
+        count = 0;
+        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
+            const double l = it->length();
+            Lavg += l;
+            Lvar += l * l;
+            count += 1;
+        }
+
+        Lavg = Lavg / count;
+        Lvar = Lvar / count - Lavg * Lavg;
+        Lstd = std::sqrt(Lvar);
+        printf("Avg: %f\n", Lavg);
+        printf("Var: %f\n", Lvar);
+
         // Collapse short edges
         hes.clear();
         for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
             hes.push_back(it.ptr());
         }
 
+        std::random_shuffle(hes.begin(), hes.end());
+
         for (Halfedge *he : hes) {
-            if (!he || he->index() >= mesh.num_halfedges()) {
+            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
+                continue;
+            }
+            if (he->index() >= mesh.num_halfedges()) {
                 continue;
             }
 
-            if (he->length() < 0.65 * L) {
-                if (mesh.collapseHE(he)) {
-                }
+            const double l = he->length();
+            const double p = (l - Lavg) / Lstd;
+            if (p < -1.0) {
+                mesh.collapseHE(he);
             }
         }
 
@@ -69,6 +113,10 @@ void remesh(Mesh &mesh, int maxiter) {
 
         // Flip edges
         for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
+            if (it->face()->isBoundary() || it->rev()->face()->isBoundary()) {
+                continue;
+            }
+
             Vertex *v0 = it->src();
             Vertex *v1 = it->dst();
             Vertex *v2 = it->next()->dst();
@@ -86,7 +134,7 @@ void remesh(Mesh &mesh, int maxiter) {
         }
 
         // Volonoi tessellation
-        for (int l = 0; l < 10; l++) {
+        for (int l = 0; l < 1; l++) {
             int index;
             const int nv = mesh.num_vertices();
             std::vector<Vec> centroids(nv);
@@ -96,10 +144,10 @@ void remesh(Mesh &mesh, int maxiter) {
             index = 0;
             for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
                 // Collect surrounding vertices
-                Vec org = it->pt();
+                Vec org = it->pos();
                 std::vector<Vec> pts;
                 for (auto vit = it->v_begin(); vit != it->v_end(); ++vit) {
-                    pts.push_back(vit->pt());
+                    pts.push_back(vit->pos());
                 }
 
                 // Compute centroids, tangents, and binormals
@@ -114,27 +162,32 @@ void remesh(Mesh &mesh, int maxiter) {
                     cent += g;
                     norm += cross(e1, e2);
                 }
-                cent /= pts.size();
-                norm = normalize(norm);
 
-                centroids[index] = cent;
-                normals[index] = norm;
+                cent /= pts.size();
+                const double l = length(norm);
+
+                if (l != 0.0) {
+                    centroids[index] = cent;
+                    normals[index] = norm / l;
+                }
                 index += 1;
             }
 
             // Update vertex positions
             index = 0;
             for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
-                const Vec pt = it->pt();
-                Vec e = centroids[index] - pt;
-                e -= normals[index] * dot(e, normals[index]);
-                it->setPt(pt + e);
+                if (length(normals[index]) != 0.0) {
+                    const Vec pt = it->pos();
+                    Vec e = centroids[index] - pt;
+                    e -= normals[index] * dot(e, normals[index]);
+                    it->setPos(pt + e);
+                }
                 index += 1;
             }
 
         }
         // Laplacian smoothing
-        //smooth(mesh, 0.1);
+        smooth(mesh, 0.5);
     }
 
     mesh.verify();

@@ -82,7 +82,7 @@ double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Ve
     Matrix v_bar;
     const double D = Q.det();
     if (D < 1.0e-8) {
-        Vec m = 0.5 * (v1.pt() + v2.pt());
+        Vec m = 0.5 * (v1.pos() + v2.pos());
         double elems[4] = {m.x, m.y, m.z, 1.0};
         v_bar = Matrix(4, 1, elems);
     } else {
@@ -124,14 +124,14 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
             return;
         }
 
-        Vec norm = cross(vs[1]->pt() - vs[0]->pt(), vs[2]->pt() - vs[0]->pt());
+        Vec norm = cross(vs[1]->pos() - vs[0]->pos(), vs[2]->pos() - vs[0]->pos());
         const double w = length(norm);
         norm /= (w + Eps);
 
         const double nx = norm.x;
         const double ny = norm.y;
         const double nz = norm.z;
-        const double d = -dot(norm, vs[0]->pt());
+        const double d = -dot(norm, vs[0]->pos());
 
         double elems[] = {
             nx * nx, nx * ny, nx * nz, nx * d,
@@ -202,7 +202,7 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
             std::vector<Vec> ps;
             for (auto it = f->v_begin(); it != f->v_end(); ++it) {
                 vs.push_back(it.ptr());
-                ps.push_back(it->pt());
+                ps.push_back(it->pos());
                 if (it.ptr() == v_i) {
                     has_i = true;
                 }

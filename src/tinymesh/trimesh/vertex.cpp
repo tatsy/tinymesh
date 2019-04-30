@@ -1,6 +1,7 @@
 #define TINYMESH_API_EXPORT
 #include "vertex.h"
 
+#include "face.h"
 #include "halfedge.h"
 
 namespace tinymesh {
@@ -10,7 +11,7 @@ namespace tinymesh {
 // ----------
 
 Vertex::Vertex() {}
-Vertex::Vertex(const Vec &v) : m_pt{ v } {}
+Vertex::Vertex(const Vec &pos) : pos_{ pos } {}
 
 Vertex::Vertex(const Vertex &v)
     : Vertex{} {
@@ -23,34 +24,36 @@ Vertex::Vertex(Vertex &&v) noexcept
 }
 
 Vertex &Vertex::operator=(const Vertex &v) {
-    this->m_pt = v.m_pt;
-    this->m_he = v.m_he;
-    this->m_index = v.m_index;
+    this->pos_ = v.pos_;
+    this->halfedge_ = v.halfedge_;
+    this->index_ = v.index_;
     return *this;
 }
 
 Vertex &Vertex::operator=(Vertex &&v) noexcept {
-    this->m_pt = v.m_pt;
-    this->m_he = v.m_he;
-    this->m_index = v.m_index;
+    this->pos_ = v.pos_;
+    this->halfedge_ = v.halfedge_;
+    this->index_ = v.index_;
 
-    v.m_pt = Vec();
-    v.m_he = nullptr;
-    v.m_index = -1;
+    v.pos_ = Vec();
+    v.halfedge_ = nullptr;
+    v.index_ = -1;
     return *this;    
 }
 
 int Vertex::degree() {
     int deg = 0;
-    for (auto it = v_begin(); it != v_end(); ++it) {
-        deg++;
+    for (auto it = ohe_begin(); it != ohe_end(); ++it) {
+        if (!it->face()->isBoundary()) {
+            deg++;
+        }
     }
     return deg;
 }
 
 
 Vertex::VertexIterator Vertex::v_begin() {
-    return Vertex::VertexIterator(m_he);
+    return Vertex::VertexIterator(halfedge_);
 }
 
 Vertex::VertexIterator Vertex::v_end() {
@@ -58,7 +61,7 @@ Vertex::VertexIterator Vertex::v_end() {
 }
 
 Vertex::InHalfedgeIterator Vertex::ihe_begin() {
-    return Vertex::InHalfedgeIterator(m_he);
+    return Vertex::InHalfedgeIterator(halfedge_);
 }
 
 Vertex::InHalfedgeIterator Vertex::ihe_end() {
@@ -66,7 +69,7 @@ Vertex::InHalfedgeIterator Vertex::ihe_end() {
 }
 
 Vertex::OutHalfedgeIterator Vertex::ohe_begin() {
-    return Vertex::OutHalfedgeIterator(m_he);
+    return Vertex::OutHalfedgeIterator(halfedge_);
 }
 
 Vertex::OutHalfedgeIterator Vertex::ohe_end() {
@@ -74,7 +77,7 @@ Vertex::OutHalfedgeIterator Vertex::ohe_end() {
 }
 
 Vertex::FaceIterator Vertex::f_begin() {
-    return Vertex::FaceIterator(m_he);
+    return Vertex::FaceIterator(halfedge_);
 }
 
 Vertex::FaceIterator Vertex::f_end() {
@@ -86,39 +89,38 @@ Vertex::FaceIterator Vertex::f_end() {
 // ----------
 
 Vertex::VertexIterator::VertexIterator(tinymesh::Halfedge *he)
-    : m_he{ he }
-    , m_init{ he } {
+    : halfedge_{ he }
+    , iter_{ he } {
 }
 
 bool Vertex::VertexIterator::operator!=(const Vertex::VertexIterator &it) const {
-    return m_he != it.m_he;
+    return iter_ != it.iter_;
 }
 
 Vertex &Vertex::VertexIterator::operator*() {
-    return *m_he->dst();
+    return *iter_->dst();
 }
 
 Vertex* Vertex::VertexIterator::ptr() const {
-    return m_he->dst();
+    return iter_->dst();
 }
 
 Vertex *Vertex::VertexIterator::operator->() const {
-    return m_he->dst();
+    return iter_->dst();
 }
 
 Vertex::VertexIterator &Vertex::VertexIterator::operator++() {
-    m_he = m_he->rev()->next();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    iter_ = iter_->rev()->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return *this;
 }
 
 Vertex::VertexIterator Vertex::VertexIterator::operator++(int) {
-    Halfedge *tmp = m_he;
-    m_he = m_he->rev()->next();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    Halfedge *tmp = iter_;
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return Vertex::VertexIterator(tmp);
 }
@@ -128,39 +130,39 @@ Vertex::VertexIterator Vertex::VertexIterator::operator++(int) {
 // ----------
 
 Vertex::InHalfedgeIterator::InHalfedgeIterator(tinymesh::Halfedge *he)
-    : m_he{ he }
-    , m_init{ he } {
+    : halfedge_{ he }
+    , iter_{ he } {
 }
 
 bool Vertex::InHalfedgeIterator::operator!=(const Vertex::InHalfedgeIterator &it) const {
-    return m_he != it.m_he;
+    return iter_ != it.iter_;
 }
 
 Halfedge &Vertex::InHalfedgeIterator::operator*() {
-    return *m_he;
+    return *iter_;
 }
 
 Halfedge *Vertex::InHalfedgeIterator::ptr() const {
-    return m_he;
+    return iter_;
 }
 
 Halfedge *Vertex::InHalfedgeIterator::operator->() const {
-    return m_he;
+    return iter_;
 }
 
 Vertex::InHalfedgeIterator &Vertex::InHalfedgeIterator::operator++() {
-    m_he = m_he->next()->rev();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    iter_ = iter_->next()->rev();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return *this;
 }
 
 Vertex::InHalfedgeIterator Vertex::InHalfedgeIterator::operator++(int) {
-    Halfedge *tmp = m_he;
-    m_he = m_he->next()->rev();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    Halfedge *tmp = iter_;
+    iter_ = iter_->next()->rev();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return Vertex::InHalfedgeIterator(tmp);
 }
@@ -170,39 +172,39 @@ Vertex::InHalfedgeIterator Vertex::InHalfedgeIterator::operator++(int) {
 // ----------
 
 Vertex::OutHalfedgeIterator::OutHalfedgeIterator(Halfedge *he)
-    : m_he{ he }
-    , m_init{ he } {
+    : halfedge_{ he }
+    , iter_{ he } {
 }
 
 bool Vertex::OutHalfedgeIterator::operator!=(const Vertex::OutHalfedgeIterator &it) const {
-    return m_he != it.m_he;
+    return iter_ != it.iter_;
 }
 
 Halfedge &Vertex::OutHalfedgeIterator::operator*() {
-    return *m_he;
+    return *iter_;
 }
 
 Halfedge *Vertex::OutHalfedgeIterator::ptr() const {
-    return m_he;
+    return iter_;
 }
 
 Halfedge *Vertex::OutHalfedgeIterator::operator->() const {
-    return m_he;
+    return iter_;
 }
 
 Vertex::OutHalfedgeIterator &Vertex::OutHalfedgeIterator::operator++() {
-    m_he = m_he->rev()->next();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    iter_ = iter_->rev()->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return *this;
 }
 
 Vertex::OutHalfedgeIterator Vertex::OutHalfedgeIterator::operator++(int) {
-    Halfedge *tmp = m_he;
-    m_he = m_he->rev()->next();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    Halfedge *tmp = iter_;
+    iter_ = iter_->rev()->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return Vertex::OutHalfedgeIterator(tmp);
 }
@@ -212,39 +214,39 @@ Vertex::OutHalfedgeIterator Vertex::OutHalfedgeIterator::operator++(int) {
 // ----------
 
 Vertex::FaceIterator::FaceIterator(tinymesh::Halfedge *he)
-    : m_he{ he }
-    , m_init{ he } {
+    : halfedge_{ he }
+    , iter_{ he } {
 }
 
 bool Vertex::FaceIterator::operator!=(const Vertex::FaceIterator &it) const {
-    return m_he != it.m_he;
+    return iter_ != it.iter_;
 }
 
 Face &Vertex::FaceIterator::operator*() {
-    return *m_he->face();
+    return *iter_->face();
 }
 
 Face *Vertex::FaceIterator::ptr() const {
-    return m_he->face();
+    return iter_->face();
 }
 
 Face *Vertex::FaceIterator::operator->() const {
-    return m_he->face();
+    return iter_->face();
 }
 
 Vertex::FaceIterator &Vertex::FaceIterator::operator++() {
-    m_he = m_he->rev()->next();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    iter_ = iter_->rev()->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return *this;
 }
 
 Vertex::FaceIterator Vertex::FaceIterator::operator++(int) {
-    Halfedge *tmp = m_he;
-    m_he = m_he->rev()->next();
-    if (m_he == m_init) {
-        m_he = nullptr;
+    Halfedge *tmp = iter_;
+    iter_ = iter_->rev()->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
     }
     return Vertex::FaceIterator(tmp);
 }

@@ -19,25 +19,25 @@ public:
     virtual ~Halfedge() = default;
 
     double length() const;
-    bool isBorder() { return m_rev == nullptr; }
+    bool isBorder() { return rev_ == nullptr; }
 
     Halfedge &operator=(const Halfedge &he) = default;
     Halfedge &operator=(Halfedge &&he) noexcept = default;
 
-    Vertex *src() const { return m_src; }
-    Vertex *dst() const { return m_next->m_src; }
-    Halfedge *next() const { return m_next; }
-    Halfedge *prev() const { return m_next->m_next; }
-    Halfedge *rev() const { return m_rev; }
-    Face *face() const { return m_face; }
-    int index() const { return m_index; }
+    Vertex *src() const { return src_; }
+    Vertex *dst() const { return next_->src_; }
+    Halfedge *next() const { return next_; }
+    Halfedge *prev() const { return next_->next_; }
+    Halfedge *rev() const { return rev_; }
+    Face *face() const { return face_; }
+    int index() const { return index_; }
 
 private:
-    Vertex *m_src = nullptr;
-    Halfedge *m_next = nullptr;
-    Halfedge *m_rev = nullptr;
-    Face *m_face = nullptr;
-    int m_index;
+    Vertex *src_ = nullptr;
+    Halfedge *next_ = nullptr;
+    Halfedge *rev_ = nullptr;
+    Face *face_ = nullptr;
+    int index_ = -1;
 
     friend class Mesh;
 };

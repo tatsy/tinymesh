@@ -22,10 +22,10 @@ void smooth(Mesh &mesh, double strength) {
     index = 0;
     for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
         // Collect surrounding vertices
-        Vec org = it->pt();
+        Vec org = it->pos();
         std::vector<Vec> pts;
         for (auto vit = it->v_begin(); vit != it->v_end(); ++vit) {
-            pts.push_back(vit->pt());
+            pts.push_back(vit->pos());
         }
 
         // Compute centroids, tangents, and binormals
@@ -47,8 +47,8 @@ void smooth(Mesh &mesh, double strength) {
     // Update vertex positions
     index = 0;
     for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
-        const Vec pt = it->pt();
-        it->setPt((1.0 - strength) * pt + strength * centroids[index]);
+        const Vec pt = it->pos();
+        it->setPos((1.0 - strength) * pt + strength * centroids[index]);
         //it->setPt(centroids[index]);
         index += 1;
     }
