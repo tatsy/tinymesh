@@ -10,8 +10,17 @@ namespace tinymesh {
 // Vertex
 // ----------
 
-Vertex::Vertex() {}
-Vertex::Vertex(const Vec &pos) : pos_{ pos } {}
+Vertex::Vertex()
+    : pos_{}
+    , halfedge_{ nullptr }
+    , index_{ -1 } {
+}
+
+Vertex::Vertex(const Vec &pos)
+    : pos_{ pos }
+    , halfedge_{ nullptr }
+    , index_{ -1 } {
+}
 
 Vertex::Vertex(const Vertex &v)
     : Vertex{} {
@@ -41,6 +50,14 @@ Vertex &Vertex::operator=(Vertex &&v) noexcept {
     return *this;    
 }
 
+bool Vertex::operator==(const Vertex &other) const {
+    bool ret = true;
+    ret &= (pos_ == other.pos_);
+    ret &= (halfedge_ == other.halfedge_);
+    ret &= (index_ == other.index_);
+    return ret;
+}
+
 int Vertex::degree() {
     int deg = 0;
     for (auto it = ohe_begin(); it != ohe_end(); ++it) {
@@ -51,6 +68,14 @@ int Vertex::degree() {
     return deg;
 }
 
+bool Vertex::isBoundary() {
+    for (auto it = ohe_begin(); it != ohe_end(); ++it) {
+        if (it->isBoundary()) {
+            return true;
+        }
+    }
+    return false;
+}
 
 Vertex::VertexIterator Vertex::v_begin() {
     return Vertex::VertexIterator(halfedge_);

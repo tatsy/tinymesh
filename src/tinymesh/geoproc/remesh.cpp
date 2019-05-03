@@ -1,6 +1,9 @@
 #define TINYMESH_API_EXPORT
 #include "remesh.h"
 
+#include <random>
+#include <algorithm>
+
 #include "core/vec.h"
 #include "trimesh/mesh.h"
 #include "trimesh/vertex.h"
@@ -14,6 +17,9 @@ void remesh(Mesh &mesh, int maxiter) {
     int count;
     double Lavg, Lvar, Lstd;
     std::vector<Halfedge*> hes;
+
+    std::random_device randev;
+    std::mt19937 rnd(randev());
 
     for (int k = 0; k < maxiter; k++) {
         printf("*** Original #%d ***\n", k + 1);
@@ -44,10 +50,13 @@ void remesh(Mesh &mesh, int maxiter) {
             hes.push_back(it.ptr());
         }
 
-        std::random_shuffle(hes.begin(), hes.end());
+        std::shuffle(hes.begin(), hes.end(), rnd);
 
         for (Halfedge *he : hes) {
-            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
+//            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
+//                continue;
+//            }
+            if (he->src()->isBoundary() || he->dst()->isBoundary()) {
                 continue;
             }
 
@@ -57,7 +66,7 @@ void remesh(Mesh &mesh, int maxiter) {
 
             const double l = he->length();
             const double p = (l - Lavg) / Lstd;
-            if (p > 1.25) {
+            if (p > 1.0) {
                 mesh.splitHE(he);
             }
         }
@@ -90,19 +99,23 @@ void remesh(Mesh &mesh, int maxiter) {
             hes.push_back(it.ptr());
         }
 
-        std::random_shuffle(hes.begin(), hes.end());
+        std::shuffle(hes.begin(), hes.end(), rnd);
 
         for (Halfedge *he : hes) {
-            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
+//            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
+//                continue;
+//            }
+            if (he->src()->isBoundary() || he->dst()->isBoundary()) {
                 continue;
             }
+
             if (he->index() >= mesh.num_halfedges()) {
                 continue;
             }
 
             const double l = he->length();
             const double p = (l - Lavg) / Lstd;
-            if (p < -1.0) {
+            if (p < -1.25) {
                 mesh.collapseHE(he);
             }
         }
@@ -142,7 +155,7 @@ void remesh(Mesh &mesh, int maxiter) {
 
             // Compute centroids and tangent planes
             index = 0;
-            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
+            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it, ++index) {
                 // Collect surrounding vertices
                 Vec org = it->pos();
                 std::vector<Vec> pts;
@@ -170,22 +183,24 @@ void remesh(Mesh &mesh, int maxiter) {
                     centroids[index] = cent;
                     normals[index] = norm / l;
                 }
-                index += 1;
             }
 
             // Update vertex positions
             index = 0;
-            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
+            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it, ++index) {
+                if (it->isBoundary()) {
+                    continue;
+                }
+
                 if (length(normals[index]) != 0.0) {
                     const Vec pt = it->pos();
                     Vec e = centroids[index] - pt;
                     e -= normals[index] * dot(e, normals[index]);
                     it->setPos(pt + e);
                 }
-                index += 1;
             }
-
         }
+
         // Laplacian smoothing
         smooth(mesh, 0.5);
     }

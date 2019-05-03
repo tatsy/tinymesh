@@ -30,6 +30,8 @@ public:
     Vertex &operator=(const Vertex &p);
     Vertex &operator=(Vertex &&p) noexcept;
 
+    bool operator==(const Vertex &other) const;
+
     int degree();
 
     VertexIterator v_begin();
@@ -45,6 +47,8 @@ public:
     void setPos(const Vec &pos) { pos_ = pos; }
 
     int index() const { return index_; }
+
+    bool isBoundary();
 
 private:
     Vec pos_;

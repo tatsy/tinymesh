@@ -18,12 +18,14 @@ public:
 
 public:
     Face();
-    Face(const Face &face) = default;
+    Face(const Face &face) = delete;
     Face(Face &&face) noexcept = default;
     virtual ~Face() = default;
 
-    Face &operator=(const Face &face) = default;
+    Face &operator=(const Face &face) = delete;
     Face &operator=(Face &&face) noexcept = default;
+
+    bool operator==(const Face &other) const;
 
     VertexIterator v_begin();
     VertexIterator v_end();

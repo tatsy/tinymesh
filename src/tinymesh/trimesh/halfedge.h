@@ -21,8 +21,10 @@ public:
     double length() const;
     bool isBorder() { return rev_ == nullptr; }
 
-    Halfedge &operator=(const Halfedge &he) = default;
-    Halfedge &operator=(Halfedge &&he) noexcept = default;
+    Halfedge &operator=(const Halfedge &he);
+    Halfedge &operator=(Halfedge &&he) noexcept;
+
+    bool operator==(const Halfedge &other) const;
 
     Vertex *src() const { return src_; }
     Vertex *dst() const { return next_->src_; }
@@ -31,6 +33,7 @@ public:
     Halfedge *rev() const { return rev_; }
     Face *face() const { return face_; }
     int index() const { return index_; }
+    bool isBoundary() const;
 
 private:
     Vertex *src_ = nullptr;

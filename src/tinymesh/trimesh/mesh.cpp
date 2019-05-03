@@ -158,7 +158,6 @@ void Mesh::load(const std::string &filename) {
             face->halfedge_ = boundaryHalfedges.front();
 
             const int degree = boundaryHalfedges.size();
-            printf("deg = %d\n", degree);
             for (int j = 0; j < degree; j++) {
                 const int k = (j - 1 + degree) % degree;
                 boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
@@ -351,89 +350,124 @@ bool Mesh::splitHE(Halfedge *he) {
         std::swap(v0, v1);
     }
 
-    if (v0->degree() < 6) {
+    if (v0->degree() < 6 || v1->degree() < 6) {
         return false;
     }
 
     // Prepare halfedge / face
-    auto he_00 = new Halfedge();
-    auto he_01 = new Halfedge();
-    auto he_02 = new Halfedge();
-    auto he_10 = new Halfedge();
-    auto he_11 = new Halfedge();
-    auto he_12 = new Halfedge();
-    
-    auto f0 = new Face();
-    auto f1 = new Face();
+    auto he_new = new Halfedge();
+    auto he01 = new Halfedge();
+    auto he02 = new Halfedge();
+    auto rev_new = new Halfedge();
+    auto he11 = new Halfedge();
+    auto he12 = new Halfedge();
+
+    auto he0 = he->next_;
+    auto he1 = he0->next_;
+    auto he2 = rev->next_;
+    auto he3 = he2->next_;
+
+    auto f0 = he->face();
+    auto f1 = rev->face();
+    if (f0->isBoundary() || f1->isBoundary()) {
+        return false;
+    }
+
+    auto f0_new = new Face();
+    auto f1_new = new Face();
+
+    auto v2 = he1->src_;
+    auto v3 = he3->src_;
 
     // Prepare new vertex
     const Vec newPos = 0.5 * (he->src()->pos() + he->dst()->pos());
     auto v_new = new Vertex(newPos);
 
-    // Setup connection between new components
-    he_01->next_ = he_02;
-    he_02->next_ = he_00;
-    he_00->next_ = he_01;
-    he_10->next_ = he_11;
-    he_11->next_ = he_12;
-    he_12->next_ = he_10;
+    // Update next half-edges
+    he->next_ = he0;
+    he0->next_ = he01;
+    he01->next_ = he;
 
-    he_00->face_ = f0;
-    he_01->face_ = f0;
-    he_02->face_ = f0;
-    f0->halfedge_ = he_00;
+    he_new->next_ = he02;
+    he02->next_ = he1;
+    he1->next_ = he_new;
 
-    he_10->face_ = f1;
-    he_11->face_ = f1;
-    he_12->face_ = f1;
-    f1->halfedge_ = he_10;
+    rev->next_ = he11;
+    he11->next_ = he3;
+    he3->next_ = rev;
 
-    // Update opposite halfedges
-    Halfedge *whe0 = he->prev()->rev()->prev();
-    Halfedge *wre0 = whe0->rev();
-    Halfedge *whe1 = rev->next()->rev()->next();
-    Halfedge *wre1 = whe1->rev();
+    rev_new->next_ = he2;
+    he2->next_ = he12;
+    he12->next_ = rev_new;
 
-    whe0->rev_ = he_01;
-    wre0->rev_ = he_02;
-    whe1->rev_ = he_12;
-    wre1->rev_ = he_11;
+    // Update rev half-edges
+    he->rev_ = rev;
+    rev->rev_ = he;
 
-    he_01->rev_ = whe0;
-    he_02->rev_ = wre0;
-    he_12->rev_ = whe1;
-    he_11->rev_ = wre1;
+    he_new->rev_ = rev_new;
+    rev_new->rev_ = he_new;
 
-    he_00->rev_ = he_10;
-    he_10->rev_ = he_00;
+    he01->rev_ = he02;
+    he02->rev_ = he01;
+
+    he11->rev_ = he12;
+    he12->rev_ = he11;
+
+    // Update faces
+    he->face_ = f0;
+    he0->face_ = f0;
+    he01->face_ = f0;
+
+    he_new->face_ = f0_new;
+    he02->face_ = f0_new;
+    he1->face_ = f0_new;
+
+    rev->face_ = f1;
+    he3->face_ = f1;
+    he11->face_ = f1;
+
+    rev_new->face_ = f1_new;
+    he12->face_ = f1_new;
+    he2->face_ = f1_new;
 
     // Update halfedge origins
-    he_00->src_ = v0;
-    he_01->src_ = v_new;
-    he_02->src_ = whe0->src_;
-    he_10->src_ = v_new;
-    he_11->src_ = v0;
-    he_12->src_ = wre1->src_;
-
     he->src_ = v_new;
-    he->prev()->rev()->src_ = v_new;
-    rev->next()->src_ = v_new;
-    whe1->src_ = v_new;
+    he0->src_ = v1;
+    he01->src_ = v2;
 
-    // Update halfedges for vertices
-    v0->halfedge_ = he_00;
-    v_new->halfedge_ = he_10;
+    he_new->src_ = v0;
+    he02->src_ = v_new;
+    he1->src_ = v2;
+
+    rev->src_ = v1;
+    he11->src_ = v_new;
+    he3->src_ = v3;
+
+    rev_new->src_ = v_new;
+    he2->src_ = v0;
+    he12->src_ = v3;
+
+    // Update vertex halfedges
+    v0->halfedge_ = he2;
+    v1->halfedge_ = he0;
+    v_new->halfedge_ = he;
+
+    // Update face halfedges
+    f0->halfedge_ = he;
+    f0_new->halfedge_ = he_new;
+    f1->halfedge_ = rev;
+    f1_new->halfedge_ = rev_new;
 
     // Add new components to the list
-    addFace(f0);
-    addFace(f1);
+    addFace(f0_new);
+    addFace(f1_new);
     addVertex(v_new);
-    addHalfedge(he_00);
-    addHalfedge(he_01);
-    addHalfedge(he_02);
-    addHalfedge(he_10);
-    addHalfedge(he_11);
-    addHalfedge(he_12);
+    addHalfedge(he_new);
+    addHalfedge(rev_new);
+    addHalfedge(he01);
+    addHalfedge(he02);
+    addHalfedge(he11);
+    addHalfedge(he12);
 
     return true;
 }
@@ -696,27 +730,36 @@ void Mesh::addFace(Face *f) {
 }
 
 void Mesh::removeVertex(Vertex* v) {
+    Assertion((*v) == (*vertices_[v->index_]), "Invalid vertex indexing!");
+
     if (v->index_ < vertices_.size() - 1) {
         std::swap(vertices_[v->index_], vertices_[vertices_.size() - 1]);
         std::swap(vertices_[v->index_]->index_ , vertices_[vertices_.size() - 1]->index_);
     } 
     vertices_.resize(vertices_.size() - 1);
+    vertices_.shrink_to_fit();
 }
 
 void Mesh::removeHalfedge(Halfedge *he) {
+    Assertion((*he) == (*halfedges_[he->index_]), "Invalid halfedge indexing!");
+
     if (he->index_ < halfedges_.size() - 1) {
         std::swap(halfedges_[he->index_], halfedges_[halfedges_.size() - 1]);
         std::swap(halfedges_[he->index_]->index_, halfedges_[halfedges_.size() - 1]->index_);
     }
     halfedges_.resize(halfedges_.size() - 1);
+    halfedges_.shrink_to_fit();
 }
 
 void Mesh::removeFace(Face *f) {
+    Assertion((*f) == (*faces_[f->index_]), "Invalid face indexing!");
+
     if (f->index_ < faces_.size() - 1) {
         std::swap(faces_[f->index_], faces_[faces_.size() - 1]);
         std::swap(faces_[f->index_]->index_, faces_[faces_.size() - 1]->index_);
     }
     faces_.resize(faces_.size() - 1);
+    faces_.shrink_to_fit();
 }
 
 

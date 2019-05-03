@@ -46,11 +46,13 @@ void smooth(Mesh &mesh, double strength) {
 
     // Update vertex positions
     index = 0;
-    for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
+    for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it, ++index) {
+        if (it->isBoundary()) {
+            continue;
+        }
+
         const Vec pt = it->pos();
         it->setPos((1.0 - strength) * pt + strength * centroids[index]);
-        //it->setPt(centroids[index]);
-        index += 1;
     }
 }
 

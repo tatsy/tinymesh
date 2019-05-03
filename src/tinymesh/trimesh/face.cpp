@@ -8,6 +8,13 @@ namespace tinymesh {
 Face::Face() {   
 }
 
+bool Face::operator==(const Face &other) const {
+    bool ret = true;
+    ret &= (halfedge_ == other.halfedge_);
+    ret &= (index_ == other.index_);
+    ret &= (isBoundary_ == other.isBoundary_);
+    return ret;
+}
 
 Face::VertexIterator Face::v_begin() {
     return Face::VertexIterator(halfedge_);
