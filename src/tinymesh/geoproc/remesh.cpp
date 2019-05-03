@@ -53,10 +53,11 @@ void remesh(Mesh &mesh, int maxiter) {
         std::shuffle(hes.begin(), hes.end(), rnd);
 
         for (Halfedge *he : hes) {
-//            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
-//                continue;
-//            }
-            if (he->src()->isBoundary() || he->dst()->isBoundary()) {
+            if (he->src()->index() >= mesh.num_vertices() || he->src()->isBoundary()) {
+                continue;
+            }
+
+            if (he->dst()->index() >= mesh.num_vertices() || he->dst()->isBoundary()) {
                 continue;
             }
 
@@ -67,7 +68,7 @@ void remesh(Mesh &mesh, int maxiter) {
             const double l = he->length();
             const double p = (l - Lavg) / Lstd;
             if (p > 1.0) {
-                mesh.splitHE(he);
+                //mesh.splitHE(he);
             }
         }
 
@@ -102,10 +103,11 @@ void remesh(Mesh &mesh, int maxiter) {
         std::shuffle(hes.begin(), hes.end(), rnd);
 
         for (Halfedge *he : hes) {
-//            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
-//                continue;
-//            }
-            if (he->src()->isBoundary() || he->dst()->isBoundary()) {
+            if (he->src()->index() >= mesh.num_vertices() || he->src()->isBoundary()) {
+                continue;
+            }
+
+            if (he->dst()->index() >= mesh.num_vertices() || he->dst()->isBoundary()) {
                 continue;
             }
 

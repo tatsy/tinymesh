@@ -473,7 +473,24 @@ bool Mesh::splitHE(Halfedge *he) {
 }
 
 bool Mesh::collapseHE(Halfedge* he) {
+    // Collapse halfedge v0->v2.
+    //       v1
+    //     /  \
+    //    /    \
+    //  v0 ---- v2
+    //    \    /
+    //     \  /
+    //      v3
+
+    printf("*********** BEFORE ***********\n");
+    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
+
+    printf("#vert: %zu\n", vertices_.size());
+
     Halfedge *rev = he->rev_;
+    Assertion(he->index_ < halfedges_.size(), "Daemon halfedge detected!");
+    Assertion(rev->index_ < halfedges_.size(), "Daemon halfedge detected!");
+
     const int d0 = he->src()->degree();
     const int d1 = rev->src()->degree();
     // Merge vertex to the one with smaller degree
@@ -491,6 +508,12 @@ bool Mesh::collapseHE(Halfedge* he) {
     Vertex *v1 = he->prev()->src();
     Vertex *v2 = rev->src();
     Vertex *v3 = rev->prev()->src();
+
+    Assertion(v0->index_ < vertices_.size(), "Daemon vertex detected!");
+    Assertion(v1->index_ < vertices_.size(), "Daemon vertex detected!");
+    Assertion(v2->index_ < vertices_.size(), "Daemon vertex detected!");
+    Assertion(v3->index_ < vertices_.size(), "Daemon vertex detected!");
+
     if (v0->degree() <= 3 || v1->degree() <= 4 || v2->degree() <= 3 || v3->degree() <= 4) {
         return false;
     }
@@ -498,11 +521,15 @@ bool Mesh::collapseHE(Halfedge* he) {
     // Check unsafe collapse
     std::set<Vertex*> neighbors;
     for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
+        Assertion(it->dst() != nullptr, "Null vertex is found!");
         neighbors.insert(it->dst());
     }
 
+    Assertion(!neighbors.empty(), "No neighboring vertex!");
+
     int numUnion = 0;
     for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
+        Assertion(it->dst() != nullptr, "Null vertex is found!");
         if (neighbors.find(it->dst()) != neighbors.end()) {
             numUnion += 1;            
         }
@@ -512,51 +539,88 @@ bool Mesh::collapseHE(Halfedge* he) {
         return false;
     }
 
-    // Update halfedge of origin
-    he->src()->halfedge_ = he->prev()->rev();
-
     // Update origins of all outward halfedges
-    Vertex *v_remove = rev->src_;
-    Vertex *v_remain = he->src_;
-    for (auto it = he->src_->ohe_begin(); it != he->src_->ohe_end(); ++it) {
+    Vertex *v_remain = he->src();    // v0
+    Vertex *v_remove = rev->src();   // v2
+    for (auto it = v_remove->ohe_begin(); it != v_remove->ohe_end(); ++it) {
+        Assertion(it->src() == v_remove, "Invalid halfedge origin detected!");
         it->src_ = v_remain;
     }
-
-    for (auto it = rev->src_->ohe_begin(); it != rev->src_->ohe_end(); ++it) {
-        it->src_ = v_remain;
+    for (auto it = v_remain->ohe_begin(); it != v_remain->ohe_end(); ++it) {
+        Assertion(it->src() == v_remain, "Invalid halfedge origin detected!");
     }
 
     // Update opposite halfedges
-    Halfedge *he0 = he->next_->rev_;
-    Halfedge *he1 = he->next_->next_->rev_;
+    Halfedge *he0 = he->next()->next()->rev();
+    Halfedge *he1 = he->next()->rev();
     he0->rev_ = he1;
     he1->rev_ = he0;
 
-    Halfedge *he2 = rev->next_->rev_;
-    Halfedge *he3 = rev->next_->next_->rev_;
+    Halfedge *he2 = rev->next()->next()->rev();
+    Halfedge *he3 = rev->next()->rev();
     he2->rev_ = he3;
     he3->rev_ = he2;
 
+    // Update halfedge of the origin vertex (v0)
+    v_remain->halfedge_ = he0;
+
     // Update halfedge for wing-vertices
-    he->prev()->src()->halfedge_ = he->next_->rev_;
-    rev->prev()->src()->halfedge_ = rev->next_->rev_;
-
-    // Remove faces
-    Face *f0 = he->face_;
-    Face *f1 = rev->face_;
-    removeFace(f0);
-    removeFace(f1);
-
-    // Remove vertices
-    removeVertex(v_remove);
+    v0->halfedge_ = he0;
+    v1->halfedge_ = he1;
+    v2->halfedge_ = he2;
+    v3->halfedge_ = he3;
 
     // Remove halfedges
+    Face *f0 = he->face_;
+    Face *f1 = rev->face_;
+    Assertion(!f0->isBoundary(), "Invalid face removal!");
+    Assertion(!f1->isBoundary(), "Invalid face removal!");
+
     removeHalfedge(he->next_->next_);
     removeHalfedge(he->next_);
     removeHalfedge(he);
     removeHalfedge(rev->next_->next_);
     removeHalfedge(rev->next_);
     removeHalfedge(rev);
+
+    // Remove faces
+    removeFace(f0);
+    removeFace(f1);
+
+    // Remove vertices
+    printf("Remain vertex #%d(%p)\n", v_remain->index(), v_remain);
+    printf("Remove vertex #%d(%p)\n", v_remove->index(), v_remove);
+    printf("Wedge vertex #%d(%p)\n", v1->index(), v1);
+    printf("Wedge vertex #%d(%p)\n", v3->index(), v3);
+    removeVertex(v_remove);
+
+    for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
+        Assertion(it->src() == v0, "Remain!");
+    }
+
+    for (auto it = v1->ohe_begin(); it != v1->ohe_end(); ++it) {
+        Assertion(it->src() == v1, "Remain!");
+    }
+
+//    for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
+//        Assertion(it->src() == v2, "Remain!");
+//    }
+
+    for (auto it = v3->ohe_begin(); it != v3->ohe_end(); ++it) {
+        Assertion(it->src() == v3, "Remain!");
+    }
+
+    for (auto it = v_remain->ohe_begin(); it != v_remain->ohe_end(); ++it) {
+        Assertion(it->src() == v_remain, "Remain!");
+    }
+
+    for (auto iter : halfedges_) {
+        Assertion(he != iter.get(), "Hogehohoge");
+        Assertion(rev != iter.get(), "Hogehohoge");
+    }
+
+    printf("*********** AFTER ***********\n");
+    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
 
     return true;
 }
@@ -638,37 +702,25 @@ bool Mesh::verify() const {
         success &= verifyVertex(v);
     }
 
-    for (int i = 0; i < halfedges_.size(); i++) {
-        auto he = halfedges_[i];
-        if (he->index() != i) {
-            fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
-            success = false;
-        }
-
-        if (!he->isBorder() && he.get() != he->rev()->rev()) {
-            fprintf(stderr, "Halfedge opposition conflict: %p != %p\n", he.get(), he->rev()->rev());
-            success = false;
-        }
-
-        success &= verifyVertex(he->src());
-        success &= verifyVertex(he->dst());
-    }
-
+//    for (int i = 0; i < halfedges_.size(); i++) {
+//        auto he = halfedges_[i];
+//        if (he->index() != i) {
+//            fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
+//            success = false;
+//        }
+//
+//        success &= verifyVertex(he->src());
+//        success &= verifyVertex(he->dst());
+//    }
+//
 //    for (int i = 0; i < faces_.size(); i++) {
 //        auto f = faces_[i];
 //        if (f->index_ != i) {
 //            printf("v: %d %d\n", f->index_, i);
 //        }
 //
-//        if (f->m_he->index_ >= halfedges_.size()) {
-//            printf("v: %d %d\n", f->m_he->index_, halfedges_.size());
-//        }
-//
-//        const int i0 = f->m_he->src()->index();
-//        const int i1 = f->m_he->next()->src()->index();
-//        const int i2 = f->m_he->prev()->src()->index();
-//        if (i0 >= vertices_.size() || i1 >= vertices_.size() || i2 >= vertices_.size()) {
-//            printf("%d %d %d, %d\n", i0, i1, i2, vertices_.size());
+//        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+//            success &= verifyVertex(it.ptr());
 //        }
 //    }
 
@@ -687,6 +739,14 @@ bool Mesh::verifyVertex(Vertex* v) const {
         fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p.x, p.y, p.z);
         success = false;
     }
+
+    for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+        if (it->src() != v) {
+            fprintf(stderr, "Origin of an outward halfedge is invalid at v[%d]!\n", v->index());
+            success = false;
+        }
+    }
+
     return success;
 }
 
@@ -731,11 +791,13 @@ void Mesh::addFace(Face *f) {
 
 void Mesh::removeVertex(Vertex* v) {
     Assertion((*v) == (*vertices_[v->index_]), "Invalid vertex indexing!");
+    Assertion(v->index() < vertices_.size(), "Vertex index out of bounds!");
 
     if (v->index_ < vertices_.size() - 1) {
         std::swap(vertices_[v->index_], vertices_[vertices_.size() - 1]);
         std::swap(vertices_[v->index_]->index_ , vertices_[vertices_.size() - 1]->index_);
-    } 
+    }
+    // vertices_[vertices_.size() - 1].reset();
     vertices_.resize(vertices_.size() - 1);
     vertices_.shrink_to_fit();
 }
@@ -747,6 +809,7 @@ void Mesh::removeHalfedge(Halfedge *he) {
         std::swap(halfedges_[he->index_], halfedges_[halfedges_.size() - 1]);
         std::swap(halfedges_[he->index_]->index_, halfedges_[halfedges_.size() - 1]->index_);
     }
+    // halfedges_[halfedges_.size() - 1].reset();
     halfedges_.resize(halfedges_.size() - 1);
     halfedges_.shrink_to_fit();
 }
@@ -758,6 +821,7 @@ void Mesh::removeFace(Face *f) {
         std::swap(faces_[f->index_], faces_[faces_.size() - 1]);
         std::swap(faces_[f->index_]->index_, faces_[faces_.size() - 1]->index_);
     }
+    // faces_[faces_.size() - 1].reset();
     faces_.resize(faces_.size() - 1);
     faces_.shrink_to_fit();
 }

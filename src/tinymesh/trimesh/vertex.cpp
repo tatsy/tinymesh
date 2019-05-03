@@ -1,6 +1,8 @@
 #define TINYMESH_API_EXPORT
 #include "vertex.h"
 
+#include <set>
+
 #include "face.h"
 #include "halfedge.h"
 
@@ -69,7 +71,10 @@ int Vertex::degree() {
 }
 
 bool Vertex::isBoundary() {
+    std::set<Halfedge *> hes;
     for (auto it = ohe_begin(); it != ohe_end(); ++it) {
+        Assertion(hes.find(it.ptr()) == hes.end(), "Duplicated halfeges! #hes in cycle = %d", (int)hes.size());
+        hes.insert(it.ptr());
         if (it->isBoundary()) {
             return true;
         }
@@ -86,7 +91,7 @@ Vertex::VertexIterator Vertex::v_end() {
 }
 
 Vertex::InHalfedgeIterator Vertex::ihe_begin() {
-    return Vertex::InHalfedgeIterator(halfedge_);
+    return Vertex::InHalfedgeIterator(halfedge_->rev());
 }
 
 Vertex::InHalfedgeIterator Vertex::ihe_end() {

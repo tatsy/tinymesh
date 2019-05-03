@@ -19,7 +19,6 @@ public:
     virtual ~Halfedge() = default;
 
     double length() const;
-    bool isBorder() { return rev_ == nullptr; }
 
     Halfedge &operator=(const Halfedge &he);
     Halfedge &operator=(Halfedge &&he) noexcept;
@@ -29,7 +28,13 @@ public:
     Vertex *src() const { return src_; }
     Vertex *dst() const { return next_->src_; }
     Halfedge *next() const { return next_; }
-    Halfedge *prev() const { return next_->next_; }
+    Halfedge *prev() const {
+        Halfedge *iter = next_;
+        while (iter->next_ != this) {
+            iter = iter->next_;
+        }
+        return iter;
+    }
     Halfedge *rev() const { return rev_; }
     Face *face() const { return face_; }
     int index() const { return index_; }
