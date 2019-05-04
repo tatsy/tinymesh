@@ -18,9 +18,10 @@ namespace {
 struct UnionFindTree {
     UnionFindTree() = default;
 
-    explicit UnionFindTree(int n)
+    explicit UnionFindTree(size_t n)
         : n{ n }
-        , values{ n, -1 } {
+        , values{ } {
+        values.assign(n, -1);
     }
 
     int root(int x) {
@@ -47,7 +48,7 @@ struct UnionFindTree {
         return values[x] == values[y];
     }
 
-    int n;
+    size_t n;
     std::vector<int> values;
 };
 
@@ -64,6 +65,10 @@ struct QEMNode {
 
     bool operator<(const QEMNode &n) const {
         return value < n.value;
+    }
+
+    bool operator>(const QEMNode &n) const {
+        return value > n.value;
     }
 
     double value;
@@ -104,17 +109,20 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
     // Determine #vertices to be removed
     int nRemove = (int)(nv * (1.0 - ratio));
     if (nRemain > 0) {
-        if (nRemain <= 3) {
+        if (nRemain <= 4) {
             FatalError("Remaining vertices must be more than 3!");
         }
         nRemove = nv - nRemain;
     }
-    nRemove = nv - nRemain;
+    printf("#remove: %d\n", nRemove);
 
     // Compute matrix Q
     std::vector<Matrix> Qs(nv, Matrix::zeros(4, 4));
     for (int i = 0; i < mesh.num_faces(); i++) {
         Face *f = mesh.face(i);
+        if (f->isBoundary()) {
+            continue;
+        }
 
         std::vector<Vertex *> vs;
         for (auto vit = f->v_begin(); vit != f->v_end(); ++vit) {
@@ -122,7 +130,7 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
         }
 
         if (vs.size() != 3) {
-            Warn("Non trianglar mesh is detected!");
+            Warn("Non trianglar mesh is detected: #vertex = %d", (int)vs.size());
             return;
         }
 
@@ -141,16 +149,15 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
             nz * nx, nz * ny, nz * nz, nz * d,
              d * nx,  d * ny,  d * nz,  d * d,
         };
+        Matrix Kp = Matrix(4, 4, elems);
 
-        Matrix Q = Matrix(4, 4, elems);
-
-        Qs[vs[0]->index()] += w * Q;
-        Qs[vs[1]->index()] += w * Q;
-        Qs[vs[2]->index()] += w * Q;
+        Qs[vs[0]->index()] += Kp;
+        Qs[vs[1]->index()] += Kp;
+        Qs[vs[2]->index()] += Kp;
     }
 
     // Push QEMs
-    std::priority_queue<QEMNode> que;
+    std::priority_queue<QEMNode, std::vector<QEMNode>, std::greater<QEMNode>> que;
     for (int i = 0; i < mesh.num_halfedges(); i++) {
         Halfedge *he = mesh.halfedge(i);
 
@@ -168,9 +175,14 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
     // Remove halfedges
     int removed = 0;
     auto uftree = UnionFindTree(nv);
-    while (removed < nRemove) {
+    std::set<Halfedge *> removedHalfedges;
+    while (removed < nRemove && !que.empty()) {
         QEMNode qn = que.top();
         que.pop();
+
+        if (removedHalfedges.find(qn.he) != removedHalfedges.end()) {
+            continue;
+        }
 
         const int ii = qn.he->src()->index();
         const int jj = qn.he->src()->index();
@@ -272,80 +284,106 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
             continue;
         }
 
+        // Update remove halfedges
+        removedHalfedges.insert(qn.he);
+        removedHalfedges.insert(qn.he->next());
+        removedHalfedges.insert(qn.he->next()->next());
+        removedHalfedges.insert(qn.he->rev());
+        removedHalfedges.insert(qn.he->rev()->next());
+        removedHalfedges.insert(qn.he->rev()->next()->next());
+
         // Collapse halfedge
-        mesh.collapseHE(qn.he);
-        uftree.merge(ii, jj);
-
-        Assertion(ii == uftree.root(jj), "Merge operation is not succeeded!");
-        Assertion(mesh.vertex(ii) != nullptr, "Invalid null vertex is found!");
-        Assertion(mesh.vertex(jj) == nullptr, "Invalid non-null vartex is found!");
-
-        // Check triangle shapes
-        //bool isUpdate = true;
-        //update_vertices = [ v_i ] #list(chain([ v_i ], v_i.vertices()))
-        //while is_update:
-        //    is_update = False
-        //for he in v_i.halfedges():
-        //if he.face is None or he.opposite.face is None:
+        qn.he->src()->setPos(qn.v);
+        if (mesh.collapseHE(qn.he)) {
+            removed += 1;
+            uftree.merge(ii, jj);    
+        }
     }
 
-//# Boundary halfedge
-//    continue
-//
-//    v0 = he.next.vertex_to.position
-//    v1 = he.vertex_to.position
-//    v2 = he.vertex_from.position
-//    v3 = he.opposite.next.vertex_to.position
-//
-//    e0 = v1 - v0
-//    e1 = v2 - v0
-//    c1 = e0.dot(e1) / (e0.norm() * e1.norm() + EPS)
-//    a1 = math.acos(max(-1.0, min(c1, 1.0)))
-//
-//    e2 = v1 - v3
-//    e3 = v2 - v3
-//    c2 = e2.dot(e3) / (e2.norm() * e3.norm() + EPS)
-//    a2 = math.acos(max(-1.0, min(c2, 1.0)))
-//
-//    if a1 + a2 > math.pi:
-//    mesh.flip_halfedge(he)
-//    is_update = True
-//    break
-//
-//# Update matrix Q
-//    for v in update_vertices:
-//    Qs[v.index] = np.zeros((4, 4))
-//    for f in v.faces():
-//    vs = list(f.vertices())
-//    assert len(vs) == 3
-//
-//    ps = [ v.position for v in vs ]
-//    norm = (ps[1] - ps[0]).cross(ps[2] - ps[0])
-//    w = norm.norm()
-//    norm /= (w + EPS)
-//
-//    d = -norm.dot(ps[0])
-//    pp = np.array([ norm.x, norm.y, norm.z, d ])
-//    Q = pp.reshape((pp.size, 1)) * pp
-//    Qs[v.index] += w * Q
-//
-//# Update QEMs
-//    for v1 in update_vertices:
-//    for v2 in v1.vertices():
-//    assert v1.index != v2.index
-//    assert mesh.vertices[v1.index] is not None
-//    assert mesh.vertices[v2.index] is not None
-//
-//    if v1.degree() <= 3 or v2.degree() <= 3: continue
-//    if v1.degree() >= 7 or v2.degree() >= 7: continue
-//
-//    Q1 = Qs[v1.index]
-//    Q2 = Qs[v2.index]
-//    qem, v_bar = compute_QEM(Q1, Q2, v1, v2)
-//
-//    pque.push(QEMNode(qem, v1.index, v2.index, v_bar))
-//
+    printf("%d vertices removed!\n", removed);
 
+    for (int it = 0; it < 3; it++) {
+        // Flip edges
+        for (int i = 0; i < mesh.num_halfedges(); i++) {
+            Halfedge *he = mesh.halfedge(i);
+            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
+                continue;
+            }
+
+            Vertex *v0 = he->src();
+            Vertex *v1 = he->dst();
+            Vertex *v2 = he->next()->dst();
+            Vertex *v3 = he->rev()->next()->dst();
+            const int d0 = v0->degree();
+            const int d1 = v1->degree();
+            const int d2 = v2->degree();
+            const int d3 = v3->degree();
+
+            const int score = std::abs(d0 - 6) + std::abs(d1 - 6) + std::abs(d2 - 6) + std::abs(d3 - 6);
+            const int after = std::abs(d0 - 1 - 6) + std::abs(d1 - 1 - 6) + std::abs(d2 + 1 - 6) + std::abs(d3 + 1 - 6);
+            if (score > after) {
+                mesh.flipHE(he);
+            }
+        }
+
+        // Volonoi tessellation
+        for (int l = 0; l < 5; l++) {
+            int index;
+            const int nv = mesh.num_vertices();
+            std::vector<Vec> centroids(nv);
+            std::vector<Vec> normals(nv);
+
+            // Compute centroids and tangent planes
+            index = 0;
+            for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+                Vertex *v = mesh.vertex(i);
+
+                // Collect surrounding vertices
+                Vec org = v->pos();
+                std::vector<Vec> pts;
+                for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
+                    pts.push_back(vit->pos());
+                }
+
+                // Compute centroids, tangents, and binormals
+                Vec cent(0.0);
+                Vec norm(0.0);
+                for (int i = 0; i < pts.size(); i++) {
+                    const int j = (i + 1) % pts.size();
+                    Vec e1 = pts[i] - org;
+                    Vec e2 = pts[j] - org;
+                    Vec g = (org + pts[i] + pts[j]) / 3.0;
+
+                    cent += g;
+                    norm += cross(e1, e2);
+                }
+
+                cent /= pts.size();
+                const double l = length(norm);
+
+                if (l != 0.0) {
+                    centroids[index] = cent;
+                    normals[index] = norm / l;
+                }
+            }
+
+            // Update vertex positions
+            index = 0;
+            for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+                Vertex *v = mesh.vertex(i);
+                if (v->isBoundary()) {
+                    continue;
+                }
+
+                if (length(normals[index]) != 0.0) {
+                    const Vec pt = v->pos();
+                    Vec e = centroids[index] - pt;
+                    e -= normals[index] * dot(e, normals[index]);
+                    v->setPos(pt + e);
+                }
+            }
+        }
+    }
 }
 
 }  // namespace tinymesh

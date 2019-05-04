@@ -74,6 +74,10 @@ Matrix& Matrix::operator*=(double s) {
     return *this;
 }
 
+Matrix& Matrix::operator/=(double s) {
+    return this->operator*=(1.0 / s);
+}
+
 double Matrix::det() const {
     Matrix lu = factorLU();
     double ret = 1.0;
@@ -188,7 +192,6 @@ Matrix Matrix::factorLU(int* order) const {
     }
 
     for (int k = 0; k < n; k++) {
-        /*
         // Pivot selection
         double maxval = 0.0;
         int pivot = k;
@@ -199,7 +202,7 @@ Matrix Matrix::factorLU(int* order) const {
             }
         }
 
-        // 行の入れ替え
+        // Swap columns
         if (order) {
             std::swap(order[k], order[pivot]);
         }
@@ -212,7 +215,7 @@ Matrix Matrix::factorLU(int* order) const {
             }
         }
 
-        // 要素の消去
+        // Eliminate entries
         double iukk = 1.0 / LU.get(k, k);
         for (int i = k + 1; i < n; i++) {
             double v = LU.get(i, k) * iukk;
@@ -222,7 +225,6 @@ Matrix Matrix::factorLU(int* order) const {
                 LU.set(i, j, v);
             }
         }
-        */
     }
 
     return std::move(LU);
@@ -267,3 +269,8 @@ tinymesh::Matrix operator*(const tinymesh::Matrix & m1, const tinymesh::Matrix &
     return std::move(ret);
 }
 
+tinymesh::Matrix operator/(const tinymesh::Matrix & m, double s) {
+    tinymesh::Matrix ret = m;
+    ret /= s;
+    return std::move(ret);
+}

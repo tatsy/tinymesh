@@ -38,19 +38,19 @@ bool Face::VertexIterator::operator!=(const Face::VertexIterator &it) const {
 }
 
 Vertex &Face::VertexIterator::operator*() {
-    return *iter_->dst();
+    return *iter_->src();
 }
 
 Vertex *Face::VertexIterator::ptr() const {
-    return iter_->dst();
+    return iter_->src();
 }
 
 Vertex *Face::VertexIterator::operator->() const {
-    return iter_->dst();
+    return iter_->src();
 }
 
 Face::VertexIterator &Face::VertexIterator::operator++() {
-    iter_ = iter_->rev()->next();
+    iter_ = iter_->next();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -59,7 +59,7 @@ Face::VertexIterator &Face::VertexIterator::operator++() {
 
 Face::VertexIterator Face::VertexIterator::operator++(int) {
     Halfedge *tmp = iter_;
-    iter_ = iter_->rev()->next();
+    iter_ = iter_->next();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }

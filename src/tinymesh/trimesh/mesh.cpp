@@ -601,19 +601,21 @@ bool Mesh::collapseHE(Halfedge* he) {
         return false;
     }
 
-    // Check unsafe collapse
-    std::set<Vertex*> neighbors;
-    for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
+    // Collect neighboring vertices of the one to be removed
+    std::vector<Vertex*> neighbors;
+    for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
-        neighbors.insert(it->dst());
+        neighbors.push_back(it->dst());
     }
 
     Assertion(!neighbors.empty(), "No neighboring vertex!");
 
+    // Check unsafe collapse (# of shared vertices)
     int numUnion = 0;
-    for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
+    std::set<Vertex*> neighborSet(neighbors.begin(), neighbors.end());
+    for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
-        if (neighbors.find(it->dst()) != neighbors.end()) {
+        if (neighborSet.find(it->dst()) != neighborSet.end()) {
             numUnion += 1;            
         }
     }
@@ -622,9 +624,31 @@ bool Mesh::collapseHE(Halfedge* he) {
         return false;
     }
 
+    // Check unsafe collapse (face flip)
+    Vec norm(0.0);
+    for (int i = 0; i < neighbors.size(); i++) {
+        const int j = (i + 1) % neighbors.size();
+        const Vec e1 = neighbors[i]->pos() - v2->pos();
+        const Vec e2 = neighbors[j]->pos() - v2->pos();
+        norm += cross(e1, e2);
+    }
+    norm = normalize(norm);
+
+    double sign = 0.0;
+    for (int i = 0; i < neighbors.size(); i++) {
+        const int j = (i + 1) % neighbors.size();
+        const Vec e1 = neighbors[i]->pos() - v0->pos();
+        const Vec e2 = neighbors[j]->pos() - v0->pos();
+        const double s = dot(norm, cross(e1, e2));
+        if (sign * s < 0.0) {
+            return false;
+        }
+        sign = s;
+    }
+
     // Update origins of all outward halfedges
-    Vertex *v_remain = he->src();    // v0
-    Vertex *v_remove = rev->src();   // v2
+    Vertex *v_remove = v2;
+    Vertex *v_remain = v0;
     for (auto it = v_remove->ohe_begin(); it != v_remove->ohe_end(); ++it) {
         Assertion(it->src() == v_remove, "Invalid halfedge origin detected!");
         it->src_ = v_remain;

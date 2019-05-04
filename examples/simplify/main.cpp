@@ -15,14 +15,14 @@ int main(int argc, char **argv) {
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
-    tinymesh::simplify(mesh);
+    tinymesh::simplify(mesh, 0.1);
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));
     const fs::path dirpath = filepath.parent_path();
     const std::string extension = filepath.extension().string();
     const std::string basename = filepath.stem().string();
-    const std::string outfile = (dirpath / fs::path((basename + "_remesh" + extension).c_str())).string();
+    const std::string outfile = (dirpath / fs::path((basename + "_simplify" + extension).c_str())).string();
     mesh.save(outfile);
     printf("Save: %s\n", outfile.c_str());
 }

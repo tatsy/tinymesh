@@ -25,6 +25,7 @@ public:
 
     Matrix &operator+=(const Matrix &m);
     Matrix &operator*=(double s);
+    Matrix &operator/=(double s);
 
     double get(int i, int j) const {
         return m_values[i * m_cols + j];
@@ -59,5 +60,6 @@ TINYMESH_API tinymesh::Matrix operator+(const tinymesh::Matrix &m1, const tinyme
 TINYMESH_API tinymesh::Matrix operator*(const tinymesh::Matrix &m, double s);
 TINYMESH_API tinymesh::Matrix operator*(double s, const tinymesh::Matrix &m);
 TINYMESH_API tinymesh::Matrix operator*(const tinymesh::Matrix &m1, const tinymesh::Matrix &m2);
+TINYMESH_API tinymesh::Matrix operator/(const tinymesh::Matrix &m, double s);
 
 #endif  // TINYMESH_MATRIX_H
