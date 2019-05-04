@@ -98,6 +98,7 @@ double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Ve
 }
 
 void simplify(Mesh &mesh, double ratio, int nRemain) {
+    /*
     static const double Eps = 1.0e-12;
     const int nv = (int)mesh.num_vertices();
 
@@ -283,6 +284,7 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
         //for he in v_i.halfedges():
         //if he.face is None or he.opposite.face is None:
     }
+    */
 
 //# Boundary halfedge
 //    continue

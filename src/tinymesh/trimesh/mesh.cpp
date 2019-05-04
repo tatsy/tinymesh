@@ -40,13 +40,23 @@ void Mesh::load(const std::string &filename) {
     faces_.clear();
 
     // Load new mesh
-    const std::string ext = fs::path(filename.c_str()).extension();
+    const std::string ext = fs::path(filename.c_str()).extension().string();
     if (ext == ".obj") {
         loadOBJ(filename);
     } else if (ext == ".ply") {
         loadPLY(filename);
     } else {
         FatalError("Unsupported file extension: %s", ext.c_str());
+    }
+
+    for (int i = 0; i < indices_.size(); i += 3) {
+        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] || indices_[i + 2] == indices_[i + 0]) {
+            int size = (int)indices_.size();
+            std::swap(indices_[i + 0], indices_[size - 3]);
+            std::swap(indices_[i + 1], indices_[size - 2]);
+            std::swap(indices_[i + 2], indices_[size - 1]);
+            indices_.resize(size - 3);
+        }
     }
 
     // Put vertex indices
@@ -56,7 +66,7 @@ void Mesh::load(const std::string &filename) {
 
     // Check if all triangles consist of three distinct vertices
     for (int i = 0; i < indices_.size(); i += 3) {
-        if (indices_[i] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] || indices_[i + 1] == indices_[i + 2]) {
+        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] || indices_[i + 2] == indices_[i + 0]) {
             FatalError("Each triangle must have three distinct vertices!");
         }
     }
@@ -66,6 +76,22 @@ void Mesh::load(const std::string &filename) {
     std::map<IndexPair, Halfedge*> pairToHalfedge;
     std::map<uint32_t, uint32_t> vertexDegree;
     for (int i = 0; i < indices_.size(); i += degree) {
+        // Check duplication
+        bool duplicated = false;
+        for (int j = 0; j < degree; j++) {
+            const uint32_t a = indices_[i + j];
+            const uint32_t b = indices_[i + (j + 1) % degree];
+            IndexPair ab(a, b);
+            if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
+                duplicated = true;
+                break;
+            }
+        }
+
+        if (duplicated) {
+            continue;
+        }
+
         // Traverse face vertices
         auto face = std::make_shared<Face>();
         std::vector<Halfedge*> faceHalfedges;
@@ -182,7 +208,7 @@ void Mesh::load(const std::string &filename) {
         } while (he != v->halfedge_);
 
         if (count != vertexDegree[v->index()]) {
-            FatalError("At least one of the vertices is non-manifold!");
+            FatalError("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
         }
     }
 
@@ -260,6 +286,8 @@ void Mesh::loadOBJ(const std::string &filename) {
             indices_.push_back(uniqueVertices[v]);
         }
     }
+
+    Assertion(indices_.size() % 3 == 0, "Non-triangle face might be contained!");
 }
 
 void Mesh::loadPLY(const std::string &filename) {
@@ -342,9 +370,6 @@ void Mesh::loadPLY(const std::string &filename) {
 }
 
 bool Mesh::splitHE(Halfedge *he) {
-    printf("*********** BEFORE ***********\n");
-    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
-
     Halfedge *rev = he->rev();
     Vertex *v0 = he->src();
     Vertex *v1 = rev->src();
@@ -472,9 +497,6 @@ bool Mesh::splitHE(Halfedge *he) {
     addHalfedge(he11);
     addHalfedge(he12);
 
-    printf("*********** AFTER ***********\n");
-    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
-
     return true;
 }
 
@@ -487,11 +509,6 @@ bool Mesh::collapseHE(Halfedge* he) {
     //    \    /
     //     \  /
     //      v3
-
-//    printf("*********** BEFORE ***********\n");
-//    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
-
-    printf("#vert: %zu\n", vertices_.size());
 
     Halfedge *rev = he->rev_;
     Assertion(he->index_ < halfedges_.size(), "Daemon halfedge detected!");
@@ -594,39 +611,7 @@ bool Mesh::collapseHE(Halfedge* he) {
     removeFace(f1);
 
     // Remove vertices
-    printf("Remain vertex #%d(%p)\n", v_remain->index(), v_remain);
-    printf("Remove vertex #%d(%p)\n", v_remove->index(), v_remove);
-    printf("Wedge vertex #%d(%p)\n", v1->index(), v1);
-    printf("Wedge vertex #%d(%p)\n", v3->index(), v3);
     removeVertex(v_remove);
-
-    for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
-        Assertion(it->src() == v0, "Remain!");
-    }
-
-    for (auto it = v1->ohe_begin(); it != v1->ohe_end(); ++it) {
-        Assertion(it->src() == v1, "Remain!");
-    }
-
-//    for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
-//        Assertion(it->src() == v2, "Remain!");
-//    }
-
-    for (auto it = v3->ohe_begin(); it != v3->ohe_end(); ++it) {
-        Assertion(it->src() == v3, "Remain!");
-    }
-
-    for (auto it = v_remain->ohe_begin(); it != v_remain->ohe_end(); ++it) {
-        Assertion(it->src() == v_remain, "Remain!");
-    }
-
-    for (auto iter : halfedges_) {
-        Assertion(he != iter.get(), "Hogehohoge");
-        Assertion(rev != iter.get(), "Hogehohoge");
-    }
-
-//    printf("*********** AFTER ***********\n");
-//    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
 
     return true;
 }
@@ -708,27 +693,27 @@ bool Mesh::verify() const {
         success &= verifyVertex(v);
     }
 
-//    for (int i = 0; i < halfedges_.size(); i++) {
-//        auto he = halfedges_[i];
-//        if (he->index() != i) {
-//            fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
-//            success = false;
-//        }
-//
-//        success &= verifyVertex(he->src());
-//        success &= verifyVertex(he->dst());
-//    }
-//
-//    for (int i = 0; i < faces_.size(); i++) {
-//        auto f = faces_[i];
-//        if (f->index_ != i) {
-//            printf("v: %d %d\n", f->index_, i);
-//        }
-//
-//        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
-//            success &= verifyVertex(it.ptr());
-//        }
-//    }
+    for (int i = 0; i < halfedges_.size(); i++) {
+        auto he = halfedges_[i];
+        if (he->index() != i) {
+            fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
+            success = false;
+        }
+
+        success &= verifyVertex(he->src());
+        success &= verifyVertex(he->dst());
+    }
+
+    for (int i = 0; i < faces_.size(); i++) {
+        auto f = faces_[i];
+        if (f->index_ != i) {
+            printf("v: %d %d\n", f->index_, i);
+        }
+
+        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+            success &= verifyVertex(it.ptr());
+        }
+    }
 
     return success;
 }
@@ -756,30 +741,6 @@ bool Mesh::verifyVertex(Vertex* v) const {
     return success;
 }
 
-Mesh::VertexIterator Mesh::v_begin() {
-    return Mesh::VertexIterator(vertices_);
-}
-
-Mesh::VertexIterator Mesh::v_end() {
-    return Mesh::VertexIterator(vertices_, vertices_.size());
-}
-
-Mesh::HalfedgeIterator Mesh::he_begin() {
-    return Mesh::HalfedgeIterator(halfedges_);
-}
-
-Mesh::HalfedgeIterator Mesh::he_end() {
-    return Mesh::HalfedgeIterator(halfedges_, halfedges_.size());
-}
-
-Mesh::FaceIterator Mesh::f_begin() {
-    return Mesh::FaceIterator(faces_);
-}
-
-Mesh::FaceIterator Mesh::f_end() {
-    return Mesh::FaceIterator(faces_, faces_.size());
-}
-
 void Mesh::addVertex(Vertex *v) {
     v->index_ = vertices_.size();
     vertices_.emplace_back(v);
@@ -788,7 +749,6 @@ void Mesh::addVertex(Vertex *v) {
 void Mesh::addHalfedge(Halfedge *he) {
     he->index_ = halfedges_.size();
     halfedges_.emplace_back(he);
-    printf("Add HE: #%d(%p)\n", he->index(), he);
 }
 
 void Mesh::addFace(Face *f) {
@@ -804,9 +764,8 @@ void Mesh::removeVertex(Vertex* v) {
         std::swap(vertices_[v->index_], vertices_[vertices_.size() - 1]);
         std::swap(vertices_[v->index_]->index_ , vertices_[vertices_.size() - 1]->index_);
     }
-    // vertices_[vertices_.size() - 1].reset();
     vertices_.resize(vertices_.size() - 1);
-    vertices_.shrink_to_fit();
+    //vertices_.shrink_to_fit();
 }
 
 void Mesh::removeHalfedge(Halfedge *he) {
@@ -816,9 +775,8 @@ void Mesh::removeHalfedge(Halfedge *he) {
         std::swap(halfedges_[he->index_], halfedges_[halfedges_.size() - 1]);
         std::swap(halfedges_[he->index_]->index_, halfedges_[halfedges_.size() - 1]->index_);
     }
-    // halfedges_[halfedges_.size() - 1].reset();
     halfedges_.resize(halfedges_.size() - 1);
-    halfedges_.shrink_to_fit();
+    //halfedges_.shrink_to_fit();
 }
 
 void Mesh::removeFace(Face *f) {
@@ -828,151 +786,8 @@ void Mesh::removeFace(Face *f) {
         std::swap(faces_[f->index_], faces_[faces_.size() - 1]);
         std::swap(faces_[f->index_]->index_, faces_[faces_.size() - 1]->index_);
     }
-    // faces_[faces_.size() - 1].reset();
     faces_.resize(faces_.size() - 1);
-    faces_.shrink_to_fit();
-}
-
-
-// ----------
-// VertexIterator
-// ----------
-
-Mesh::VertexIterator::VertexIterator(std::vector<std::shared_ptr<Vertex>> &vertices, int index)
-    : vertices_{ vertices }
-    , index_{ index } {
-}
-
-bool Mesh::VertexIterator::operator!=(const Mesh::VertexIterator &it) const {
-    return index_ != it.index_;
-}
-
-Vertex &Mesh::VertexIterator::operator*() {
-    return *vertices_[index_];
-}
-
-Vertex *Mesh::VertexIterator::operator->() const {
-    return index_ < vertices_.size() ? vertices_[index_].get() : nullptr;
-}
-
-Vertex* Mesh::VertexIterator::ptr() const {
-    return index_ < vertices_.size() ? vertices_[index_].get() : nullptr;
-}
-
-Mesh::VertexIterator &Mesh::VertexIterator::operator++() {
-    ++index_;
-    return *this;
-}
-
-Mesh::VertexIterator Mesh::VertexIterator::operator++(int) {
-    int prev = index_;
-    ++index_;
-    return Mesh::VertexIterator(vertices_, prev);
-}
-
-Mesh::VertexIterator &Mesh::VertexIterator::operator--() {
-    --index_;
-    return *this;
-}
-
-Mesh::VertexIterator Mesh::VertexIterator::operator--(int) {
-    int prev = index_;
-    --index_;
-    return Mesh::VertexIterator(vertices_, prev);
-}
-
-// ----------
-// HalfedgeIterator
-// ----------
-
-Mesh::HalfedgeIterator::HalfedgeIterator(std::vector<std::shared_ptr<Halfedge>>& hes, int index)
-    : halfedges_{ hes }
-    , index_{ index } {    
-}
-
-bool Mesh::HalfedgeIterator::operator!=(const HalfedgeIterator& it) const {
-    return index_ != it.index_;
-}
-
-Halfedge &Mesh::HalfedgeIterator::operator*() {
-    return *halfedges_[index_];
-}
-
-Halfedge* Mesh::HalfedgeIterator::operator->() const {
-    return index_ < halfedges_.size() ? halfedges_[index_].get() : nullptr;
-}
-
-Halfedge* Mesh::HalfedgeIterator::ptr() const {
-    return index_ < halfedges_.size() ? halfedges_[index_].get() : nullptr;
-}
-
-Mesh::HalfedgeIterator &Mesh::HalfedgeIterator::operator++() {
-    ++index_;
-    return *this;
-}
-
-Mesh::HalfedgeIterator Mesh::HalfedgeIterator::operator++(int) {
-    int prev = index_;
-    ++index_;
-    return Mesh::HalfedgeIterator(halfedges_, prev);
-}
-
-Mesh::HalfedgeIterator &Mesh::HalfedgeIterator::operator--() {
-    --index_;
-    return *this;
-}
-
-Mesh::HalfedgeIterator Mesh::HalfedgeIterator::operator--(int) {
-    int prev = index_;
-    --index_;
-    return Mesh::HalfedgeIterator(halfedges_, prev);
-}
-
-// ----------
-// FaceIterator
-// ----------
-
-Mesh::FaceIterator::FaceIterator(std::vector<std::shared_ptr<Face>> &faces, int index)
-    : faces_{ faces }
-    , index_{ index } {
-}
-
-bool Mesh::FaceIterator::operator!=(const FaceIterator &it) const {
-    return index_ != it.index_;
-}
-
-Face &Mesh::FaceIterator::operator*() {
-    return *faces_[index_];
-}
-
-Face *Mesh::FaceIterator::operator->() const {
-    return index_ < faces_.size() ? faces_[index_].get() : nullptr;
-}
-
-Face *Mesh::FaceIterator::ptr() const {
-    return index_ < faces_.size() ? faces_[index_].get() : nullptr;
-}
-
-Mesh::FaceIterator &Mesh::FaceIterator::operator++() {
-    ++index_;
-    return *this;
-}
-
-Mesh::FaceIterator Mesh::FaceIterator::operator++(int) {
-    int prev = index_;
-    ++index_;
-    return Mesh::FaceIterator(faces_, prev);
-}
-
-Mesh::FaceIterator &Mesh::FaceIterator::operator--() {
-    --index_;
-    return *this;
-}
-
-Mesh::FaceIterator Mesh::FaceIterator::operator--(int) {
-    int prev = index_;
-    --index_;
-    return Mesh::FaceIterator(faces_, prev);
+    //faces_.shrink_to_fit();
 }
 
 }  // namespace tinymesh

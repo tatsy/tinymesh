@@ -13,11 +13,11 @@
 
 namespace tinymesh {
 
-void remesh(Mesh &mesh, int maxiter) {
+void remesh(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
     int count;
     double Lavg, Lvar, Lstd;
-    std::vector<Halfedge*> hes;
 
+    std::vector<uint32_t> indices;
     std::random_device randev;
     std::mt19937 rnd(randev());
 
@@ -31,8 +31,9 @@ void remesh(Mesh &mesh, int maxiter) {
         Lvar = 0.0;
 
         count = 0;
-        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            const double l = it->length();
+        for (int i = 0; i < mesh.num_halfedges(); i++) {
+            Halfedge *he = mesh.halfedge(i);
+            const double l = he->length();
             Lavg += l;
             Lvar += l * l;
             count += 1;
@@ -41,34 +42,23 @@ void remesh(Mesh &mesh, int maxiter) {
         Lavg = Lavg / count;
         Lvar = Lvar / count - Lavg * Lavg;
         Lstd = std::sqrt(Lvar);
-        printf("Avg: %f\n", Lavg);
-        printf("Var: %f\n", Lvar);
 
         // Split long edges
-        hes.clear();
-        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            hes.push_back(it.ptr());
+        indices.clear();
+        for (int i = 0; i < mesh.num_halfedges(); i++) {
+            indices.push_back(i);
         }
 
-        std::shuffle(hes.begin(), hes.end(), rnd);
+        std::shuffle(indices.begin(), indices.end(), rnd);
 
-        for (Halfedge *he : hes) {
-            if (he->src()->index() >= mesh.num_vertices() || he->src()->isBoundary()) {
-                continue;
-            }
-
-            if (he->dst()->index() >= mesh.num_vertices() || he->dst()->isBoundary()) {
-                continue;
-            }
-
-            if (he->index() >= mesh.num_halfedges()) {
-                continue;
-            }
-
-            const double l = he->length();
-            const double p = (l - Lavg) / Lstd;
-            if (p > 1.0) {
-                mesh.splitHE(he);
+        for (int i : indices) {
+            if (i >= 0 && i < mesh.num_halfedges()) {
+                Halfedge *he = mesh.halfedge(i);
+                const double l = he->length();
+                const double p = (l - Lavg) / Lstd;
+                if (l >= Lavg * ratioUpper) {
+                    mesh.splitHE(he);
+                }
             }
         }
 
@@ -76,49 +66,22 @@ void remesh(Mesh &mesh, int maxiter) {
         printf("#vert: %d\n", (int)mesh.num_vertices());
         printf("#face: %d\n", (int)mesh.num_faces());
 
-        // Compute average edge length
-        Lavg = 0.0;
-        Lvar = 0.0;
-
-        count = 0;
-        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            const double l = it->length();
-            Lavg += l;
-            Lvar += l * l;
-            count += 1;
-        }
-
-        Lavg = Lavg / count;
-        Lvar = Lvar / count - Lavg * Lavg;
-        Lstd = std::sqrt(Lvar);
-        printf("Avg: %f\n", Lavg);
-        printf("Var: %f\n", Lvar);
-
         // Collapse short edges
-        hes.clear();
-        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            hes.push_back(it.ptr());
+        indices.clear();
+        for (int i = 0; i < mesh.num_halfedges(); i++) {
+            indices.push_back(i);
         }
 
-        std::shuffle(hes.begin(), hes.end(), rnd);
+        std::shuffle(indices.begin(), indices.end(), rnd);
 
-        for (Halfedge *he : hes) {
-            if (he->src()->index() >= mesh.num_vertices() || he->src()->isBoundary()) {
-                continue;
-            }
-
-            if (he->dst()->index() >= mesh.num_vertices() || he->dst()->isBoundary()) {
-                continue;
-            }
-
-            if (he->index() >= mesh.num_halfedges()) {
-                continue;
-            }
-
-            const double l = he->length();
-            const double p = (l - Lavg) / Lstd;
-            if (p < -1.25) {
-                mesh.collapseHE(he);
+        for (int i : indices) {
+            if (i >= 0 && i < mesh.num_halfedges()) {
+                Halfedge *he = mesh.halfedge(i);
+                const double l = he->length();
+                const double p = (l - Lavg) / Lstd;
+                if (l <= Lavg * ratioLower) {
+                    mesh.collapseHE(he);
+                }
             }
         }
 
@@ -127,15 +90,16 @@ void remesh(Mesh &mesh, int maxiter) {
         printf("#face: %d\n", (int)mesh.num_faces());
 
         // Flip edges
-        for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-            if (it->face()->isBoundary() || it->rev()->face()->isBoundary()) {
+        for (int i = 0; i < mesh.num_halfedges(); i++) {
+            Halfedge *he = mesh.halfedge(i);
+            if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
                 continue;
             }
 
-            Vertex *v0 = it->src();
-            Vertex *v1 = it->dst();
-            Vertex *v2 = it->next()->dst();
-            Vertex *v3 = it->rev()->next()->dst();
+            Vertex *v0 = he->src();
+            Vertex *v1 = he->dst();
+            Vertex *v2 = he->next()->dst();
+            Vertex *v3 = he->rev()->next()->dst();
             const int d0 = v0->degree();
             const int d1 = v1->degree();
             const int d2 = v2->degree();
@@ -144,12 +108,12 @@ void remesh(Mesh &mesh, int maxiter) {
             const int score = std::abs(d0 - 6) + std::abs(d1 - 6) + std::abs(d2 - 6) + std::abs(d3 - 6);
             const int after = std::abs(d0 - 1 - 6) + std::abs(d1 - 1 - 6) + std::abs(d2 + 1 - 6) + std::abs(d3 + 1 - 6);
             if (score > after) {
-                mesh.flipHE(it.ptr());
+                mesh.flipHE(he);
             }
         }
 
         // Volonoi tessellation
-        for (int l = 0; l < 1; l++) {
+        for (int l = 0; l < 5; l++) {
             int index;
             const int nv = mesh.num_vertices();
             std::vector<Vec> centroids(nv);
@@ -157,11 +121,13 @@ void remesh(Mesh &mesh, int maxiter) {
 
             // Compute centroids and tangent planes
             index = 0;
-            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it, ++index) {
+            for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+                Vertex *v = mesh.vertex(i);
+
                 // Collect surrounding vertices
-                Vec org = it->pos();
+                Vec org = v->pos();
                 std::vector<Vec> pts;
-                for (auto vit = it->v_begin(); vit != it->v_end(); ++vit) {
+                for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
                     pts.push_back(vit->pos());
                 }
 
@@ -189,25 +155,24 @@ void remesh(Mesh &mesh, int maxiter) {
 
             // Update vertex positions
             index = 0;
-            for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it, ++index) {
-                if (it->isBoundary()) {
+            for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+                Vertex *v = mesh.vertex(i);
+                if (v->isBoundary()) {
                     continue;
                 }
 
                 if (length(normals[index]) != 0.0) {
-                    const Vec pt = it->pos();
+                    const Vec pt = v->pos();
                     Vec e = centroids[index] - pt;
                     e -= normals[index] * dot(e, normals[index]);
-                    it->setPos(pt + e);
+                    v->setPos(pt + e);
                 }
             }
         }
 
         // Laplacian smoothing
-        smooth(mesh, 0.5);
+        smooth(mesh, 1.0);
     }
-
-    mesh.verify();
 }
 
 }  // namespace tinymesh

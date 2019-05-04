@@ -20,11 +20,13 @@ void smooth(Mesh &mesh, double strength) {
 
     // Compute centroids and tangent planes
     index = 0;
-    for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it) {
+    for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+        Vertex *v = mesh.vertex(i);
+
         // Collect surrounding vertices
-        Vec org = it->pos();
+        Vec org = v->pos();
         std::vector<Vec> pts;
-        for (auto vit = it->v_begin(); vit != it->v_end(); ++vit) {
+        for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
             pts.push_back(vit->pos());
         }
 
@@ -41,18 +43,19 @@ void smooth(Mesh &mesh, double strength) {
         cent /= pts.size();
 
         centroids[index] = cent;
-        index += 1;
     }
 
     // Update vertex positions
     index = 0;
-    for (auto it = mesh.v_begin(); it != mesh.v_end(); ++it, ++index) {
-        if (it->isBoundary()) {
+    for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+        Vertex *v = mesh.vertex(i);
+
+        if (v->isBoundary()) {
             continue;
         }
 
-        const Vec pt = it->pos();
-        it->setPos((1.0 - strength) * pt + strength * centroids[index]);
+        const Vec pt = v->pos();
+        v->setPos((1.0 - strength) * pt + strength * centroids[index]);
     }
 }
 

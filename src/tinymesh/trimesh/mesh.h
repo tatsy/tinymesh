@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <memory>
 
 #include "core/common.h"
@@ -34,12 +35,20 @@ public:
 
     bool verify() const;
 
-    VertexIterator v_begin();
-    VertexIterator v_end();
-    HalfedgeIterator he_begin();
-    HalfedgeIterator he_end();
-    FaceIterator f_begin();
-    FaceIterator f_end();
+    Vertex *vertex(int index) const {
+        Assertion(index >= 0 && index < vertices_.size(), "Vertex index out of bounds!");
+        return vertices_[index].get();
+    }
+
+    Halfedge* halfedge(int index) const {
+        Assertion(index >= 0 && index < halfedges_.size(), "Halfedge index out of bounds!");
+        return halfedges_[index].get();
+    }
+
+    Face* face(int index) const {
+        Assertion(index >= 0 && index < faces_.size(), "Face index out of bounds!");
+        return faces_[index].get();
+    }
 
     size_t num_vertices() { return vertices_.size(); }
     size_t num_halfedges() { return halfedges_.size(); }
@@ -62,59 +71,6 @@ private:
     std::vector<std::shared_ptr<Halfedge>> halfedges_;
     std::vector<std::shared_ptr<Face>> faces_;
     std::vector<uint32_t> indices_;
-
-    friend class Mesh::VertexIterator;
-};
-
-class TINYMESH_API Mesh::VertexIterator {
-public:
-    explicit VertexIterator(std::vector<std::shared_ptr<Vertex>> &verts, int index = 0);
-    bool operator!=(const VertexIterator &it) const;
-    Vertex &operator*();
-    Vertex *operator->() const;
-    Vertex *ptr() const;
-    VertexIterator &operator++();
-    VertexIterator operator++(int);
-    VertexIterator &operator--();
-    VertexIterator operator--(int);
-
-private:
-    std::vector<std::shared_ptr<Vertex>> &vertices_;
-    int index_;
-};
-
-class TINYMESH_API Mesh::HalfedgeIterator {
-public:
-    explicit HalfedgeIterator(std::vector<std::shared_ptr<Halfedge>> &hes, int index = 0);
-    bool operator!=(const HalfedgeIterator &it) const;
-    Halfedge &operator*();
-    Halfedge *operator->() const;
-    Halfedge *ptr() const;
-    HalfedgeIterator &operator++();
-    HalfedgeIterator operator++(int);
-    HalfedgeIterator &operator--();
-    HalfedgeIterator operator--(int);
-
-private:
-    std::vector<std::shared_ptr<Halfedge>> &halfedges_;
-    int index_;
-};
-
-class TINYMESH_API Mesh::FaceIterator {
-public:
-    explicit FaceIterator(std::vector<std::shared_ptr<Face>> &faces, int index = 0);
-    bool operator!=(const FaceIterator &it) const;
-    Face &operator*();
-    Face *operator->() const;
-    Face *ptr() const;
-    FaceIterator &operator++();
-    FaceIterator operator++(int);
-    FaceIterator &operator--();
-    FaceIterator operator--(int);
-
-private:
-    std::vector<std::shared_ptr<Face>> &faces_;
-    int index_;
 };
 
 }  // namespace tinymesh
