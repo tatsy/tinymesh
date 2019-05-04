@@ -169,9 +169,6 @@ void remesh(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
                 }
             }
         }
-
-        // Laplacian smoothing
-        smooth(mesh, 1.0);
     }
 }
 

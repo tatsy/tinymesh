@@ -98,11 +98,10 @@ double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Ve
 }
 
 void simplify(Mesh &mesh, double ratio, int nRemain) {
-    /*
     static const double Eps = 1.0e-12;
     const int nv = (int)mesh.num_vertices();
 
-    // How many vertices are removed?
+    // Determine #vertices to be removed
     int nRemove = (int)(nv * (1.0 - ratio));
     if (nRemain > 0) {
         if (nRemain <= 3) {
@@ -114,9 +113,11 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
 
     // Compute matrix Q
     std::vector<Matrix> Qs(nv, Matrix::zeros(4, 4));
-    for (auto fit = mesh.f_begin(); fit != mesh.f_end(); ++fit) {
+    for (int i = 0; i < mesh.num_faces(); i++) {
+        Face *f = mesh.face(i);
+
         std::vector<Vertex *> vs;
-        for (auto vit = fit->v_begin(); vit != fit->v_end(); ++fit) {
+        for (auto vit = f->v_begin(); vit != f->v_end(); ++vit) {
             vs.push_back(vit.ptr());
         }
 
@@ -150,18 +151,21 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
 
     // Push QEMs
     std::priority_queue<QEMNode> que;
-    for (auto it = mesh.he_begin(); it != mesh.he_end(); ++it) {
-        Vertex *v1 = it->src();
-        Vertex *v2 = it->dst();
+    for (int i = 0; i < mesh.num_halfedges(); i++) {
+        Halfedge *he = mesh.halfedge(i);
+
+        Vertex *v1 = he->src();
+        Vertex *v2 = he->dst();
         int i1 = v1->index();
         int i2 = v2->index();
         Matrix &q1 = Qs[i1];
         Matrix &q2 = Qs[i2];
         Vec v;
         const double qem = computeQEM(q1, q2, *v1, *v2, &v);
-        que.push(QEMNode(qem, it.ptr(), v));
+        que.push(QEMNode(qem, he, v));
     }
 
+    // Remove halfedges
     int removed = 0;
     auto uftree = UnionFindTree(nv);
     while (removed < nRemove) {
@@ -284,7 +288,6 @@ void simplify(Mesh &mesh, double ratio, int nRemain) {
         //for he in v_i.halfedges():
         //if he.face is None or he.opposite.face is None:
     }
-    */
 
 //# Boundary halfedge
 //    continue

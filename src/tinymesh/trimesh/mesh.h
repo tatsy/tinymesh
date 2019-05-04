@@ -25,7 +25,7 @@ public:
     Mesh();
     Mesh(const std::string &filename);
     void load(const std::string &filename);
-    void save(const std::string &filename);
+    void save(const std::string &filename) const;
 
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
@@ -57,6 +57,8 @@ public:
 private:
     void loadOBJ(const std::string &filename);
     void loadPLY(const std::string &filename);
+    void saveOBJ(const std::string &filename) const;
+    void savePLY(const std::string &filename) const;
 
     void addVertex(Vertex *v);
     void addHalfedge(Halfedge *he);
