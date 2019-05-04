@@ -766,6 +766,72 @@ bool Mesh::flipHE(Halfedge* he) {
     return true;
 }
 
+bool Mesh::triangulate(Face* f) {
+    std::vector<Halfedge*> hes;
+
+    Halfedge *he = f->halfedge_;
+    do {
+        hes.push_back(he);
+        he = he->next_;
+    } while (he != f->halfedge_);
+
+    std::vector<Halfedge*> new_hes;
+    new_hes.push_back(hes[0]);
+    new_hes.push_back(hes[1]);
+    
+    std::vector<Face*> new_faces;
+    for (int i = 1; i < hes.size() - 1; i++) {
+        if (i < hes.size() - 2) {
+            auto new_he0 = new Halfedge();
+            auto new_he1 = new Halfedge();
+            new_hes.push_back(new_he0);
+            new_hes.push_back(new_he1);
+            new_hes.push_back(hes[i + 1]);
+            addHalfedge(new_he0);
+            addHalfedge(new_he1);
+        }
+
+        auto new_face = new Face();
+        new_faces.push_back(new_face);
+        addFace(new_face);
+    }
+
+    new_hes.push_back(hes[hes.size() - 1]);
+
+    Assertion(new_hes.size() % 3 == 0 && new_hes.size() / 3 == new_faces.size(), "Invalid!!");
+
+    for (int i = 0; i < new_faces.size(); i++) {
+        auto he0 = new_hes[i * 3 + 0];
+        auto he1 = new_hes[i * 3 + 1];
+        auto he2 = new_hes[i * 3 + 2];
+
+        if (i >= 1) {
+            he0->src_ = hes[0]->src_;
+        }
+
+        if (i < new_faces.size() - 1) {
+            he2->src_ = he1->next_->src_;
+        }
+
+        he0->next_ = he1;
+        he1->next_ = he2;
+        he2->next_ = he0;
+        he0->face_ = new_faces[i];
+        he1->face_ = new_faces[i];
+        he2->face_ = new_faces[i];
+
+        if (i >= 1 && i < new_faces.size()) {
+            auto rev = new_hes[i * 3 - 1];
+            he0->rev_ = rev;
+            rev->rev_ = he0;
+        }
+    }
+
+    removeFace(f);
+
+    return true;
+}
+
 bool Mesh::verify() const {
     bool success = true;
     for (int i = 0; i < vertices_.size(); i++) {

@@ -16,5 +16,6 @@
 #include "geoproc/remesh.h"
 #include "geoproc/simplify.h"
 #include "geoproc/smooth.h"
+#include "geoproc/hole_fill.h"
 
 #endif  // TINYMESH_H

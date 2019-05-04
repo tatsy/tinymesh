@@ -30,6 +30,7 @@ public:
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
+    bool triangulate(Face *f);
 
     Vertex *vertex(int i) { return vertices_[i].get(); }
 

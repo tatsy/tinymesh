@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
+    tinymesh::holeFill(mesh);
     tinymesh::remesh(mesh, 0.667, 1.333, 5);
 
     // Save
