@@ -342,6 +342,9 @@ void Mesh::loadPLY(const std::string &filename) {
 }
 
 bool Mesh::splitHE(Halfedge *he) {
+    printf("*********** BEFORE ***********\n");
+    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
+
     Halfedge *rev = he->rev();
     Vertex *v0 = he->src();
     Vertex *v1 = rev->src();
@@ -469,6 +472,9 @@ bool Mesh::splitHE(Halfedge *he) {
     addHalfedge(he11);
     addHalfedge(he12);
 
+    printf("*********** AFTER ***********\n");
+    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
+
     return true;
 }
 
@@ -482,8 +488,8 @@ bool Mesh::collapseHE(Halfedge* he) {
     //     \  /
     //      v3
 
-    printf("*********** BEFORE ***********\n");
-    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
+//    printf("*********** BEFORE ***********\n");
+//    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
 
     printf("#vert: %zu\n", vertices_.size());
 
@@ -619,8 +625,8 @@ bool Mesh::collapseHE(Halfedge* he) {
         Assertion(rev != iter.get(), "Hogehohoge");
     }
 
-    printf("*********** AFTER ***********\n");
-    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
+//    printf("*********** AFTER ***********\n");
+//    printf("%s!\n", verify() ? "SUCCESS" : "FAILED");
 
     return true;
 }
@@ -782,6 +788,7 @@ void Mesh::addVertex(Vertex *v) {
 void Mesh::addHalfedge(Halfedge *he) {
     he->index_ = halfedges_.size();
     halfedges_.emplace_back(he);
+    printf("Add HE: #%d(%p)\n", he->index(), he);
 }
 
 void Mesh::addFace(Face *f) {

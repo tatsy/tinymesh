@@ -68,7 +68,7 @@ void remesh(Mesh &mesh, int maxiter) {
             const double l = he->length();
             const double p = (l - Lavg) / Lstd;
             if (p > 1.0) {
-                //mesh.splitHE(he);
+                mesh.splitHE(he);
             }
         }
 
