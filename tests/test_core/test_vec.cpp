@@ -16,8 +16,7 @@ protected:
     virtual ~VecTest() {}
 };
 
-class VecUnaryTest : public VecTest,
-                          public ::testing::WithParamInterface<Vec> {
+class VecUnaryTest : public VecTest, public ::testing::WithParamInterface<Vec> {
 protected:
     Vec v1;
 
@@ -30,8 +29,7 @@ protected:
     }
 };
 
-class VecPairwiseTest : public VecTest,
-                             public ::testing::WithParamInterface<VecPair> {
+class VecPairwiseTest : public VecTest, public ::testing::WithParamInterface<VecPair> {
 protected:
     Vec v1, v2;
 

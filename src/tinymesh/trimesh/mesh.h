@@ -14,16 +14,15 @@
 
 namespace tinymesh {
 
+/**
+ * Halfedge data structure for polygonal mesh.
+ */
 class TINYMESH_API Mesh {
 public:
-    // Forward declaration
-    class VertexIterator;
-    class HalfedgeIterator;
-    class FaceIterator;
-
-public:
+    // Public methods
     Mesh();
     Mesh(const std::string &filename);
+
     void load(const std::string &filename);
     void save(const std::string &filename) const;
 
@@ -31,8 +30,6 @@ public:
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
     bool triangulate(Face *f);
-
-    Vertex *vertex(int i) { return vertices_[i].get(); }
 
     bool verify() const;
 
@@ -56,6 +53,7 @@ public:
     size_t num_faces() { return faces_.size(); }
 
 private:
+    // Private methods
     void loadOBJ(const std::string &filename);
     void loadPLY(const std::string &filename);
     void saveOBJ(const std::string &filename) const;
@@ -70,6 +68,7 @@ private:
 
     bool verifyVertex(Vertex *v) const;
 
+    // Private parameters
     std::vector<std::shared_ptr<Vertex>> vertices_;
     std::vector<std::shared_ptr<Halfedge>> halfedges_;
     std::vector<std::shared_ptr<Face>> faces_;

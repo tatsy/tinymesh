@@ -2,27 +2,28 @@
 #include "matrix.h"
 
 #include <cstring>
+#include <random>
 #include <algorithm>
 
 namespace tinymesh {
 
 Matrix::Matrix()
-    : m_rows{ 0 }
-    , m_cols{ 0 } {
-    m_values = nullptr;
+    : rows_{ 0 }
+    , cols_{ 0 } {
+    values_ = nullptr;
 }
 
 Matrix::Matrix(int rows, int cols)
-    : m_rows{ rows }
-    , m_cols{ cols } {
-    m_values = std::make_unique<double[]>(rows * cols);
+    : rows_{ rows }
+    , cols_{ cols } {
+    values_ = std::make_unique<double[]>(rows * cols);
 }
 
-Matrix::Matrix(int rows, int cols, double* const m)
-    : m_rows{ rows }
-    , m_cols{ cols } {
-    m_values = std::make_unique<double[]>(rows * cols);
-    std::memcpy(m_values.get(), m, sizeof(double)* rows* cols);
+Matrix::Matrix(int rows, int cols, double *const m)
+    : rows_{ rows }
+    , cols_{ cols } {
+    values_ = std::make_unique<double[]>(rows * cols);
+    std::memcpy(values_.get(), m, sizeof(double)* rows* cols);
 }
 
 Matrix::Matrix(const Matrix& m)
@@ -39,28 +40,28 @@ Matrix::~Matrix() {
 }
 
 Matrix& Matrix::operator=(const Matrix& m) {
-    this->m_rows = m.m_rows;
-    this->m_cols = m.m_cols;
-    this->m_values = std::make_unique<double[]>(m_rows * m_cols);
-    std::memcpy(m_values.get(), m.m_values.get(), sizeof(double) * m.m_rows * m.m_cols);
+    this->rows_ = m.rows_;
+    this->cols_ = m.cols_;
+    this->values_ = std::make_unique<double[]>(rows_ * cols_);
+    std::memcpy(values_.get(), m.values_.get(), sizeof(double) * m.rows_ * m.cols_);
     return *this;
 }
 
 Matrix& Matrix::operator=(Matrix&& m) noexcept {
-    this->m_rows = m.m_rows;
-    this->m_cols = m.m_cols;
-    this->m_values = std::move(m.m_values);
+    this->rows_ = m.rows_;
+    this->cols_ = m.cols_;
+    this->values_ = std::move(m.values_);
     return *this;
 }
 
 Matrix& Matrix::operator+=(const Matrix& m) {
-    if (m_rows != m.m_rows || m_cols != m.m_cols) {
+    if (rows_ != m.rows_ || cols_ != m.cols_) {
         FatalError("Matrix size does not match!");
     }
 
-    for (int i = 0; i < m_rows; i++) {
-        for (int j = 0; j < m_cols; j++) {
-            m_values[i * m_cols + j] += m.m_values[i * m_cols + j];
+    for (int i = 0; i < rows_; i++) {
+        for (int j = 0; j < cols_; j++) {
+            values_[i * cols_ + j] += m.values_[i * cols_ + j];
         }
     }
 
@@ -68,8 +69,8 @@ Matrix& Matrix::operator+=(const Matrix& m) {
 }
 
 Matrix& Matrix::operator*=(double s) {
-    for (int i = 0; i < m_rows * m_cols; i++) {
-        m_values[i] *= s;
+    for (int i = 0; i < rows_ * cols_; i++) {
+        values_[i] *= s;
     }
     return *this;
 }
@@ -81,32 +82,32 @@ Matrix& Matrix::operator/=(double s) {
 double Matrix::det() const {
     Matrix lu = factorLU();
     double ret = 1.0;
-    for (int i = 0; i < m_rows; i++) {
-        ret *= lu.get(i, i);
+    for (int i = 0; i < rows_; i++) {
+        ret *= lu(i, i);
     }
     return ret;
 }
 
 Matrix Matrix::solve(const Matrix& b) const {
-    if (m_rows != m_cols) {
+    if (rows_ != cols_) {
         FatalError("Matrix is not square. Cannot factorize.");
     }
 
-    if (m_cols != b.m_rows) {
+    if (cols_ != b.rows_) {
         FatalError("Matrix size is invalid");
     }
 
-    int m = m_rows;
-    int n = b.m_cols;
+    int m = rows_;
+    int n = b.cols_;
 
     // LU factorization
     int* order = new int[m];
-    Matrix LU = factorLU(order);
+    Matrix lu = factorLU(order);
 
     // Compute determinant
     double d = 1.0;
     for (int i = 0; i < m; i++) {
-        d *= LU.get(i, i);
+        d *= lu(i, i);
     }
 
     if (d == 0.0) {
@@ -114,10 +115,10 @@ Matrix Matrix::solve(const Matrix& b) const {
     }
 
     // Reorder entries following pivot selections
-    Matrix x(m_rows, b.m_cols);
+    Matrix x(rows_, b.cols_);
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-            x.set(i, j, b.get(order[i], j));
+            x(i, j) = b(order[i], j);
         }
     }
 
@@ -125,7 +126,7 @@ Matrix Matrix::solve(const Matrix& b) const {
     for (int j = 0; j < m; j++) {
         for (int i = j + 1; i < m; i++) {
             for (int k = 0; k < n; k++) {
-                x.set(i, k, x.get(i, k) - x.get(j, k) * LU.get(i, j));
+                x(i, k) = x(i, k) - x(j, k) * lu(i, j);
             }
         }
     }
@@ -133,9 +134,9 @@ Matrix Matrix::solve(const Matrix& b) const {
     // solve for U
     for (int j = m - 1; j >= 0; j--) {
         for (int k = 0; k < n; k++) {
-            x.set(j, k, x.get(j, k) / LU.get(j, j));
+            x(j, k) = x(j, k) / lu(j, j);
             for (int i = 0; i < j; i++) {
-                x.set(i, k, x.get(i, k) - x.get(j, k) * LU.get(i, j));
+                x(i, k) = x(i, k) - x(j, k) * lu(i, j);
             }
         }
     }
@@ -146,21 +147,26 @@ Matrix Matrix::solve(const Matrix& b) const {
 }
 
 Matrix Matrix::T() const {
-    Matrix ret(m_cols, m_rows);
-    for (int i = 0; i < m_rows; i++) {
-        for (int j = 0; j < m_cols; j++) {
-            ret.set(j, i, get(i, j));
+    Matrix ret(cols_, rows_);
+    for (int i = 0; i < rows_; i++) {
+        for (int j = 0; j < cols_; j++) {
+            ret(j, i) = (*this)(i, j);
         }
     }
     return std::move(ret);
 }
 
+Matrix Matrix::inverse() const {
+    Assertion(rows_ == cols_, "Non square matrix cannot be inverted!");
+    Matrix I = Matrix::identity(rows_, cols_);
+    return std::move(this->solve(I));
+}
+
 Matrix Matrix::identity(int rows, int cols) {
     Matrix ret = Matrix::zeros(rows, cols);
     for (int i = 0; i < std::min(rows, cols); i++) {
-        ret.set(i, i, 1.0);
+        ret(i, i) = 1.0;
     }
-
     return std::move(ret);
 }
 
@@ -174,17 +180,31 @@ Matrix Matrix::ones(int rows, int cols) {
 
 Matrix Matrix::constant(int rows, int cols, double value) {
     Matrix m(rows, cols);
-    std::fill(m.m_values.get(), m.m_values.get() + rows * cols, value);
+    std::fill(m.values_.get(), m.values_.get() + rows * cols, value);
+    return std::move(m);
+}
+
+Matrix Matrix::random(int rows, int cols) {
+    std::random_device randev;
+    std::mt19937 mt(randev());
+    std::uniform_real_distribution<double> rng;
+
+    Matrix m(rows, cols);
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            m(i, j) = rng(mt);
+        }
+    }
     return std::move(m);
 }
 
 Matrix Matrix::factorLU(int* order) const {
-    if (m_rows != m_cols) {
+    if (rows_ != cols_) {
         FatalError("Matrix is not square. Cannot factorize.");
     }
 
-    int n = m_rows;
-    Matrix LU = (*this);
+    int n = rows_;
+    Matrix lu = (*this);
     for (int i = 0; i < n; i++) {
         if (order) {
             order[i] = i;
@@ -196,8 +216,8 @@ Matrix Matrix::factorLU(int* order) const {
         double maxval = 0.0;
         int pivot = k;
         for (int i = k; i < n; i++) {
-            if (maxval < std::abs(LU.get(i, k))) {
-                maxval = std::abs(LU.get(i, k));
+            if (maxval < std::abs(lu(i, k))) {
+                maxval = std::abs(lu(i, k));
                 pivot = i;
             }
         }
@@ -209,25 +229,25 @@ Matrix Matrix::factorLU(int* order) const {
 
         if (pivot != k) {
             for (int j = 0; j < n; j++) {
-                double tmp = LU.get(k, j);
-                LU.set(k, j, LU.get(pivot, j));
-                LU.set(pivot, j, tmp);
+                double tmp = lu(k, j);
+                lu(k, j) = lu(pivot, j);
+                lu(pivot, j) = tmp;
             }
         }
 
         // Eliminate entries
-        double iukk = 1.0 / LU.get(k, k);
+        double iukk = 1.0 / lu(k, k);
         for (int i = k + 1; i < n; i++) {
-            double v = LU.get(i, k) * iukk;
-            LU.set(i, k, v);
+            double v = lu(i, k) * iukk;
+            lu(i, k) = v;
             for (int j = k + 1; j < n; j++) {
-                double v = LU.get(i, j) - LU.get(i, k) * LU.get(k, j);
-                LU.set(i, j, v);
+                double v = lu(i, j) - lu(i, k) * lu(k, j);
+                lu(i, j) = v;
             }
         }
     }
 
-    return std::move(LU);
+    return std::move(lu);
 }
 
 }  // namespace tinymesh
@@ -260,9 +280,9 @@ tinymesh::Matrix operator*(const tinymesh::Matrix & m1, const tinymesh::Matrix &
         for (int j = 0; j < m2.cols(); j++) {
             double v = 0.0;
             for (int k = 0; k < m1.cols(); k++) {
-                v += m1.get(i, k) * m2.get(k, j);
+                v += m1(i, k) * m2(k, j);
             }
-            ret.set(i, j, v);
+            ret(i, j) = v;
         }
     }
 

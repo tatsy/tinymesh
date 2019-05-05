@@ -13,6 +13,8 @@
 #include "trimesh/halfedge.h"
 #include "trimesh/face.h"
 
+#include "math/matrix.h"
+
 #include "geoproc/remesh.h"
 #include "geoproc/simplify.h"
 #include "geoproc/smooth.h"

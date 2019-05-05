@@ -25,6 +25,8 @@ else()
     add_library(${BUILD_TARGET} SHARED ${SOURCE_FILES})
 endif()
 
+source_group("Source Files" FILES ${SOURCE_FILES})
+
 target_include_directories(${BUILD_TARGET} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 target_link_libraries(${BUILD_TARGET} ${CXX_FS_LIBRARY})
 

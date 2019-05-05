@@ -9,7 +9,7 @@
 
 namespace tinymesh {
 
-TINYMESH_API void smooth(Mesh &mesh, double strength = 0.5);
+TINYMESH_API void smooth(Mesh &mesh, double strength = 1.0);
 
 }  // namespace tinymesh
 

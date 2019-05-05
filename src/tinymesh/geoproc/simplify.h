@@ -9,7 +9,7 @@
 
 namespace tinymesh {
 
-TINYMESH_API void simplify(Mesh &mesh, double ratio = 0.5, int num_remains = -1);
+TINYMESH_API void simplifyIncremental(Mesh &mesh, int numTarget);
 
 }  // namespace tinymesh
 

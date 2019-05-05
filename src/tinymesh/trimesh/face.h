@@ -18,11 +18,11 @@ public:
 
 public:
     Face();
-    Face(const Face &face) = delete;
+    Face(const Face &face) = default;
     Face(Face &&face) noexcept = default;
     virtual ~Face() = default;
 
-    Face &operator=(const Face &face) = delete;
+    Face &operator=(const Face &face) = default;
     Face &operator=(Face &&face) noexcept = default;
 
     bool operator==(const Face &other) const;

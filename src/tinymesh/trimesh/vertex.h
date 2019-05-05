@@ -22,13 +22,13 @@ public:
 
 public:
     Vertex();
-    Vertex(const Vertex &v);
-    Vertex(Vertex &&p) noexcept;
+    Vertex(const Vertex &v) = default;
+    Vertex(Vertex &&p) noexcept = default;
     explicit Vertex(const Vec &v);
     virtual ~Vertex() = default;
 
-    Vertex &operator=(const Vertex &p);
-    Vertex &operator=(Vertex &&p) noexcept;
+    Vertex &operator=(const Vertex &p) = default;
+    Vertex &operator=(Vertex &&p) noexcept = default;
 
     bool operator==(const Vertex &other) const;
 

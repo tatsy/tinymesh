@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include "core/openmp.h"
 #include "trimesh/face.h"
 #include "trimesh/vertex.h"
 #include "trimesh/halfedge.h"
@@ -10,17 +11,13 @@
 namespace tinymesh {
 
 void smooth(Mesh &mesh, double strength) {
-    // Clip strength
-    strength = std::max(0.0, std::min(strength, 1.0));
-
-    // Simple Laplacian smoothing
-    int index;
+    // Volonoi tessellation
     const int nv = mesh.num_vertices();
     std::vector<Vec> centroids(nv);
+    std::vector<Vec> normals(nv);
 
     // Compute centroids and tangent planes
-    index = 0;
-    for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+    omp_parallel_for (int i = 0; i < mesh.num_vertices(); i++) {
         Vertex *v = mesh.vertex(i);
 
         // Collect surrounding vertices
@@ -32,6 +29,7 @@ void smooth(Mesh &mesh, double strength) {
 
         // Compute centroids, tangents, and binormals
         Vec cent(0.0);
+        Vec norm(0.0);
         for (int i = 0; i < pts.size(); i++) {
             const int j = (i + 1) % pts.size();
             Vec e1 = pts[i] - org;
@@ -39,23 +37,32 @@ void smooth(Mesh &mesh, double strength) {
             Vec g = (org + pts[i] + pts[j]) / 3.0;
 
             cent += g;
+            norm += cross(e1, e2);
         }
-        cent /= pts.size();
 
-        centroids[index] = cent;
+        cent /= pts.size();
+        const double l = length(norm);
+
+        if (l != 0.0) {
+            centroids[i] = cent;
+            normals[i] = norm / l;
+        }
     }
 
     // Update vertex positions
-    index = 0;
-    for (int i = 0; i < mesh.num_vertices(); i++, index++) {
+    omp_parallel_for (int i = 0; i < mesh.num_vertices(); i++) {
         Vertex *v = mesh.vertex(i);
-
         if (v->isBoundary()) {
             continue;
         }
 
-        const Vec pt = v->pos();
-        v->setPos((1.0 - strength) * pt + strength * centroids[index]);
+        if (length(normals[i]) != 0.0) {
+            const Vec pt = v->pos();
+            Vec e = centroids[i] - pt;
+            e -= normals[i] * dot(e, normals[i]);
+            Vec newPos = (1.0 - strength) * v->pos() + strength * (pt + e);
+            v->setPos(newPos);
+        }
     }
 }
 

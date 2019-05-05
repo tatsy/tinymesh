@@ -14,16 +14,16 @@ namespace tinymesh {
 class TINYMESH_API Halfedge {
 public:
     Halfedge();
-    Halfedge(const Halfedge &he);
-    Halfedge(Halfedge &&he) noexcept;
+    Halfedge(const Halfedge &he) = default;
+    Halfedge(Halfedge &&he) noexcept = default;
     virtual ~Halfedge() = default;
 
-    double length() const;
-
-    Halfedge &operator=(const Halfedge &he);
-    Halfedge &operator=(Halfedge &&he) noexcept;
+    Halfedge &operator=(const Halfedge &he) = default;
+    Halfedge &operator=(Halfedge &&he) noexcept = default;
 
     bool operator==(const Halfedge &other) const;
+
+    double length() const;
 
     Vertex *src() const { return src_; }
     Vertex *dst() const { return next_->src_; }

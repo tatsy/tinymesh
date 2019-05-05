@@ -24,34 +24,6 @@ Vertex::Vertex(const Vec &pos)
     , index_{ -1 } {
 }
 
-Vertex::Vertex(const Vertex &v)
-    : Vertex{} {
-    this->operator=(v);
-}
-
-Vertex::Vertex(Vertex &&v) noexcept
-    : Vertex{} {
-    this->operator=(std::move(v));
-}
-
-Vertex &Vertex::operator=(const Vertex &v) {
-    this->pos_ = v.pos_;
-    this->halfedge_ = v.halfedge_;
-    this->index_ = v.index_;
-    return *this;
-}
-
-Vertex &Vertex::operator=(Vertex &&v) noexcept {
-    this->pos_ = v.pos_;
-    this->halfedge_ = v.halfedge_;
-    this->index_ = v.index_;
-
-    v.pos_ = Vec();
-    v.halfedge_ = nullptr;
-    v.index_ = -1;
-    return *this;    
-}
-
 bool Vertex::operator==(const Vertex &other) const {
     bool ret = true;
     ret &= (pos_ == other.pos_);
@@ -71,10 +43,7 @@ int Vertex::degree() {
 }
 
 bool Vertex::isBoundary() {
-    std::set<Halfedge *> hes;
     for (auto it = ohe_begin(); it != ohe_end(); ++it) {
-        Assertion(hes.find(it.ptr()) == hes.end(), "Duplicated halfeges! #hes in cycle = %d", (int)hes.size());
-        hes.insert(it.ptr());
         if (it->isBoundary()) {
             return true;
         }

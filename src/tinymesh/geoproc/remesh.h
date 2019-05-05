@@ -9,7 +9,7 @@
 
 namespace tinymesh {
 
-TINYMESH_API void remesh(Mesh &mesh, double ratioLower = 0.667, double ratioUpper = 1.333, int maxiter = 5);
+TINYMESH_API void remeshIncremental(Mesh &mesh, double ratioLower = 0.8, double ratioUpper = 1.333, int maxiter = 5);
 
 }  // namespace tinymesh
 

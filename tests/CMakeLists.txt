@@ -6,6 +6,7 @@ configure_file("${CMAKE_CURRENT_LIST_DIR}/test_config.h.in"
 set(SOURCE_FILES gtest.cpp)
 add_folder(SOURCE_FILES "test_core")
 add_folder(SOURCE_FILES "test_trimesh")
+add_folder(SOURCE_FILES "test_math")
 
 include_directories(${TINYMESH_INCLUDE_DIR} ${GTEST_INCLUDE_DIRS})
 add_executable(${BUILD_TARGET} ${SOURCE_FILES})

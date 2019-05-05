@@ -9,3 +9,6 @@ build/*
 .DS_Store
 
 test_config.h
+
+*.ply
+*.obj

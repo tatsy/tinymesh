@@ -3,8 +3,10 @@
 
 #include <random>
 #include <algorithm>
+#include <atomic>
 
 #include "core/vec.h"
+#include "core/openmp.h"
 #include "trimesh/mesh.h"
 #include "trimesh/vertex.h"
 #include "trimesh/halfedge.h"
@@ -13,35 +15,36 @@
 
 namespace tinymesh {
 
-void remesh(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
+void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
     int count;
     double Lavg, Lvar, Lstd;
+    // Compute average edge length
+    Lavg = 0.0;
+    Lvar = 0.0;
 
+    count = 0;
+    for (int i = 0; i < mesh.num_halfedges(); i++) {
+        Halfedge *he = mesh.halfedge(i);
+        const double l = he->length();
+        Lavg += l;
+        Lvar += l * l;
+        count += 1;
+    }
+
+    Lavg = Lavg / count;
+    Lvar = Lvar / count - Lavg * Lavg;
+    Lstd = std::sqrt(Lvar);
+
+    // Initialize random number generator
     std::vector<uint32_t> indices;
     std::random_device randev;
     std::mt19937 rnd(randev());
 
+    // Remesh loop
     for (int k = 0; k < maxiter; k++) {
         printf("*** Original #%d ***\n", k + 1);
         printf("#vert: %d\n", (int)mesh.num_vertices());
         printf("#face: %d\n", (int)mesh.num_faces());
-
-        // Compute average edge length
-        Lavg = 0.0;
-        Lvar = 0.0;
-
-        count = 0;
-        for (int i = 0; i < mesh.num_halfedges(); i++) {
-            Halfedge *he = mesh.halfedge(i);
-            const double l = he->length();
-            Lavg += l;
-            Lvar += l * l;
-            count += 1;
-        }
-
-        Lavg = Lavg / count;
-        Lvar = Lvar / count - Lavg * Lavg;
-        Lstd = std::sqrt(Lvar);
 
         // Split long edges
         indices.clear();
@@ -80,7 +83,20 @@ void remesh(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
                 const double l = he->length();
                 const double p = (l - Lavg) / Lstd;
                 if (l <= Lavg * ratioLower) {
-                    mesh.collapseHE(he);
+                    // Check if collapse does not generate long edge
+                    Vertex *a = he->src();
+                    Vertex *b = he->dst();
+                    bool collapseOK = true;
+                    for (auto vit = b->v_begin(); vit != b->v_end(); ++vit) {
+                        if (length(a->pos() - vit->pos()) >= Lavg * ratioUpper) {
+                            collapseOK = false;
+                        }
+                    }
+
+                    // Collapse
+                    if (collapseOK) {
+                        mesh.collapseHE(he);
+                    }
                 }
             }
         }
@@ -112,62 +128,9 @@ void remesh(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
             }
         }
 
-        // Volonoi tessellation
-        for (int l = 0; l < 5; l++) {
-            int index;
-            const int nv = mesh.num_vertices();
-            std::vector<Vec> centroids(nv);
-            std::vector<Vec> normals(nv);
-
-            // Compute centroids and tangent planes
-            index = 0;
-            for (int i = 0; i < mesh.num_vertices(); i++, index++) {
-                Vertex *v = mesh.vertex(i);
-
-                // Collect surrounding vertices
-                Vec org = v->pos();
-                std::vector<Vec> pts;
-                for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
-                    pts.push_back(vit->pos());
-                }
-
-                // Compute centroids, tangents, and binormals
-                Vec cent(0.0);
-                Vec norm(0.0);
-                for (int i = 0; i < pts.size(); i++) {
-                    const int j = (i + 1) % pts.size();
-                    Vec e1 = pts[i] - org;
-                    Vec e2 = pts[j] - org;
-                    Vec g = (org + pts[i] + pts[j]) / 3.0;
-
-                    cent += g;
-                    norm += cross(e1, e2);
-                }
-
-                cent /= pts.size();
-                const double l = length(norm);
-
-                if (l != 0.0) {
-                    centroids[index] = cent;
-                    normals[index] = norm / l;
-                }
-            }
-
-            // Update vertex positions
-            index = 0;
-            for (int i = 0; i < mesh.num_vertices(); i++, index++) {
-                Vertex *v = mesh.vertex(i);
-                if (v->isBoundary()) {
-                    continue;
-                }
-
-                if (length(normals[index]) != 0.0) {
-                    const Vec pt = v->pos();
-                    Vec e = centroids[index] - pt;
-                    e -= normals[index] * dot(e, normals[index]);
-                    v->setPos(pt + e);
-                }
-            }
+        // Smoothing
+        for (int loop = 0; loop < 1; loop++) {
+            smooth(mesh);
         }
     }
 }
