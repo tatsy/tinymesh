@@ -15,7 +15,9 @@ int main(int argc, char **argv) {
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
-    tinymesh::simplifyIncremental(mesh, 5000);
+    const int target = (int)(0.02 * mesh.num_vertices());
+    tinymesh::simplifyIncremental(mesh, target);
+    tinymesh::remeshIncremental(mesh);
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));

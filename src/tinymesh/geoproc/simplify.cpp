@@ -109,6 +109,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
     static const double Eps = 1.0e-12;
     const int numTargetRemove = mesh.num_vertices() - numTarget;
     if (numTarget <= 0) {
+        Warn("#vertices is already less than #target: %d < %d", (int)mesh.num_vertices(), numTarget);
         return;
     }
 
