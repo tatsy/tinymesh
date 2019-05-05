@@ -407,6 +407,11 @@ void Mesh::savePLY(const std::string& filename) const {
             continue;
         }
 
+        if (!f->halfedge_) {
+            Warn("Face without halfedge is detected!");
+            continue;
+        }
+
         const int i0 = f->halfedge_->src()->index();
         const int i1 = f->halfedge_->next()->src()->index();
         const int i2 = f->halfedge_->prev()->src()->index();

@@ -7,16 +7,19 @@ namespace fs = std::experimental::filesystem;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
-        std::cout << "usage: hello_tinymesh [input mesh]" << std::endl;
+        std::cout << "usage: hello_tinymesh [input mesh] [ratio]" << std::endl;
         return 1;
     }
+
+    const double ratio = argc <= 2 ? 0.1 : atof(argv[2]);
 
     // Load
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
-    const int target = (int)(0.02 * mesh.num_vertices());
+    const int target = (int)(ratio * mesh.num_vertices());
     tinymesh::simplifyIncremental(mesh, target);
+    tinymesh::holeFill(mesh);
     tinymesh::remeshIncremental(mesh);
 
     // Save

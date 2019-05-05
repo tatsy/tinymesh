@@ -173,6 +173,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
 
             Vertex *v1 = he->src();
             Vertex *v2 = he->dst();
+
             int i1 = v1->index();
             int i2 = v2->index();
             Matrix &q1 = Qs[i1];
@@ -198,6 +199,11 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
 
             Vertex *v_i = mesh.vertex(ii);
             Vertex *v_j = mesh.vertex(jj);
+
+            // Skip boundary vertice3s
+            if (v_i->isBoundary() || v_j->isBoundary()) {
+                continue;
+            }
 
             // Vertices with degree < 4 cannot be contracted
             if (v_i->degree() <= 3 || v_j->degree() <= 3) {
