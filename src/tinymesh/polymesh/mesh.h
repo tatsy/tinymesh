@@ -60,9 +60,11 @@ private:
     void savePLY(const std::string &filename) const;
 
     void addVertex(Vertex *v);
+    void addEdge(Edge *e);
     void addHalfedge(Halfedge *he);
     void addFace(Face *f);
     void removeVertex(Vertex *v);
+    void removeEdge(Edge *e);
     void removeHalfedge(Halfedge *he);
     void removeFace(Face *f);
 
@@ -70,6 +72,7 @@ private:
 
     // Private parameters
     std::vector<std::shared_ptr<Vertex>> vertices_;
+    std::vector<std::shared_ptr<Edge>> edges_;
     std::vector<std::shared_ptr<Halfedge>> halfedges_;
     std::vector<std::shared_ptr<Face>> faces_;
     std::vector<uint32_t> indices_;

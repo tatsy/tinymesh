@@ -16,7 +16,7 @@ set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source/ti
 set(SOURCE_FILES ${SOURCE_FILES} "tinymesh.h")
 add_folder(SOURCE_FILES "core")
 add_folder(SOURCE_FILES "math")
-add_folder(SOURCE_FILES "trimesh")
+add_folder(SOURCE_FILES "polymesh")
 add_folder(SOURCE_FILES "geoproc")
 
 if (BUILD_STATIC_LIB)

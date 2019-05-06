@@ -8,10 +8,10 @@
 #include "core/common.h"
 #include "core/vec.h"
 
-#include "trimesh/mesh.h"
-#include "trimesh/vertex.h"
-#include "trimesh/halfedge.h"
-#include "trimesh/face.h"
+#include "polymesh/mesh.h"
+#include "polymesh/vertex.h"
+#include "polymesh/halfedge.h"
+#include "polymesh/face.h"
 
 #include "math/matrix.h"
 

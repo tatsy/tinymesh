@@ -7,10 +7,10 @@
 
 #include "core/vec.h"
 #include "core/openmp.h"
-#include "trimesh/mesh.h"
-#include "trimesh/vertex.h"
-#include "trimesh/halfedge.h"
-#include "trimesh/face.h"
+#include "polymesh/mesh.h"
+#include "polymesh/vertex.h"
+#include "polymesh/halfedge.h"
+#include "polymesh/face.h"
 #include "geoproc/smooth.h"
 
 namespace tinymesh {

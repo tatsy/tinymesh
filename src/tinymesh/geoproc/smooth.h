@@ -5,7 +5,7 @@
 #ifndef TINYMESH_SMOOTH_H
 #define TINYMESH_SMOOTH_H
 
-#include "trimesh/mesh.h"
+#include "polymesh/mesh.h"
 
 namespace tinymesh {
 

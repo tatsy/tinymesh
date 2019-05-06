@@ -13,9 +13,10 @@
 namespace fs = std::experimental::filesystem;
 
 #include "core/vec.h"
-#include "trimesh/vertex.h"
-#include "trimesh/halfedge.h"
-#include "trimesh/face.h"
+#include "polymesh/vertex.h"
+#include "polymesh/edge.h"
+#include "polymesh/halfedge.h"
+#include "polymesh/face.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
 
@@ -35,8 +36,9 @@ Mesh::Mesh(const std::string &filename) {
 
 void Mesh::load(const std::string &filename) {
     // Clear existing elements
-    halfedges_.clear();
     vertices_.clear();
+    edges_.clear();
+    halfedges_.clear();
     faces_.clear();
 
     // Load new mesh
@@ -96,6 +98,7 @@ void Mesh::load(const std::string &filename) {
         auto face = std::make_shared<Face>();
         std::vector<Halfedge*> faceHalfedges;
         for (int j = 0; j < degree; j++) {
+            // Count up vertex degree
             const uint32_t a = indices_[i + j];
             if (vertexDegree.find(a) == vertexDegree.end()) {
                 vertexDegree[a] = 1;
@@ -103,14 +106,14 @@ void Mesh::load(const std::string &filename) {
                 vertexDegree[a] += 1;
             }
 
+            // Check duplicated halfedges
             const uint32_t b = indices_[i + (j + 1) % degree];
             IndexPair ab(a, b);
-            auto he = std::make_shared<Halfedge>();
-
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
                 FatalError("Duplicated halfedges are found!");
             }
 
+            auto he = std::make_shared<Halfedge>();
             halfedges_.push_back(he);
             pairToHalfedge[ab] = he.get();
 
@@ -121,14 +124,18 @@ void Mesh::load(const std::string &filename) {
 
             faceHalfedges.push_back(he.get());
 
-            // Set opposite halfedge if exists
+            // Set opposite halfedge if it exists.
+            // Besides, add an edge if opposite halfedge is successfully paired.
             IndexPair ba(b, a);
             auto iba = pairToHalfedge.find(ba);
             if (iba != pairToHalfedge.end()) {
                 Halfedge *rev = iba->second;
-
                 he->rev_ = rev;
                 rev->rev_ = he.get();
+
+                auto edge = std::make_shared<Edge>();
+                edge->halfedge_ = he.get();
+                edges_.push_back(edge);
             } else {
                 he->rev_ = nullptr;
             }
@@ -210,6 +217,11 @@ void Mesh::load(const std::string &filename) {
         if (count != vertexDegree[v->index()]) {
             //FatalError("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
         }
+    }
+
+    // Put edge indices
+    for (int i = 0; i < edges_.size(); i++) {
+        edges_[i]->index_ = i;
     }
 
     // Put halfedge indices
@@ -913,14 +925,24 @@ void Mesh::addFace(Face *f) {
 
 void Mesh::removeVertex(Vertex* v) {
     Assertion((*v) == (*vertices_[v->index_]), "Invalid vertex indexing!");
-    Assertion(v->index() < vertices_.size(), "Vertex index out of bounds!");
+    Assertion(v->index_ < vertices_.size(), "Vertex index out of range!");
 
     if (v->index_ < vertices_.size() - 1) {
         std::swap(vertices_[v->index_], vertices_[vertices_.size() - 1]);
         std::swap(vertices_[v->index_]->index_ , vertices_[vertices_.size() - 1]->index_);
     }
     vertices_.resize(vertices_.size() - 1);
-    //vertices_.shrink_to_fit();
+}
+
+void Mesh::removeEdge(Edge *e) {
+    Assertion((*e) == (*edges_[e->index_]), "Invalid edge indexing!");
+    Assertion(e->index_ < edges_.size(), "Edge index out of range!");
+
+    if (e->index_ < edges_.size() - 1) {
+        std::swap(edges_[e->index_], edges_[edges_.size() - 1]);
+        std::swap(edges_[e->index_]->index_, edges_[edges_.size() - 1]->index_);
+    }
+    edges_.resize(edges_.size() - 1);
 }
 
 void Mesh::removeHalfedge(Halfedge *he) {
@@ -931,7 +953,6 @@ void Mesh::removeHalfedge(Halfedge *he) {
         std::swap(halfedges_[he->index_]->index_, halfedges_[halfedges_.size() - 1]->index_);
     }
     halfedges_.resize(halfedges_.size() - 1);
-    //halfedges_.shrink_to_fit();
 }
 
 void Mesh::removeFace(Face *f) {
@@ -942,7 +963,6 @@ void Mesh::removeFace(Face *f) {
         std::swap(faces_[f->index_]->index_, faces_[faces_.size() - 1]->index_);
     }
     faces_.resize(faces_.size() - 1);
-    //faces_.shrink_to_fit();
 }
 
 }  // namespace tinymesh

@@ -1,8 +1,8 @@
 #define TINYMESH_API_EXPORT
 #include "hole_fill.h"
 
-#include "trimesh/mesh.h"
-#include "trimesh/face.h"
+#include "polymesh/mesh.h"
+#include "polymesh/face.h"
 
 namespace tinymesh {
 

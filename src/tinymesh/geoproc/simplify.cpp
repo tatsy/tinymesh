@@ -10,10 +10,10 @@
 #include "core/progress.h"
 #include "core/openmp.h"
 #include "math/matrix.h"
-#include "trimesh/mesh.h"
-#include "trimesh/face.h"
-#include "trimesh/halfedge.h"
-#include "trimesh/vertex.h"
+#include "polymesh/mesh.h"
+#include "polymesh/face.h"
+#include "polymesh/halfedge.h"
+#include "polymesh/vertex.h"
 #include "geoproc/smooth.h"
 
 namespace {
