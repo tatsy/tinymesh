@@ -42,6 +42,24 @@ int Vertex::degree() {
     return deg;
 }
 
+Vec Vertex::normal() {
+    Vec norm(0.0);
+    Vertex *prev = nullptr;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        if (prev) {
+            const Vec e1 = prev->pos() - pos();
+            const Vec e2 = it->pos() - pos();
+            norm += cross(e1, e2);
+        }
+        prev = it.ptr();
+    }
+    const Vec e1 = prev->pos() - pos();
+    const Vec e2 = v_begin()->pos() - pos();
+    norm += cross(e1, e2);
+
+    return normalize(norm);
+}
+
 bool Vertex::isBoundary() {
     for (auto it = ohe_begin(); it != ohe_end(); ++it) {
         if (it->isBoundary()) {

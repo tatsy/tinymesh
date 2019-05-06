@@ -33,6 +33,7 @@ public:
     bool operator==(const Vertex &other) const;
 
     int degree();
+    Vec normal();
 
     VertexIterator v_begin();
     VertexIterator v_end();

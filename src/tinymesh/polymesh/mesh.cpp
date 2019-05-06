@@ -165,7 +165,9 @@ void Mesh::load(const std::string &filename) {
     }
 
     // Construct new faces (possibly non-triangle) for each boundary components
-    for (auto he : halfedges_) {
+    const int numHalfedges = halfedges_.size();
+    for (int i = 0; i < numHalfedges; i++) {
+        auto &he = halfedges_[i];
         if (he->rev_ == nullptr) {
             auto face = std::make_shared<Face>();
             faces_.push_back(face);
@@ -224,7 +226,7 @@ void Mesh::load(const std::string &filename) {
         } while (he != v->halfedge_);
 
         if (count != vertexDegree[v->index()]) {
-            //FatalError("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
+            FatalError("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
         }
     }
 
@@ -352,12 +354,14 @@ void Mesh::loadPLY(const std::string &filename) {
                           raw_vertices[i * 3 + 2]);
             }
 
-            if (uniqueVertices.count(pos) == 0) {
-                uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
-                vertices_.push_back(std::make_shared<Vertex>(pos));
-            }
-
-            indices_.push_back(uniqueVertices[pos]);
+//            if (uniqueVertices.count(pos) == 0) {
+//                uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
+//                vertices_.push_back(std::make_shared<Vertex>(pos));
+//            }
+//
+//            indices_.push_back(uniqueVertices[pos]);
+            indices_.push_back(vertices_.size());
+            vertices_.push_back(std::make_shared<Vertex>(pos));
         }
     } catch (const std::exception &e) {
         std::cerr << "Caught tinyply exception: " << e.what() << std::endl;
@@ -464,7 +468,7 @@ bool Mesh::splitHE(Halfedge *he) {
         std::swap(v0, v1);
     }
 
-    if (v0->degree() < 6 || v1->degree() < 6) {
+    if (v0->degree() < 3 || v1->degree() < 3) {
         return false;
     }
 
@@ -621,9 +625,9 @@ bool Mesh::collapseHE(Halfedge* he) {
     Assertion(he->index_ < halfedges_.size(), "Daemon halfedge detected!");
     Assertion(rev->index_ < halfedges_.size(), "Daemon halfedge detected!");
 
+    // Merge vertex to the one with smaller degree
     const int d0 = he->src()->degree();
     const int d1 = rev->src()->degree();
-    // Merge vertex to the one with smaller degree
     if (d0 > d1) {
         std::swap(he, rev);
     }
@@ -696,10 +700,14 @@ bool Mesh::collapseHE(Halfedge* he) {
     // Update origins of all outward halfedges
     Vertex *v_remove = v2;
     Vertex *v_remain = v0;
+    Assertion(v_remain->index() < vertices_.size(), "Something is wrong1!");
+    Assertion(v_remove->index() < vertices_.size(), "Something is wrong2!");
+    Assertion(v_remove != v_remain, "Something is wrong3!");
     for (auto it = v_remove->ohe_begin(); it != v_remove->ohe_end(); ++it) {
         Assertion(it->src() == v_remove, "Invalid halfedge origin detected!");
         it->src_ = v_remain;
     }
+
     for (auto it = v_remain->ohe_begin(); it != v_remain->ohe_end(); ++it) {
         Assertion(it->src() == v_remain, "Invalid halfedge origin detected!");
     }
@@ -900,6 +908,53 @@ bool Mesh::triangulate(Face* f) {
     removeFace(f);
 
     return true;
+}
+
+double Mesh::K(Vertex *v) const {
+    std::vector<Vertex*> neighbors;
+    for (auto it = v->v_begin(); it != v->v_end(); ++it) {
+        neighbors.push_back(it.ptr());
+    }
+
+    const int N = static_cast<int>(neighbors.size());
+    double sumAngles = 0.0;
+    double sumAreas = 0.0;
+    for (int i = 0; i < N; i++) {
+        const int j = (i + 1) % N;
+        const Vec e1 = neighbors[i]->pos() - v->pos();
+        const Vec e2 = neighbors[j]->pos() - v->pos();
+        sumAngles += std::atan2(length(cross(e1, e2)), dot(e1, e2));
+        sumAreas += length(cross(e1, e2)) / 6.0;
+    }
+    return (2.0 * Pi - sumAngles) / sumAreas;
+}
+
+double Mesh::H(Vertex *v) const {
+    std::vector<Vertex*> neighbors;
+    for (auto it = v->v_begin(); it != v->v_end(); ++it) {
+        neighbors.push_back(it.ptr());
+    }
+
+    const int N = static_cast<int>(neighbors.size());
+    Vec laplace = Vec(0.0);
+    double sumAreas = 0.0;
+    for (int i = 0; i < N; i++) {
+        const int prev = (i - 1 + N) % N;
+        const int post = (i + 1) % N;
+
+        const Vec ea1 = v->pos() - neighbors[prev]->pos();
+        const Vec ea2 = neighbors[i]->pos() - neighbors[prev]->pos();
+        const double cota = length(ea1) * length(ea2) / length(cross(ea1, ea2));
+        const Vec eb1 = v->pos() - neighbors[post]->pos();
+        const Vec eb2 = v->pos() - neighbors[post]->pos();
+        const double cotb = length(eb1) * length(eb2) / length(cross(eb1, eb2));
+        laplace += (cota + cotb) * (neighbors[i]->pos() - v->pos());
+
+        const Vec e1 = neighbors[i]->pos() - v->pos();
+        const Vec e2 = neighbors[post]->pos() - v->pos();
+        sumAreas += length(cross(e1, e2)) / 6.0;
+    }
+    return length(laplace) / (2.0 * sumAreas);
 }
 
 bool Mesh::verify() const {

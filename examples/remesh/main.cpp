@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
     // Simplify
     tinymesh::holeFill(mesh);
-    tinymesh::remeshIncremental(mesh, 0.8, 1.333, 5);
+    tinymesh::remeshIncremental(mesh);
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));

@@ -59,8 +59,11 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
         for (int i : indices) {
             if (i >= 0 && i < mesh.num_halfedges()) {
                 Halfedge *he = mesh.halfedge(i);
-                const double l = he->length();
+                const Vec p1 = he->src()->pos();
+                const Vec p2 = he->dst()->pos();
+                const double l = length(p1 - p2);
                 const double p = (l - Lavg) / Lstd;
+
                 if (l >= Lavg * ratioUpper) {
                     mesh.splitHE(he);
                 }
@@ -84,7 +87,9 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
         for (int i : indices) {
             if (i >= 0 && i < mesh.num_halfedges()) {
                 Halfedge *he = mesh.halfedge(i);
-                const double l = he->length();
+                const Vec p1 = he->src()->pos();
+                const Vec p2 = he->dst()->pos();
+                const double l = length(p1 - p2);
                 const double p = (l - Lavg) / Lstd;
                 if (l <= Lavg * ratioLower) {
                     // Check if collapse does not generate long edge
@@ -94,6 +99,7 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
                     for (auto vit = b->v_begin(); vit != b->v_end(); ++vit) {
                         if (length(a->pos() - vit->pos()) >= Lavg * ratioUpper) {
                             collapseOK = false;
+                            break;
                         }
                     }
 
@@ -124,9 +130,13 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
             const int d1 = v1->degree();
             const int d2 = v2->degree();
             const int d3 = v3->degree();
+            const int t0 = v0->isBoundary() ? 4 : 6;
+            const int t1 = v1->isBoundary() ? 4 : 6;
+            const int t2 = v2->isBoundary() ? 4 : 6;
+            const int t3 = v3->isBoundary() ? 4 : 6;
 
-            const int score = std::abs(d0 - 6) + std::abs(d1 - 6) + std::abs(d2 - 6) + std::abs(d3 - 6);
-            const int after = std::abs(d0 - 1 - 6) + std::abs(d1 - 1 - 6) + std::abs(d2 + 1 - 6) + std::abs(d3 + 1 - 6);
+            const int score = std::abs(d0 - t0) + std::abs(d1 - t1) + std::abs(d2 - t2) + std::abs(d3 - t3);
+            const int after = std::abs(d0 - 1 - t0) + std::abs(d1 - 1 - t1) + std::abs(d2 + 1 - t2) + std::abs(d3 + 1 - t3);
             if (score > after) {
                 mesh.flipHE(he);
             }

@@ -48,6 +48,11 @@ public:
         return faces_[index].get();
     }
 
+    //! Compute Gaussian curvature at a vertex
+    double K(Vertex *v) const;
+    //! Compute mean curvature at a vertex
+    double H(Vertex *v) const;
+
     size_t num_vertices() { return vertices_.size(); }
     size_t num_halfedges() { return halfedges_.size(); }
     size_t num_faces() { return faces_.size(); }
