@@ -134,6 +134,8 @@ void Mesh::load(const std::string &filename) {
                 rev->rev_ = he.get();
 
                 auto edge = std::make_shared<Edge>();
+                he->edge_ = edge.get();
+                rev->edge_ = edge.get();
                 edge->halfedge_ = he.get();
                 edges_.push_back(edge);
             } else {
@@ -176,8 +178,15 @@ void Mesh::load(const std::string &filename) {
                 halfedges_.push_back(rev);
                 boundaryHalfedges.push_back(rev.get());
 
+                auto edge = std::make_shared<Edge>();
+                edges_.push_back(edge);
+
                 it->rev_ = rev.get();
                 rev->rev_ = it;
+                edge->halfedge_ = it;
+                it->edge_ = edge.get();
+                rev->edge_ = edge.get();
+
                 rev->face_ = face.get();
                 rev->src_ = it->next_->src_;
 
@@ -467,6 +476,10 @@ bool Mesh::splitHE(Halfedge *he) {
     auto he11 = new Halfedge();
     auto he12 = new Halfedge();
 
+    auto e_new = new Edge();
+    auto e0 = new Edge();
+    auto e1 = new Edge();
+
     auto he0 = he->next_;
     auto he1 = he0->next_;
     auto he2 = rev->next_;
@@ -504,6 +517,19 @@ bool Mesh::splitHE(Halfedge *he) {
     rev_new->next_ = he2;
     he2->next_ = he12;
     he12->next_ = rev_new;
+
+    // Set edge-halfedge links
+    e_new->halfedge_ = he_new;
+    he_new->edge_ = e_new;
+    rev_new->edge_ = e_new;
+
+    e0->halfedge_ = he01;
+    he01->edge_ = e0;
+    he02->edge_ = e0;
+
+    e1->halfedge_ = he11;
+    he11->edge_ = e1;
+    he12->edge_ = e1;
 
     // Update rev half-edges
     he->rev_ = rev;
@@ -567,6 +593,9 @@ bool Mesh::splitHE(Halfedge *he) {
     addFace(f0_new);
     addFace(f1_new);
     addVertex(v_new);
+    addEdge(e_new);
+    addEdge(e0);
+    addEdge(e1);
     addHalfedge(he_new);
     addHalfedge(rev_new);
     addHalfedge(he01);
@@ -587,6 +616,7 @@ bool Mesh::collapseHE(Halfedge* he) {
     //     \  /
     //      v3
 
+    Edge *e = he->edge_;
     Halfedge *rev = he->rev_;
     Assertion(he->index_ < halfedges_.size(), "Daemon halfedge detected!");
     Assertion(rev->index_ < halfedges_.size(), "Daemon halfedge detected!");
@@ -674,16 +704,26 @@ bool Mesh::collapseHE(Halfedge* he) {
         Assertion(it->src() == v_remain, "Invalid halfedge origin detected!");
     }
 
-    // Update opposite halfedges
+    // Update edges and opposite halfedges
+    Edge *e0 = he->next()->next()->edge();
+    Edge *e1 = he->next()->edge();
     Halfedge *he0 = he->next()->next()->rev();
     Halfedge *he1 = he->next()->rev();
+    e0->halfedge_ = he0;
     he0->rev_ = he1;
+    he0->edge_ = e0;
     he1->rev_ = he0;
+    he1->edge_ = e0;
 
+    Edge *e2 = rev->next()->next()->edge();
+    Edge *e3 = rev->next()->edge();
     Halfedge *he2 = rev->next()->next()->rev();
     Halfedge *he3 = rev->next()->rev();
+    e2->halfedge_ = he2;
     he2->rev_ = he3;
+    he2->edge_ = e2;
     he3->rev_ = he2;
+    he3->edge_ = e2;
 
     // Update halfedge of the origin vertex (v0)
     v_remain->halfedge_ = he0;
@@ -693,6 +733,11 @@ bool Mesh::collapseHE(Halfedge* he) {
     v1->halfedge_ = he1;
     v2->halfedge_ = he2;
     v3->halfedge_ = he3;
+
+    // Remove edges
+    removeEdge(e);
+    removeEdge(e1);
+    removeEdge(e3);
 
     // Remove halfedges
     Face *f0 = he->face_;
@@ -799,16 +844,24 @@ bool Mesh::triangulate(Face* f) {
     std::vector<Face*> new_faces;
     for (int i = 1; i < hes.size() - 1; i++) {
         if (i < hes.size() - 2) {
+            auto new_e = new Edge();
             auto new_he0 = new Halfedge();
             auto new_he1 = new Halfedge();
+
+            new_e->halfedge_ = new_he0;
+            new_he0->edge_ = new_e;
+            new_he1->edge_ = new_e;
+
             new_hes.push_back(new_he0);
             new_hes.push_back(new_he1);
             new_hes.push_back(hes[i + 1]);
+            addEdge(new_e);
             addHalfedge(new_he0);
             addHalfedge(new_he1);
         }
 
         auto new_face = new Face();
+        new_face->halfedge_ = hes[i];
         new_faces.push_back(new_face);
         addFace(new_face);
     }
@@ -854,31 +907,48 @@ bool Mesh::verify() const {
     for (int i = 0; i < vertices_.size(); i++) {
         Vertex *v = vertices_[i].get();
         if (v->index() != i) {
-            fprintf(stderr, "Vertex index does not match array index: v[%d].index = %d\n", i, v->index());
+            Warn("Vertex index does not match array index: v[%d].index = %d", i, v->index());
             success = false;
         }
         success &= verifyVertex(v);
     }
 
-    for (int i = 0; i < halfedges_.size(); i++) {
-        auto he = halfedges_[i];
-        if (he->index() != i) {
-            fprintf(stderr, "Halfedge index does not match array index: he[%d].index = %d\n", i, he->index());
+    for (int i = 0; i < edges_.size(); i++) {
+        Edge *e = edges_[i].get();
+        if (e->index() != i) {
+            Warn("Edge index does not match array index: e[%d].index = %d", i, e->index());
             success = false;
         }
 
-        success &= verifyVertex(he->src());
-        success &= verifyVertex(he->dst());
+        if (e->halfedge_ == nullptr) {
+            Warn("Edge[%d] is not with non-null halfedge!", e->index());
+            success = false;
+        }
+    }
+
+    for (int i = 0; i < halfedges_.size(); i++) {
+        auto he = halfedges_[i];
+        if (he->index() != i) {
+            Warn("Halfedge index does not match array index: he[%d].index = %d", i, he->index());
+            success = false;
+        }
+
+        if (he->edge_ == nullptr) {
+            Warn("Halfedge[%d] is not with non-null edge!", he->index());
+            success = false;
+        }
     }
 
     for (int i = 0; i < faces_.size(); i++) {
         auto f = faces_[i];
-        if (f->index_ != i) {
-            printf("v: %d %d\n", f->index_, i);
+        if (f->index() != i) {
+            Warn("Face index does not match array index: f[%d].index = %d", i, f->index());
+            success = false;
         }
 
-        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
-            success &= verifyVertex(it.ptr());
+        if (f->halfedge_ == nullptr) {
+            Warn("Face[%d] is not with non-null halfedge!", f->index());
+            success = false;
         }
     }
 
@@ -909,17 +979,22 @@ bool Mesh::verifyVertex(Vertex* v) const {
 }
 
 void Mesh::addVertex(Vertex *v) {
-    v->index_ = vertices_.size();
+    v->index_ = static_cast<int>(vertices_.size());
     vertices_.emplace_back(v);
 }
 
+void Mesh::addEdge(Edge *e) {
+    e->index_ = static_cast<int>(edges_.size());
+    edges_.emplace_back(e);
+}
+
 void Mesh::addHalfedge(Halfedge *he) {
-    he->index_ = halfedges_.size();
+    he->index_ = static_cast<int>(halfedges_.size());
     halfedges_.emplace_back(he);
 }
 
 void Mesh::addFace(Face *f) {
-    f->index_ = faces_.size();
+    f->index_ = static_cast<int>(faces_.size());
     faces_.emplace_back(f);
 }
 

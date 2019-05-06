@@ -35,7 +35,9 @@ public:
         }
         return iter;
     }
+
     Halfedge *rev() const { return rev_; }
+    Edge *edge() const { return edge_; }
     Face *face() const { return face_; }
     int index() const { return index_; }
     bool isBoundary() const;
@@ -44,6 +46,7 @@ private:
     Vertex *src_ = nullptr;
     Halfedge *next_ = nullptr;
     Halfedge *rev_ = nullptr;
+    Edge *edge_ = nullptr;
     Face *face_ = nullptr;
     int index_ = -1;
 

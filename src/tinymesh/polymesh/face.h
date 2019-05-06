@@ -30,6 +30,7 @@ public:
     VertexIterator v_begin();
     VertexIterator v_end();
 
+    int index() const { return index_; }
     bool isBoundary() const { return isBoundary_; }
 
 private:

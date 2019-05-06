@@ -23,6 +23,7 @@ public:
 
     Halfedge *halfedge() const { return halfedge_; }
 
+    int index() const { return index_; }
     bool isBoundary() const;
     double length() const;
 

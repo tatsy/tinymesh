@@ -16,9 +16,11 @@
 namespace tinymesh {
 
 void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
+    Assertion(mesh.verify(), "Invalid mesh!");
+
+    // Compute average edge length
     int count;
     double Lavg, Lvar, Lstd;
-    // Compute average edge length
     Lavg = 0.0;
     Lvar = 0.0;
 
@@ -68,6 +70,8 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
         printf("*** After split ***\n");
         printf("#vert: %d\n", (int)mesh.num_vertices());
         printf("#face: %d\n", (int)mesh.num_faces());
+
+        mesh.verify();
 
         // Collapse short edges
         indices.clear();
