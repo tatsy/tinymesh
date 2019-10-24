@@ -78,24 +78,25 @@ void Mesh::load(const std::string &filename) {
     std::map<IndexPair, Halfedge*> pairToHalfedge;
     std::map<uint32_t, uint32_t> vertexDegree;
     for (int i = 0; i < indices_.size(); i += degree) {
-        // Check duplication
-        bool duplicated = false;
+        // Check polygon duplication
+        bool isDuplicated = false;
         for (int j = 0; j < degree; j++) {
             const uint32_t a = indices_[i + j];
             const uint32_t b = indices_[i + (j + 1) % degree];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                duplicated = true;
+                Warn("An edge with vertices #%d and #%d is detected! Skip the face that includes this edge.", a, b);
+                isDuplicated = true;
                 break;
             }
         }
 
-        if (duplicated) {
+        if (isDuplicated) {
             continue;
         }
 
         // Traverse face vertices
-        auto face = std::make_shared<Face>();
+        auto face = new Face();
         std::vector<Halfedge*> faceHalfedges;
         for (int j = 0; j < degree; j++) {
             // Count up vertex degree
@@ -110,19 +111,19 @@ void Mesh::load(const std::string &filename) {
             const uint32_t b = indices_[i + (j + 1) % degree];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                FatalError("Duplicated halfedges are found!");
+                FatalError("An edge with vertices #%d and #%d is duplicated\n", a, b);
             }
 
-            auto he = std::make_shared<Halfedge>();
-            halfedges_.push_back(he);
-            pairToHalfedge[ab] = he.get();
+            auto he = new Halfedge();
+            addHalfedge(he);
+            pairToHalfedge[ab] = he;
 
-            vertices_[a]->halfedge_ = he.get();
+            vertices_[a]->halfedge_ = he;
             he->src_ = vertices_[a].get();
-            he->face_ = face.get();
-            face->halfedge_ = he.get();
+            he->face_ = face;
+            face->halfedge_ = he;
 
-            faceHalfedges.push_back(he.get());
+            faceHalfedges.push_back(he);
 
             // Set opposite halfedge if it exists.
             // Besides, add an edge if opposite halfedge is successfully paired.
@@ -131,18 +132,18 @@ void Mesh::load(const std::string &filename) {
             if (iba != pairToHalfedge.end()) {
                 Halfedge *rev = iba->second;
                 he->rev_ = rev;
-                rev->rev_ = he.get();
+                rev->rev_ = he;
 
-                auto edge = std::make_shared<Edge>();
-                he->edge_ = edge.get();
-                rev->edge_ = edge.get();
-                edge->halfedge_ = he.get();
-                edges_.push_back(edge);
+                auto edge = new Edge();
+                addEdge(edge);
+                he->edge_ = edge;
+                rev->edge_ = edge;
+                edge->halfedge_ = he;
             } else {
                 he->rev_ = nullptr;
             }
         }
-        faces_.push_back(face);
+        addFace(face);
 
         // Set next halfedges
         for (int j = 0; j < degree; j++) {
@@ -168,34 +169,36 @@ void Mesh::load(const std::string &filename) {
     const int numHalfedges = halfedges_.size();
     for (int i = 0; i < numHalfedges; i++) {
         auto &he = halfedges_[i];
+        Assertion(he.get() != nullptr, "Null halfedge detected!");
         if (he->rev_ == nullptr) {
-            auto face = std::make_shared<Face>();
-            faces_.push_back(face);
+            auto face = new Face();
+            addFace(face);
             face->isBoundary_ = true;
 
             std::vector<Halfedge*> boundaryHalfedges;
             Halfedge *it = he.get();
             do {
-                auto rev = std::make_shared<Halfedge>();
-                halfedges_.push_back(rev);
-                boundaryHalfedges.push_back(rev.get());
+                auto rev = new Halfedge();
+                addHalfedge(rev);
+                boundaryHalfedges.push_back(rev);
 
-                auto edge = std::make_shared<Edge>();
-                edges_.push_back(edge);
+                auto edge = new Edge();
+                addEdge(edge);
 
-                it->rev_ = rev.get();
+                it->rev_ = rev;
                 rev->rev_ = it;
                 edge->halfedge_ = it;
-                it->edge_ = edge.get();
-                rev->edge_ = edge.get();
+                it->edge_ = edge;
+                rev->edge_ = edge;
 
-                rev->face_ = face.get();
+                rev->face_ = face;
                 rev->src_ = it->next_->src_;
 
                 // Advance it to the next halfedge along the current boundary loop
                 it = it->next_;
                 while (it != he.get() && it->rev_ != nullptr) {
-                    it = it->rev_->next_;
+                    it = it->rev_;
+                    it = it->next_;
                 }
             } while (it != he.get());
 
@@ -207,6 +210,11 @@ void Mesh::load(const std::string &filename) {
                 boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
             }
         }
+    }
+
+    // To make the later traversal easier, update the vertex halfedges to be not on the boundary.
+    for (auto v : vertices_) {
+        v->halfedge_ = v->halfedge_->rev_->next_;
     }
 
     // Check if the mesh is non-manifold
@@ -228,21 +236,6 @@ void Mesh::load(const std::string &filename) {
         if (count != vertexDegree[v->index()]) {
             FatalError("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
         }
-    }
-
-    // Put edge indices
-    for (int i = 0; i < edges_.size(); i++) {
-        edges_[i]->index_ = i;
-    }
-
-    // Put halfedge indices
-    for (int i = 0; i < halfedges_.size(); i++) {
-        halfedges_[i]->index_ = i;
-    }
-
-    // Put face indices
-    for (int i = 0; i < faces_.size(); i++) {
-        faces_[i]->index_ = i;
     }
 }
 
@@ -279,7 +272,6 @@ void Mesh::loadOBJ(const std::string &filename) {
                 uniqueVertices[v] = static_cast<uint32_t>(vertices_.size());
                 vertices_.push_back(std::make_shared<Vertex>(v));
             }
-
             indices_.push_back(uniqueVertices[v]);
         }
     }
@@ -354,14 +346,11 @@ void Mesh::loadPLY(const std::string &filename) {
                           raw_vertices[i * 3 + 2]);
             }
 
-//            if (uniqueVertices.count(pos) == 0) {
-//                uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
-//                vertices_.push_back(std::make_shared<Vertex>(pos));
-//            }
-//
-//            indices_.push_back(uniqueVertices[pos]);
-            indices_.push_back(vertices_.size());
-            vertices_.push_back(std::make_shared<Vertex>(pos));
+            if (uniqueVertices.count(pos) == 0) {
+                uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
+                vertices_.push_back(std::make_shared<Vertex>(pos));
+            }
+            indices_.push_back(uniqueVertices[pos]);
         }
     } catch (const std::exception &e) {
         std::cerr << "Caught tinyply exception: " << e.what() << std::endl;
