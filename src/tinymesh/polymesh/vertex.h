@@ -24,7 +24,7 @@ public:
     Vertex();
     Vertex(const Vertex &v) = default;
     Vertex(Vertex &&p) noexcept = default;
-    explicit Vertex(const Vec &v);
+    explicit Vertex(const Vec3 &v);
     virtual ~Vertex() = default;
 
     Vertex &operator=(const Vertex &p) = default;
@@ -33,7 +33,7 @@ public:
     bool operator==(const Vertex &other) const;
 
     int degree();
-    Vec normal();
+    Vec3 normal();
 
     VertexIterator v_begin();
     VertexIterator v_end();
@@ -44,15 +44,15 @@ public:
     FaceIterator f_begin();
     FaceIterator f_end();
 
-    Vec pos() const { return pos_; }
-    void setPos(const Vec &pos) { pos_ = pos; }
+    Vec3 pos() const { return pos_; }
+    void setPos(const Vec3 &pos) { pos_ = pos; }
 
     int index() const { return index_; }
 
     bool isBoundary();
 
 private:
-    Vec pos_;
+    Vec3 pos_;
     Halfedge *halfedge_ = nullptr;
     int index_ = -1;
 

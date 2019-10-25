@@ -13,23 +13,23 @@ namespace tinymesh {
 void smooth(Mesh &mesh, double strength) {
     // Volonoi tessellation
     const int nv = mesh.num_vertices();
-    std::vector<Vec> centroids(nv);
-    std::vector<Vec> normals(nv);
+    std::vector<Vec3> centroids(nv);
+    std::vector<Vec3> normals(nv);
 
     // Compute centroids and tangent planes
     omp_parallel_for (int i = 0; i < mesh.num_vertices(); i++) {
         Vertex *v = mesh.vertex(i);
 
         // Collect surrounding vertices
-        Vec org = v->pos();
-        std::vector<Vec> pts;
+        Vec3 org = v->pos();
+        std::vector<Vec3> pts;
         for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
             pts.push_back(vit->pos());
         }
 
         // Compute centroids, tangents, and binormals
-        Vec cent(0.0);
-        Vec norm(0.0);
+        Vec3 cent(0.0);
+        Vec3 norm(0.0);
         for (int i = 0; i < pts.size(); i++) {
             const int j = (i + 1) % pts.size();
             Vec e1 = pts[i] - org;

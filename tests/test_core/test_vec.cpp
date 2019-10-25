@@ -8,7 +8,7 @@
 #include "tinymesh/tinymesh.h"
 using namespace tinymesh;
 
-using VecPair = std::tuple<Vec, Vec>; 
+using VecPair = std::tuple<Vec3, Vec3>;
 
 class VecTest : public ::testing::Test {
 protected:
@@ -16,9 +16,9 @@ protected:
     virtual ~VecTest() {}
 };
 
-class VecUnaryTest : public VecTest, public ::testing::WithParamInterface<Vec> {
+class VecUnaryTest : public VecTest, public ::testing::WithParamInterface<Vec3> {
 protected:
-    Vec v1;
+    Vec3 v1;
 
 protected:
     VecUnaryTest() {}
@@ -31,7 +31,7 @@ protected:
 
 class VecPairwiseTest : public VecTest, public ::testing::WithParamInterface<VecPair> {
 protected:
-    Vec v1, v2;
+    Vec3 v1, v2;
 
 protected:
     VecPairwiseTest() {}
@@ -44,105 +44,105 @@ protected:
 };
 
 TEST_F(VecTest, DefaultInstance) {
-    Vec v;
-    EXPECT_EQ(0.0, v.x);
-    EXPECT_EQ(0.0, v.y);
-    EXPECT_EQ(0.0, v.z);
+    Vec3 v;
+    EXPECT_EQ(0.0, v.x());
+    EXPECT_EQ(0.0, v.y());
+    EXPECT_EQ(0.0, v.z());
 }
 
 TEST_P(VecUnaryTest, Instance) {
-    Vec u(v1.x, v1.y, v1.z);
-    EXPECT_EQ(v1.x, u.x);
-    EXPECT_EQ(v1.y, u.y);
-    EXPECT_EQ(v1.z, u.z);
+    Vec3 u(v1.x(), v1.y(), v1.z());
+    EXPECT_EQ(v1.x(), u.x());
+    EXPECT_EQ(v1.y(), u.y());
+    EXPECT_EQ(v1.z(), u.z());
 
-    Vec v = { v1.x, v1.y, v1.z };
-    EXPECT_EQ(v1.x, v.x);
-    EXPECT_EQ(v1.y, v.y);
-    EXPECT_EQ(v1.z, v.z);
+    Vec3 v = Vec3{ v1.x(), v1.y(), v1.z() };
+    EXPECT_EQ(v1.x(), v.x());
+    EXPECT_EQ(v1.y(), v.y());
+    EXPECT_EQ(v1.z(), v.z());
 }
 
 TEST_P(VecUnaryTest, Copy) {
-    Vec v = Vec(v1);
-    EXPECT_EQ(v1.x, v.x);
-    EXPECT_EQ(v1.y, v.y);
-    EXPECT_EQ(v1.z, v.z);
+    Vec3 v = Vec(v1);
+    EXPECT_EQ(v1.x(), v.x());
+    EXPECT_EQ(v1.y(), v.y());
+    EXPECT_EQ(v1.z(), v.z());
 }
 
 TEST_P(VecUnaryTest, Assignment) {
-    Vec v;
+    Vec3 v;
     v = v1;
-    EXPECT_EQ(v1.x, v.x);
-    EXPECT_EQ(v1.y, v.y);
-    EXPECT_EQ(v1.z, v.z);
+    EXPECT_EQ(v1.x(), v.x());
+    EXPECT_EQ(v1.y(), v.y());
+    EXPECT_EQ(v1.z(), v.z());
 }
 
 TEST_P(VecPairwiseTest, PlusOperator) {
     Vec w = v1 + v2;
-    EXPECT_EQ(v1.x + v2.x, w.x);
-    EXPECT_EQ(v1.y + v2.y, w.y);
-    EXPECT_EQ(v1.z + v2.z, w.z);
+    EXPECT_EQ(v1.x() + v2.x(), w.x());
+    EXPECT_EQ(v1.y() + v2.y(), w.y());
+    EXPECT_EQ(v1.z() + v2.z(), w.z());
 }
 
 TEST_P(VecPairwiseTest, MinusOperator) {
     Vec w = v1 - v2;
-    EXPECT_EQ(v1.x - v2.x, w.x);
-    EXPECT_EQ(v1.y - v2.y, w.y);
-    EXPECT_EQ(v1.z - v2.z, w.z);
+    EXPECT_EQ(v1.x() - v2.x(), w.x());
+    EXPECT_EQ(v1.y() - v2.y(), w.y());
+    EXPECT_EQ(v1.z() - v2.z(), w.z());
 }
 
 TEST_P(VecPairwiseTest, Multiplication) {
     const Vec v = v1 * v2;
-    EXPECT_EQ(v1.x * v2.x, v.x);
-    EXPECT_EQ(v1.y * v2.y, v.y);
-    EXPECT_EQ(v1.z * v2.z, v.z);
+    EXPECT_EQ(v1.x() * v2.x(), v.x());
+    EXPECT_EQ(v1.y() * v2.y(), v.y());
+    EXPECT_EQ(v1.z() * v2.z(), v.z());
 
-    const double a = v2.x;
+    const double a = v2.x();
     const Vec u = v1 * a;
-    EXPECT_EQ(v1.x * a, u.x);
-    EXPECT_EQ(v1.y * a, u.y);
-    EXPECT_EQ(v1.z * a, u.z);
+    EXPECT_EQ(v1.x() * a, u.x());
+    EXPECT_EQ(v1.y() * a, u.y());
+    EXPECT_EQ(v1.z() * a, u.z());
 
-    const double b = v2.y;
+    const double b = v2.y();
     const Vec w = b * v1;
-    EXPECT_EQ(b * v1.x, w.x);
-    EXPECT_EQ(b * v1.y, w.y);
-    EXPECT_EQ(b * v1.z, w.z);
+    EXPECT_EQ(b * v1.x(), w.x());
+    EXPECT_EQ(b * v1.y(), w.y());
+    EXPECT_EQ(b * v1.z(), w.z());
 }
 
 TEST_P(VecPairwiseTest, Division) {
-    if (v2.x != 0.0 && v2.y != 0.0 && v2.z != 0.0) {
+    if (v2.x() != 0.0 && v2.y() != 0.0 && v2.z() != 0.0) {
         const Vec v = v1 / v2;
-        EXPECT_EQ(v1.x / v2.x, v.x);
-        EXPECT_EQ(v1.y / v2.y, v.y);
-        EXPECT_EQ(v1.z / v2.z, v.z);
+        EXPECT_EQ(v1.x() / v2.x(), v.x());
+        EXPECT_EQ(v1.y() / v2.y(), v.y());
+        EXPECT_EQ(v1.z() / v2.z(), v.z());
     } else {
-        ASSERT_DEATH(v1 / v2, "");
+        ASSERT_ANY_THROW(v1 / v2);
     }
 
-    const double a = v2.x;
+    const double a = v2.x();
     if (a != 0.0) {
         const Vec u = v1 / a;
-        EXPECT_DOUBLE_EQ(v1.x / a, u.x);
-        EXPECT_DOUBLE_EQ(v1.y / a, u.y);
-        EXPECT_DOUBLE_EQ(v1.z / a, u.z);
+        EXPECT_DOUBLE_EQ(v1.x() / a, u.x());
+        EXPECT_DOUBLE_EQ(v1.y() / a, u.y());
+        EXPECT_DOUBLE_EQ(v1.z() / a, u.z());
     } else {
-        ASSERT_DEATH(v1 / a, "");
+        ASSERT_ANY_THROW(v1 / a);
     }
 }
 
 TEST_P(VecUnaryTest, NormAndNormalize) {
-    const double sqnrm = v1.x * v1.x + 
-                         v1.y * v1.y +
-                         v1.z * v1.z;
+    const double sqnrm = v1.x() * v1.x() + 
+                         v1.y() * v1.y() +
+                         v1.z() * v1.z();
     const double nrm = sqrt(sqnrm);
     EXPECT_EQ(sqrt(sqnrm), length(v1));
 
     if (nrm != 0.0) {
         const Vec w = normalize(v1);
-        EXPECT_EQ(v1.x / nrm, w.x);
-        EXPECT_EQ(v1.y / nrm, w.y);
-        EXPECT_EQ(v1.z / nrm, w.z);
+        EXPECT_EQ(v1.x() / nrm, w.x());
+        EXPECT_EQ(v1.y() / nrm, w.y());
+        EXPECT_EQ(v1.z() / nrm, w.z());
         EXPECT_FLOAT_EQ(length(w), 1.0);
     } else {
         ASSERT_DEATH(normalize(v1), "");
@@ -151,32 +151,32 @@ TEST_P(VecUnaryTest, NormAndNormalize) {
 
 TEST_P(VecUnaryTest, Negation) {
     Vec v = -v1;
-    EXPECT_EQ(-v1.x, v.x);
-    EXPECT_EQ(-v1.y, v.y);
-    EXPECT_EQ(-v1.z, v.z);
+    EXPECT_EQ(-v1.x(), v.x());
+    EXPECT_EQ(-v1.y(), v.y());
+    EXPECT_EQ(-v1.z(), v.z());
 }
 
 TEST_P(VecPairwiseTest, Equal) {
-    EXPECT_EQ(v1.x == v2.x && v1.y == v2.y && v1.z == v2.z, v1 == v2);
+    EXPECT_EQ(v1.x() == v2.x() && v1.y() == v2.y() && v1.z() == v2.z(), v1 == v2);
 }
 
 TEST_P(VecPairwiseTest, DotAndCross) {
     double dt = dot(v1, v2);
-    EXPECT_EQ(v1.x * v2.x + v1.y * v2.y + v1.z * v2.z, dt);
+    EXPECT_EQ(v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z(), dt);
     EXPECT_EQ(dt, dot(v2, v1));
 
     const Vec w = cross(v1, v2);
-    EXPECT_EQ(v1.y * v2.z - v1.z * v2.y, w.x);
-    EXPECT_EQ(v1.z * v2.x - v1.x * v2.z, w.y);
-    EXPECT_EQ(v1.x * v2.y - v1.y * v2.x, w.z);
+    EXPECT_EQ(v1.y() * v2.z() - v1.z() * v2.y(), w.x());
+    EXPECT_EQ(v1.z() * v2.x() - v1.x() * v2.z(), w.y());
+    EXPECT_EQ(v1.x() * v2.y() - v1.y() * v2.x(), w.z());
 }
 
-std::vector<Vec> vectors = {
-    Vec(0.0, 1.0, 2.0),
-    Vec(-2.0, -1.0, 0.0),
-    Vec(3.14, 1.59, 2.65),
-    Vec(1.0e8, 1.0e8, 1.0e8),
-    Vec(1.0e-8, 1.0e-8, 1.0e-8)
+std::vector<Vec3> vectors = {
+    Vec3(0.0, 1.0, 2.0),
+    Vec3(-2.0, -1.0, 0.0),
+    Vec3(3.14, 1.59, 2.65),
+    Vec3(1.0e8, 1.0e8, 1.0e8),
+    Vec3(1.0e-8, 1.0e-8, 1.0e-8)
 };
 
 INSTANTIATE_TEST_CASE_P(, VecUnaryTest,

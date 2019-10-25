@@ -60,7 +60,7 @@ struct UnionFindTree {
 namespace tinymesh {
 
 struct QEMNode {
-    QEMNode(double value, Halfedge *he, const Vec &v)
+    QEMNode(double value, Halfedge *he, const Vec3 &v)
         : value{ value }
         , he{ he }
         , v{ v } {
@@ -76,10 +76,10 @@ struct QEMNode {
 
     double value;
     Halfedge *he;
-    Vec v;
+    Vec3 v;
 };
 
-double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Vertex &v2, Vec *v) {
+double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Vertex &v2, Vec3 *v) {
     Matrix Q = Matrix::identity(4, 4);
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
@@ -91,7 +91,7 @@ double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Ve
     const double D = Q.det();
     if (D < 1.0e-8) {
         Vec m = 0.5 * (v1.pos() + v2.pos());
-        double elems[4] = {m.x, m.y, m.z, 1.0};
+        double elems[4] = {m[0], m[1], m[2], 1.0};
         v_bar = Matrix(4, 1, elems);
     } else {
         double elems[4] = {0.0, 0.0, 0.0, 1.0};
@@ -100,7 +100,7 @@ double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Ve
 
     const double qem = (v_bar.T() * ((m1 + m2) * v_bar))(0, 0);
     if (v) {
-        *v = Vec(v_bar(0, 0), v_bar(1, 0), v_bar(2, 0));
+        *v = Vec3(v_bar(0, 0), v_bar(1, 0), v_bar(2, 0));
     }
     return qem;
 }
@@ -148,9 +148,9 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
             const double w = length(norm);
             norm /= (w + Eps);
 
-            const double nx = norm.x;
-            const double ny = norm.y;
-            const double nz = norm.z;
+            const double nx = norm.x();
+            const double ny = norm.y();
+            const double nz = norm.z();
             const double d = -dot(norm, vs[0]->pos());
 
             double elems[] = {
@@ -178,7 +178,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
             int i2 = v2->index();
             Matrix &q1 = Qs[i1];
             Matrix &q2 = Qs[i2];
-            Vec v;
+            Vec3 v;
             const double qem = computeQEM(q1, q2, *v1, *v2, &v);
             que.push(QEMNode(qem, he, v));
         }
@@ -225,7 +225,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
                 bool has_i = false;
                 bool has_j = false;
                 std::vector<Vertex*> vs;
-                std::vector<Vec> ps;
+                std::vector<Vec3> ps;
                 for (auto it = f->v_begin(); it != f->v_end(); ++it) {
                     vs.push_back(it.ptr());
                     ps.push_back(it->pos());

@@ -258,14 +258,14 @@ void Mesh::loadOBJ(const std::string &filename) {
     // Traverse triangles
     vertices_.clear();
     indices_.clear();
-    std::unordered_map<Vec, uint32_t> uniqueVertices;
+    std::unordered_map<Vec3, uint32_t> uniqueVertices;
     for (const auto &shape : shapes) {
         for (const auto &index : shape.mesh.indices) {
-            Vec v;
+            Vec3 v;
             if (index.vertex_index >= 0) {
-                v = Vec(attrib.vertices[index.vertex_index * 3 + 0],
-                        attrib.vertices[index.vertex_index * 3 + 1],
-                        attrib.vertices[index.vertex_index * 3 + 2]);
+                v = Vec3(attrib.vertices[index.vertex_index * 3 + 0],
+                         attrib.vertices[index.vertex_index * 3 + 1],
+                         attrib.vertices[index.vertex_index * 3 + 2]);
             }
 
             if (uniqueVertices.count(v) == 0) {
@@ -335,15 +335,15 @@ void Mesh::loadPLY(const std::string &filename) {
         std::vector<uint32_t> raw_indices(numFaces * 3);
         std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
 
-        std::unordered_map<Vec, uint32_t> uniqueVertices;
+        std::unordered_map<Vec3, uint32_t> uniqueVertices;
         vertices_.clear();
         for (uint32_t i : raw_indices) {
-            Vec pos;
+            Vec3 pos;
 
             if (vert_data) {
-                pos = Vec(raw_vertices[i * 3 + 0],
-                          raw_vertices[i * 3 + 1],
-                          raw_vertices[i * 3 + 2]);
+                pos = Vec3(raw_vertices[i * 3 + 0],
+                           raw_vertices[i * 3 + 1],
+                           raw_vertices[i * 3 + 2]);
             }
 
             if (uniqueVertices.count(pos) == 0) {
@@ -376,7 +376,7 @@ void Mesh::saveOBJ(const std::string& filename) const {
     }
 
     for (const auto &v : vertices_) {
-        writer << "v " << v->pos().x << " " << v->pos().y << " " << v->pos().z << std::endl;
+        writer << "v " << v->pos().x() << " " << v->pos().y() << " " << v->pos().z() << std::endl;
     }
 
     for (const auto &f : faces_) {
@@ -409,9 +409,9 @@ void Mesh::savePLY(const std::string& filename) const {
     std::vector<float> vertexData(vertices_.size() * 3);
     for (int i = 0; i < vertices_.size(); i++) {
         Vec v = vertices_[i]->pos();
-        vertexData[i * 3 + 0] = v.x;
-        vertexData[i * 3 + 1] = v.y;
-        vertexData[i * 3 + 2] = v.z;
+        vertexData[i * 3 + 0] = v.x();
+        vertexData[i * 3 + 1] = v.y();
+        vertexData[i * 3 + 2] = v.z();
     }
 
     std::vector<uint32_t> indexData;
@@ -665,7 +665,7 @@ bool Mesh::collapseHE(Halfedge* he) {
     }
 
     // Check unsafe collapse (face flip)
-    Vec norm(0.0);
+    Vec3 norm(0.0);
     for (int i = 0; i < neighbors.size(); i++) {
         const int j = (i + 1) % neighbors.size();
         const Vec e1 = neighbors[i]->pos() - v2->pos();
@@ -925,7 +925,7 @@ double Mesh::H(Vertex *v) const {
     }
 
     const int N = static_cast<int>(neighbors.size());
-    Vec laplace = Vec(0.0);
+    Vec laplace = Vec3(0.0);
     double sumAreas = 0.0;
     for (int i = 0; i < N; i++) {
         const int prev = (i - 1 + N) % N;
@@ -1007,8 +1007,8 @@ bool Mesh::verifyVertex(Vertex* v) const {
     }
 
     Vec p = v->pos();
-    if (std::isinf(p.x) || std::isnan(p.x) || std::isinf(p.y) || std::isnan(p.y) || std::isinf(p.z) || std::isnan(p.z)) {
-        fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p.x, p.y, p.z);
+    if (std::isinf(p[0]) || std::isnan(p[0]) || std::isinf(p[1]) || std::isnan(p[1]) || std::isinf(p[2]) || std::isnan(p[2])) {
+        fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p[0], p[1], p[2]);
         success = false;
     }
 

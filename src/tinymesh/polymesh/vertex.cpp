@@ -18,7 +18,7 @@ Vertex::Vertex()
     , index_{ -1 } {
 }
 
-Vertex::Vertex(const Vec &pos)
+Vertex::Vertex(const Vec3 &pos)
     : pos_{ pos }
     , halfedge_{ nullptr }
     , index_{ -1 } {
@@ -42,8 +42,8 @@ int Vertex::degree() {
     return deg;
 }
 
-Vec Vertex::normal() {
-    Vec norm(0.0);
+Vec3 Vertex::normal() {
+    Vec3 norm(0.0);
     Vertex *prev = nullptr;
     for (auto it = v_begin(); it != v_end(); ++it) {
         if (prev) {
