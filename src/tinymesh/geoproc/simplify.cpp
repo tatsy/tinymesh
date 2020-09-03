@@ -90,7 +90,7 @@ double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Ve
     Matrix v_bar;
     const double D = Q.det();
     if (D < 1.0e-8) {
-        Vec m = 0.5 * (v1.pos() + v2.pos());
+        Vec3 m = 0.5 * (v1.pos() + v2.pos());
         double elems[4] = {m[0], m[1], m[2], 1.0};
         v_bar = Matrix(4, 1, elems);
     } else {
@@ -144,7 +144,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
                 return;
             }
 
-            Vec norm = cross(vs[1]->pos() - vs[0]->pos(), vs[2]->pos() - vs[0]->pos());
+            Vec3 norm = cross(vs[1]->pos() - vs[0]->pos(), vs[2]->pos() - vs[0]->pos());
             const double w = length(norm);
             norm /= (w + Eps);
 
@@ -195,7 +195,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
 
             const int ii = qn.he->src()->index();
             const int jj = qn.he->dst()->index();
-            const Vec v_bar = qn.v;
+            const Vec3 v_bar = qn.v;
 
             Vertex *v_i = mesh.vertex(ii);
             Vertex *v_j = mesh.vertex(jj);
@@ -242,7 +242,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
                     continue;
                 }
 
-                const Vec n0 = cross(ps[2] - ps[0], ps[1] - ps[0]);
+                const Vec3 n0 = cross(ps[2] - ps[0], ps[1] - ps[0]);
                 bool isFound = false;
                 for (int i = 0; i < vs.size(); i++) {
                     if (vs[i] == v_i || vs[i] == v_j) {
@@ -256,7 +256,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
                     FatalError("Contractible vertex not found!");
                 }
 
-                const Vec n1 = cross(ps[2] - ps[0], ps[1] - ps[0]);
+                const Vec3 n1 = cross(ps[2] - ps[0], ps[1] - ps[0]);
 
                 const double cos = dot(n0, n1) / (length(n0) * length(n1));
                 if (cos <= 1.0e-12) {

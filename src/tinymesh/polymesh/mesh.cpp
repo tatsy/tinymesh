@@ -8,9 +8,12 @@
 #include <map>
 #include <functional>
 #include <unordered_map>
+
 #include <experimental/filesystem>
 
 namespace fs = std::experimental::filesystem;
+//#include <filesystem>
+//namespace fs = std::filesystem;
 
 #include "core/vec.h"
 #include "polymesh/vertex.h"
@@ -408,7 +411,7 @@ void Mesh::savePLY(const std::string& filename) const {
     
     std::vector<float> vertexData(vertices_.size() * 3);
     for (int i = 0; i < vertices_.size(); i++) {
-        Vec v = vertices_[i]->pos();
+        const Vec3 v = vertices_[i]->pos();
         vertexData[i * 3 + 0] = v.x();
         vertexData[i * 3 + 1] = v.y();
         vertexData[i * 3 + 2] = v.z();
@@ -491,7 +494,7 @@ bool Mesh::splitHE(Halfedge *he) {
     auto v3 = he3->src_;
 
     // Prepare new vertex
-    const Vec newPos = 0.5 * (he->src()->pos() + he->dst()->pos());
+    const Vec3 newPos = 0.5 * (he->src()->pos() + he->dst()->pos());
     auto v_new = new Vertex(newPos);
 
     // Update next half-edges
@@ -668,8 +671,8 @@ bool Mesh::collapseHE(Halfedge* he) {
     Vec3 norm(0.0);
     for (int i = 0; i < neighbors.size(); i++) {
         const int j = (i + 1) % neighbors.size();
-        const Vec e1 = neighbors[i]->pos() - v2->pos();
-        const Vec e2 = neighbors[j]->pos() - v2->pos();
+        const Vec3 e1 = neighbors[i]->pos() - v2->pos();
+        const Vec3 e2 = neighbors[j]->pos() - v2->pos();
         norm += cross(e1, e2);
     }
     norm = normalize(norm);
@@ -677,8 +680,8 @@ bool Mesh::collapseHE(Halfedge* he) {
     double sign = 0.0;
     for (int i = 0; i < neighbors.size(); i++) {
         const int j = (i + 1) % neighbors.size();
-        const Vec e1 = neighbors[i]->pos() - v0->pos();
-        const Vec e2 = neighbors[j]->pos() - v0->pos();
+        const Vec3 e1 = neighbors[i]->pos() - v0->pos();
+        const Vec3 e2 = neighbors[j]->pos() - v0->pos();
         const double s = dot(norm, cross(e1, e2));
         if (sign * s < 0.0) {
             return false;
@@ -910,8 +913,8 @@ double Mesh::K(Vertex *v) const {
     double sumAreas = 0.0;
     for (int i = 0; i < N; i++) {
         const int j = (i + 1) % N;
-        const Vec e1 = neighbors[i]->pos() - v->pos();
-        const Vec e2 = neighbors[j]->pos() - v->pos();
+        const Vec3 e1 = neighbors[i]->pos() - v->pos();
+        const Vec3 e2 = neighbors[j]->pos() - v->pos();
         sumAngles += std::atan2(length(cross(e1, e2)), dot(e1, e2));
         sumAreas += length(cross(e1, e2)) / 6.0;
     }
@@ -925,22 +928,22 @@ double Mesh::H(Vertex *v) const {
     }
 
     const int N = static_cast<int>(neighbors.size());
-    Vec laplace = Vec3(0.0);
+    Vec3 laplace = Vec3(0.0);
     double sumAreas = 0.0;
     for (int i = 0; i < N; i++) {
         const int prev = (i - 1 + N) % N;
         const int post = (i + 1) % N;
 
-        const Vec ea1 = v->pos() - neighbors[prev]->pos();
-        const Vec ea2 = neighbors[i]->pos() - neighbors[prev]->pos();
+        const Vec3 ea1 = v->pos() - neighbors[prev]->pos();
+        const Vec3 ea2 = neighbors[i]->pos() - neighbors[prev]->pos();
         const double cota = length(ea1) * length(ea2) / length(cross(ea1, ea2));
-        const Vec eb1 = v->pos() - neighbors[post]->pos();
-        const Vec eb2 = v->pos() - neighbors[post]->pos();
+        const Vec3 eb1 = v->pos() - neighbors[post]->pos();
+        const Vec3 eb2 = v->pos() - neighbors[post]->pos();
         const double cotb = length(eb1) * length(eb2) / length(cross(eb1, eb2));
         laplace += (cota + cotb) * (neighbors[i]->pos() - v->pos());
 
-        const Vec e1 = neighbors[i]->pos() - v->pos();
-        const Vec e2 = neighbors[post]->pos() - v->pos();
+        const Vec3 e1 = neighbors[i]->pos() - v->pos();
+        const Vec3 e2 = neighbors[post]->pos() - v->pos();
         sumAreas += length(cross(e1, e2)) / 6.0;
     }
     return length(laplace) / (2.0 * sumAreas);
@@ -1006,7 +1009,7 @@ bool Mesh::verifyVertex(Vertex* v) const {
         success = false;
     }
 
-    Vec p = v->pos();
+    Vec3 p = v->pos();
     if (std::isinf(p[0]) || std::isnan(p[0]) || std::isinf(p[1]) || std::isnan(p[1]) || std::isinf(p[2]) || std::isnan(p[2])) {
         fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p[0], p[1], p[2]);
         success = false;

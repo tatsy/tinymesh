@@ -32,9 +32,9 @@ void smooth(Mesh &mesh, double strength) {
         Vec3 norm(0.0);
         for (int i = 0; i < pts.size(); i++) {
             const int j = (i + 1) % pts.size();
-            Vec e1 = pts[i] - org;
-            Vec e2 = pts[j] - org;
-            Vec g = (org + pts[i] + pts[j]) / 3.0;
+            Vec3 e1 = pts[i] - org;
+            Vec3 e2 = pts[j] - org;
+            Vec3 g = (org + pts[i] + pts[j]) / 3.0;
 
             cent += g;
             norm += cross(e1, e2);
@@ -57,10 +57,10 @@ void smooth(Mesh &mesh, double strength) {
         }
 
         if (length(normals[i]) != 0.0) {
-            const Vec pt = v->pos();
-            Vec e = centroids[i] - pt;
+            const Vec3 pt = v->pos();
+            Vec3 e = centroids[i] - pt;
             e -= normals[i] * dot(e, normals[i]);
-            Vec newPos = (1.0 - strength) * v->pos() + strength * (pt + e);
+            Vec3 newPos = (1.0 - strength) * v->pos() + strength * (pt + e);
             v->setPos(newPos);
         }
     }

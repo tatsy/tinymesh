@@ -59,8 +59,8 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
         for (int i : indices) {
             if (i >= 0 && i < mesh.num_halfedges()) {
                 Halfedge *he = mesh.halfedge(i);
-                const Vec p1 = he->src()->pos();
-                const Vec p2 = he->dst()->pos();
+                const Vec3 p1 = he->src()->pos();
+                const Vec3 p2 = he->dst()->pos();
                 const double l = length(p1 - p2);
                 const double p = (l - Lavg) / Lstd;
 
@@ -87,8 +87,8 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
         for (int i : indices) {
             if (i >= 0 && i < mesh.num_halfedges()) {
                 Halfedge *he = mesh.halfedge(i);
-                const Vec p1 = he->src()->pos();
-                const Vec p2 = he->dst()->pos();
+                const Vec3 p1 = he->src()->pos();
+                const Vec3 p2 = he->dst()->pos();
                 const double l = length(p1 - p2);
                 const double p = (l - Lavg) / Lstd;
                 if (l <= Lavg * ratioLower) {
