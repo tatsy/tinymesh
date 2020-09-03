@@ -2,6 +2,15 @@
 #include "smooth.h"
 
 #include <algorithm>
+#include <unordered_map>
+
+#include <Eigen/SparseCore>
+#include <Eigen/IterativeLinearSolvers>
+
+using ScalarType = double;
+using IndexType = int64_t;
+using Triplet = Eigen::Triplet<ScalarType, IndexType>;
+using SparseMatrix = Eigen::SparseMatrix<ScalarType>;
 
 #include "core/openmp.h"
 #include "polymesh/face.h"
@@ -9,6 +18,90 @@
 #include "polymesh/halfedge.h"
 
 namespace tinymesh {
+
+void implicit_fairing(Mesh &mesh, double lambda) {
+    // Indexing vertices
+    const int n_verts = mesh.num_vertices();
+    std::unordered_map<Vertex*, int64_t> v2i;
+    for (int i = 0; i < n_verts; i++) {
+        v2i.insert(std::make_pair(mesh.vertex(i), i));
+    }
+
+    // Compute diffusion matrix
+    Eigen::MatrixXd X(n_verts, 3);
+    std::vector<Triplet> triplets;
+
+    for (int i = 0; i < n_verts; i++) {
+        Vertex *v = mesh.vertex(i);
+
+        // Compute Volonoi area
+        double A = 0.0;
+        for (auto f_it = v->f_begin(); f_it != v->f_end(); ++f_it) {
+            std::vector<Vec3> vs;
+            for (auto v_it = f_it->v_begin(); v_it != f_it->v_end(); ++v_it) {
+                vs.push_back(v_it->pos());
+            }
+
+            Assertion(vs.size() == 3, "Non-triangle face is detected!");
+
+            A += 0.5 * length(cross(vs[1] - vs[0], vs[2] - vs[0])) / 6.0;
+        }
+
+        double sumW = 0.0;
+        for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+            Halfedge *ohe = it.ptr();
+            Halfedge *ihe = ohe->rev();
+
+            Vertex *xa = ohe->next()->dst();
+            Vertex *xb = ohe->dst();
+            Vertex *xc = ihe->dst();
+            Vertex *xd = ihe->next()->dst();
+
+            const Vec3 va = xa->pos();
+            const Vec3 vb = xb->pos();
+            const Vec3 vc = xc->pos();
+            const Vec3 vd = xd->pos();
+
+            const Vec3 e_ab = vb - va;
+            const Vec3 e_ac = vc - va;
+            const double cot_a = dot(e_ab, e_ac) / length(cross(e_ab, e_ac));
+
+            const Vec3 e_db = vb - vd;
+            const Vec3 e_dc = vc - vd;
+            const double cot_d = dot(e_db, e_dc) / length(cross(e_db, e_dc));
+
+            const double W = (cot_a + cot_d) / (4.0 * A);
+            triplets.emplace_back(i, xb->index(), W);
+            sumW += W;
+        }
+
+        triplets.emplace_back(i, i, -sumW);
+        X(i, 0) = v->pos()[0];
+        X(i, 1) = v->pos()[1];
+        X(i, 2) = v->pos()[2];
+    }
+
+    SparseMatrix K(n_verts, n_verts);
+    K.setFromTriplets(triplets.begin(), triplets.end());
+
+    SparseMatrix I(n_verts, n_verts);
+    I.setIdentity();
+
+    SparseMatrix A = I - lambda * K;
+
+    Eigen::BiCGSTAB<SparseMatrix> cg;
+    cg.setTolerance(1.0e-3);
+    cg.setMaxIterations(50);
+    cg.compute(A);
+
+    Eigen::MatrixXd Xnext(n_verts, 3);
+    Xnext = cg.solve(X);
+
+    for (int i = 0; i < n_verts; i++) {
+        const Vec3 newpos = Vec3(Xnext(i, 0), Xnext(i, 1), Xnext(i, 2));
+        mesh.vertex(i)->setPos(newpos);
+    }
+}
 
 void smooth(Mesh &mesh, double strength) {
     // Volonoi tessellation
@@ -52,7 +145,7 @@ void smooth(Mesh &mesh, double strength) {
     // Update vertex positions
     omp_parallel_for (int i = 0; i < mesh.num_vertices(); i++) {
         Vertex *v = mesh.vertex(i);
-        if (v->isBoundary()) {
+        if (v->isBoundary() || v->isStatic()) {
             continue;
         }
 

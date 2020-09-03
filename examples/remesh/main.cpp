@@ -13,9 +13,14 @@ int main(int argc, char **argv) {
 
     // Load
     tinymesh::Mesh mesh(argv[1]);
+    for (int i = 0; i < mesh.num_faces(); i++) {
+        mesh.face(i)->setIsStatic(true);
+    }
 
     // Simplify
     tinymesh::holeFill(mesh);
+    //tinymesh::implicit_fairing(mesh);
+    //tinymesh::smooth(mesh);
     tinymesh::remeshIncremental(mesh);
 
     // Save

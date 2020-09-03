@@ -69,6 +69,15 @@ bool Vertex::isBoundary() {
     return false;
 }
 
+bool Vertex::isStatic() {
+    for (auto it = f_begin(); it != f_end(); ++it) {
+        if (it->isStatic()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Vertex::VertexIterator Vertex::v_begin() {
     return Vertex::VertexIterator(halfedge_);
 }

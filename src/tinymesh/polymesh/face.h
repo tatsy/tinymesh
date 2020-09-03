@@ -32,11 +32,14 @@ public:
 
     int index() const { return index_; }
     bool isBoundary() const { return isBoundary_; }
+    bool isStatic() const { return isStatic_; }
+    void setIsStatic(bool flag) { isStatic_ = flag; }
 
 private:
     Halfedge *halfedge_ = nullptr;
     int index_;
     bool isBoundary_ = false;
+    bool isStatic_ = false;
 
     friend class Mesh;
 };

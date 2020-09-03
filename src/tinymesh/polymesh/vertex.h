@@ -50,6 +50,7 @@ public:
     int index() const { return index_; }
 
     bool isBoundary();
+    bool isStatic();
 
 private:
     Vec3 pos_;
