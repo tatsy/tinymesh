@@ -6,14 +6,13 @@
 #include <fstream>
 #include <set>
 #include <map>
+#include <queue>
+#include <tuple>
 #include <functional>
 #include <unordered_map>
 
-#include <experimental/filesystem>
-
-namespace fs = std::experimental::filesystem;
-//#include <filesystem>
-//namespace fs = std::filesystem;
+#include "core/filesystem.h"
+namespace fs = std::filesystem;
 
 #include "core/vec.h"
 #include "polymesh/vertex.h"
@@ -24,6 +23,14 @@ namespace fs = std::experimental::filesystem;
 #include "tinyply.h"
 
 using IndexPair = std::pair<uint32_t, uint32_t>;
+
+struct IndexPairHash : public std::unary_function<IndexPair, std::size_t> {
+    std::size_t operator()(const IndexPair& k) const {
+        return std::get<0>(k) ^ std::get<1>(k);
+    }
+};
+
+#include <Eigen/Core>
 
 namespace tinymesh {
 
@@ -828,76 +835,189 @@ bool Mesh::flipHE(Halfedge* he) {
     return true;
 }
 
-bool Mesh::triangulate(Face* f) {
-    std::vector<Halfedge*> hes;
+bool Mesh::triangulate(Face* face) {
+    /*
+     * This is an triangulation algorithm described in the following paper.
+     * Barequet and Sharir, "Filling Gaps in the Boundary of a Polyhedron", 1995.
+     */
 
-    Halfedge *he = f->halfedge_;
+    using E = IndexPair;
+    using T = std::tuple<uint32_t, uint32_t, uint32_t>;
+
+    std::vector<Vertex*> vs;
+    std::unordered_map<E, Halfedge*, IndexPairHash> pair2he;
+    std::unordered_map<Halfedge*, E> he2pair;
+
+    Halfedge *it = face->halfedge_;
     do {
-        hes.push_back(he);
-        he = he->next_;
-    } while (he != f->halfedge_);
+        vs.push_back(it->src());
+        it = it->next_;
+    } while (it != face->halfedge_);
+    const int n_verts = (int)vs.size();
 
-    std::vector<Halfedge*> new_hes;
-    new_hes.push_back(hes[0]);
-    new_hes.push_back(hes[1]);
-    
+    int count = 0;
+    it = face->halfedge_;
+    do {
+        const int next = (count + 1) % n_verts;
+        pair2he.insert(std::make_pair(E(count, next), it));
+        he2pair.insert(std::make_pair(it, E(count, next)));
+        it = it->next_;
+        count += 1;
+    } while (it != face->halfedge_);
+
+    Eigen::MatrixXd W(n_verts, n_verts);
+    Eigen::MatrixXi O(n_verts, n_verts);
+    W.setConstant(1.0e12);
+    O.setConstant(-1);
+    for (int i = 0; i < n_verts - 1; i++) {
+        W(i, i + 1) = 0.0;
+        O(i, i + 1) = -1;
+        if (i < n_verts - 2) {
+            const Vec3 v0 = vs[i]->pos();
+            const Vec3 v1 = vs[i + 1]->pos();
+            const Vec3 v2 = vs[i + 2]->pos();
+            W(i, i + 2) = 0.5 * length(cross(v1 - v0, v2 - v0));
+            O(i, i + 2) = i + 1;
+        }
+    }
+
+    for (int j = 3; j < n_verts; j++) {
+        for (int i = 0; i < n_verts - j; i++) {
+            const int k = i + j;
+            for (int m = i + 1; m < k; m++) {
+                const Vec3 v0 = vs[i]->pos();
+                const Vec3 v1 = vs[m]->pos();
+                const Vec3 v2 = vs[k]->pos();
+                const double F = 0.5 * length(cross(v1 - v0, v2 - v0));
+                const double Wnew = W(i, m) + W(m, k) + F;
+                if (Wnew < W(i, k)) {
+                    W(i, k) = Wnew;
+                    O(i, k) = m;
+                }
+            }
+        }
+    }
+
+    std::queue<E> que;
+    std::vector<T> tris;
+
+    que.push(E(0, n_verts - 1));
+    while (!que.empty()) {
+        const E ik = que.front();
+        que.pop();
+
+        const int i = std::get<0>(ik);
+        const int k = std::get<1>(ik);
+        const int m = O(i, k);
+
+        if (i + 2 == k) {
+            tris.emplace_back(i, m, k);
+        } else {
+            if (i + 1 != m) {
+                que.push(E(i, m));
+            }
+
+            tris.emplace_back(i, m, k);
+
+            if (m != k - 1) {
+                que.push(E(m, k));
+            }
+        }
+    }
+
     std::vector<Face*> new_faces;
-    for (int i = 1; i < hes.size() - 1; i++) {
-        if (i < hes.size() - 2) {
-            auto new_e = new Edge();
-            auto new_he0 = new Halfedge();
-            auto new_he1 = new Halfedge();
+    for (const auto &t : tris) {
+        const int i0 = std::get<0>(t);
+        const int i1 = std::get<1>(t);
+        const int i2 = std::get<2>(t);
 
-            new_e->halfedge_ = new_he0;
-            new_he0->edge_ = new_e;
-            new_he1->edge_ = new_e;
-
-            new_hes.push_back(new_he0);
-            new_hes.push_back(new_he1);
-            new_hes.push_back(hes[i + 1]);
-            addEdge(new_e);
+        Halfedge *new_he0 = nullptr;
+        if (pair2he.count(E(i0, i1)) != 0) {
+            new_he0 = pair2he[E(i0, i1)];
+        } else {
+            new_he0 = new Halfedge();
+            pair2he.insert(std::make_pair(E(i0, i1), new_he0));
+            he2pair.insert(std::make_pair(new_he0, E(i0, i1)));
             addHalfedge(new_he0);
+        }
+
+        Halfedge *new_he1 = nullptr;
+        if (pair2he.count(E(i1, i2)) != 0) {
+            new_he1 = pair2he[E(i1, i2)];
+        } else {
+            new_he1 = new Halfedge();
+            pair2he.insert(std::make_pair(E(i1, i2), new_he1));
+            he2pair.insert(std::make_pair(new_he1, E(i1, i2)));
             addHalfedge(new_he1);
         }
 
+        Halfedge *new_he2 = nullptr;
+        if (pair2he.count(E(i2, i0)) != 0) {
+            new_he2 = pair2he[E(i2, i0)];
+        } else {
+            new_he2 = new Halfedge();
+            pair2he.insert(std::make_pair(E(i2, i0), new_he2));
+            he2pair.insert(std::make_pair(new_he2, E(i2, i0)));
+            addHalfedge(new_he2);
+        }
+
+        new_he0->src_ = vs[i0];
+        new_he1->src_ = vs[i1];
+        new_he2->src_ = vs[i2];
+
+        new_he0->next_ = new_he1;
+        new_he1->next_ = new_he2;
+        new_he2->next_ = new_he0;
+
         auto new_face = new Face();
-        new_face->halfedge_ = hes[i];
-        new_faces.push_back(new_face);
         addFace(new_face);
+        new_faces.push_back(new_face);
+
+        new_he0->face_ = new_face;
+        new_he1->face_ = new_face;
+        new_he2->face_ = new_face;
+        new_face->halfedge_ = new_he0;
     }
 
-    new_hes.push_back(hes[hes.size() - 1]);
+    for (auto f : new_faces) {
+        Halfedge *he = f->halfedge_;
+        do {
+            if (he->rev_ == NULL) {
+                auto e = he2pair[he];
+                int i = std::get<0>(e);
+                int j = std::get<1>(e);
 
-    Assertion(new_hes.size() % 3 == 0 && new_hes.size() / 3 == new_faces.size(), "Invalid!!");
+                auto r = E(j, i);
+                if (pair2he.count(r) != 0) {
+                    Halfedge *rev = pair2he[r];
+                    he->rev_ = rev;
+                    rev->rev_ = he;
 
-    for (int i = 0; i < new_faces.size(); i++) {
-        auto he0 = new_hes[i * 3 + 0];
-        auto he1 = new_hes[i * 3 + 1];
-        auto he2 = new_hes[i * 3 + 2];
+                    Edge *new_edge = new Edge();
+                    he->edge_ = new_edge;
+                    rev->edge_ = new_edge;
+                    new_edge->halfedge_ = he;
+                    addEdge(new_edge);
+                } else {
+                    printf("%d %d %p\n", i, j, he);
+                }
+            }
 
-        if (i >= 1) {
-            he0->src_ = hes[0]->src_;
-        }
-
-        if (i < new_faces.size() - 1) {
-            he2->src_ = he1->next_->src_;
-        }
-
-        he0->next_ = he1;
-        he1->next_ = he2;
-        he2->next_ = he0;
-        he0->face_ = new_faces[i];
-        he1->face_ = new_faces[i];
-        he2->face_ = new_faces[i];
-
-        if (i >= 1 && i < new_faces.size()) {
-            auto rev = new_hes[i * 3 - 1];
-            he0->rev_ = rev;
-            rev->rev_ = he0;
-        }
+            he = he->next_;
+        } while (he != f->halfedge_);
     }
 
-    removeFace(f);
+    for (auto f : new_faces) {
+        Halfedge *he = f->halfedge_;
+        do {
+            if (he->rev_ == NULL) printf("Error#1\n");
+            if (he->rev_->rev_ == NULL) printf("Error#2\n");
+
+            he = he->next_;
+        } while (he != f->halfedge_);
+    }
+
+    removeFace(face);
 
     return true;
 }

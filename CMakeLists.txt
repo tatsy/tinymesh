@@ -32,6 +32,11 @@ set(TINYMESH_LIBRARY "tinymesh")
 set(TINYMESH_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
 
 # ----------
+# Required packages
+# ----------
+find_package(Eigen3 REQUIRED)
+
+# ----------
 # OpenMP
 # ----------
 if (WITH_OPENMP)
