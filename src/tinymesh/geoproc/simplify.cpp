@@ -6,10 +6,15 @@
 #include <set>
 #include <array>
 
+#include <Eigen/Core>
+#include <Eigen/LU>
+#include <Eigen/QR>
+using Matrix4 = Eigen::Matrix4d;
+using Vector4 = Eigen::Vector4d;
+
 #include "core/vec.h"
 #include "core/progress.h"
 #include "core/openmp.h"
-#include "math/matrix.h"
 #include "polymesh/mesh.h"
 #include "polymesh/face.h"
 #include "polymesh/halfedge.h"
@@ -79,26 +84,26 @@ struct QEMNode {
     Vec3 v;
 };
 
-double computeQEM(const Matrix &m1, const Matrix &m2, const Vertex &v1, const Vertex &v2, Vec3 *v) {
-    Matrix Q = Matrix::identity(4, 4);
+double computeQEM(const Matrix4 &m1, const Matrix4 &m2, const Vertex &v1, const Vertex &v2, Vec3 *v) {
+    Matrix4 Q = Matrix4::Identity();
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
             Q(i, j) = m1(i, j) + m2(i, j);
         }
     }
 
-    Matrix v_bar;
-    const double D = Q.det();
+    Vector4 v_bar;
+    const double D = Q.determinant();
     if (D < 1.0e-8) {
         Vec3 m = 0.5 * (v1.pos() + v2.pos());
-        double elems[4] = {m[0], m[1], m[2], 1.0};
-        v_bar = Matrix(4, 1, elems);
+        v_bar << m[0], m[1], m[2], 1.0;
     } else {
-        double elems[4] = {0.0, 0.0, 0.0, 1.0};
-        v_bar = Q.solve(Matrix(4, 1, elems));
+        Vector4 bb;
+        bb << 0.0, 0.0, 0.0, 1.0;
+        v_bar = Q.colPivHouseholderQr().solve(bb);
     }
 
-    const double qem = (v_bar.T() * ((m1 + m2) * v_bar))(0, 0);
+    const double qem = (v_bar.transpose() * ((m1 + m2) * v_bar))(0, 0);
     if (v) {
         *v = Vec3(v_bar(0, 0), v_bar(1, 0), v_bar(2, 0));
     }
@@ -116,7 +121,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
     ProgressBar pbar(numTargetRemove);
 
     // Pre-smoothing
-    smooth(mesh);
+    laplace_smooth(mesh);
 
     // Simplification
     int numRemoved = 0;
@@ -127,7 +132,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
         const int numFaces = (int)mesh.num_faces();
 
         // Compute quadric metric tensor for current vertices.
-        std::vector<Matrix> Qs(numVertices, Matrix::zeros(4, 4));
+        std::vector<Matrix4> Qs(numVertices, Matrix4::Zero());
         for (int i = 0; i < numFaces; i++) {
             Face *f = mesh.face(i);
             if (f->isBoundary()) {
@@ -153,13 +158,11 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
             const double nz = norm.z();
             const double d = -dot(norm, vs[0]->pos());
 
-            double elems[] = {
-                nx * nx, nx * ny, nx * nz, nx * d,
-                ny * nx, ny * ny, ny * nz, ny * d,
-                nz * nx, nz * ny, nz * nz, nz * d,
-                 d * nx,  d * ny,  d * nz,  d * d,
-            };
-            Matrix Kp = Matrix(4, 4, elems);
+            Matrix4 Kp;
+            Kp << nx * nx, nx * ny, nx * nz, nx * d,
+                  ny * nx, ny * ny, ny * nz, ny * d,
+                  nz * nx, nz * ny, nz * nz, nz * d,
+                   d * nx,  d * ny,  d * nz,  d * d;
 
             Qs[vs[0]->index()] += Kp;
             Qs[vs[1]->index()] += Kp;
@@ -176,8 +179,8 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
 
             int i1 = v1->index();
             int i2 = v2->index();
-            Matrix &q1 = Qs[i1];
-            Matrix &q2 = Qs[i2];
+            Matrix4 &q1 = Qs[i1];
+            Matrix4 &q2 = Qs[i2];
             Vec3 v;
             const double qem = computeQEM(q1, q2, *v1, *v2, &v);
             que.push(QEMNode(qem, he, v));
@@ -333,7 +336,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
         }
 
         // Smoothing
-        smooth(mesh);
+        laplace_smooth(mesh);
 
         if (numRemoved >= numTargetRemove) {
             break;

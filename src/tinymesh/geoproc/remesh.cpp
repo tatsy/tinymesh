@@ -156,7 +156,7 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
 
         // Smoothing
         for (int loop = 0; loop < 3; loop++) {
-            smooth(mesh);
+            laplace_smooth(mesh);
         }
     }
 }

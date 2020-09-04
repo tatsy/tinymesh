@@ -8,19 +8,20 @@
 #include <map>
 #include <queue>
 #include <tuple>
-#include <functional>
 #include <unordered_map>
 
-#include "core/filesystem.h"
-namespace fs = std::filesystem;
+#include <Eigen/Core>
 
 #include "core/vec.h"
+#include "core/filesystem.h"
 #include "polymesh/vertex.h"
 #include "polymesh/edge.h"
 #include "polymesh/halfedge.h"
 #include "polymesh/face.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
+
+namespace fs = std::filesystem;
 
 using IndexPair = std::pair<uint32_t, uint32_t>;
 
@@ -30,8 +31,6 @@ struct IndexPairHash : public std::unary_function<IndexPair, std::size_t> {
     }
 };
 
-#include <Eigen/Core>
-
 namespace tinymesh {
 
 // ----------
@@ -40,9 +39,7 @@ namespace tinymesh {
 
 Mesh::Mesh() {}
 
-Mesh::Mesh(const std::string &filename) {
-    load(filename);
-}
+Mesh::Mesh(const std::string &filename) { load(filename); }
 
 void Mesh::load(const std::string &filename) {
     // Clear existing elements
@@ -62,7 +59,8 @@ void Mesh::load(const std::string &filename) {
     }
 
     for (int i = 0; i < indices_.size(); i += 3) {
-        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] || indices_[i + 2] == indices_[i + 0]) {
+        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
+            indices_[i + 2] == indices_[i + 0]) {
             int size = (int)indices_.size();
             std::swap(indices_[i + 0], indices_[size - 3]);
             std::swap(indices_[i + 1], indices_[size - 2]);
@@ -78,14 +76,15 @@ void Mesh::load(const std::string &filename) {
 
     // Check if all triangles consist of three distinct vertices
     for (int i = 0; i < indices_.size(); i += 3) {
-        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] || indices_[i + 2] == indices_[i + 0]) {
+        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
+            indices_[i + 2] == indices_[i + 0]) {
             FatalError("Each triangle must have three distinct vertices!");
         }
     }
 
     // Setup halfedge structure
     static const int degree = 3;
-    std::map<IndexPair, Halfedge*> pairToHalfedge;
+    std::map<IndexPair, Halfedge *> pairToHalfedge;
     std::map<uint32_t, uint32_t> vertexDegree;
     for (int i = 0; i < indices_.size(); i += degree) {
         // Check polygon duplication
@@ -107,7 +106,7 @@ void Mesh::load(const std::string &filename) {
 
         // Traverse face vertices
         auto face = new Face();
-        std::vector<Halfedge*> faceHalfedges;
+        std::vector<Halfedge *> faceHalfedges;
         for (int j = 0; j < degree; j++) {
             // Count up vertex degree
             const uint32_t a = indices_[i + j];
@@ -185,7 +184,7 @@ void Mesh::load(const std::string &filename) {
             addFace(face);
             face->isBoundary_ = true;
 
-            std::vector<Halfedge*> boundaryHalfedges;
+            std::vector<Halfedge *> boundaryHalfedges;
             Halfedge *it = he.get();
             do {
                 auto rev = new Halfedge();
@@ -273,8 +272,7 @@ void Mesh::loadOBJ(const std::string &filename) {
         for (const auto &index : shape.mesh.indices) {
             Vec3 v;
             if (index.vertex_index >= 0) {
-                v = Vec3(attrib.vertices[index.vertex_index * 3 + 0],
-                         attrib.vertices[index.vertex_index * 3 + 1],
+                v = Vec3(attrib.vertices[index.vertex_index * 3 + 0], attrib.vertices[index.vertex_index * 3 + 1],
                          attrib.vertices[index.vertex_index * 3 + 2]);
             }
 
@@ -351,9 +349,7 @@ void Mesh::loadPLY(const std::string &filename) {
             Vec3 pos;
 
             if (vert_data) {
-                pos = Vec3(raw_vertices[i * 3 + 0],
-                           raw_vertices[i * 3 + 1],
-                           raw_vertices[i * 3 + 2]);
+                pos = Vec3(raw_vertices[i * 3 + 0], raw_vertices[i * 3 + 1], raw_vertices[i * 3 + 2]);
             }
 
             if (uniqueVertices.count(pos) == 0) {
@@ -379,7 +375,7 @@ void Mesh::save(const std::string &filename) const {
     }
 }
 
-void Mesh::saveOBJ(const std::string& filename) const {
+void Mesh::saveOBJ(const std::string &filename) const {
     std::ofstream writer(filename.c_str(), std::ios::out);
     if (writer.fail()) {
         FatalError("Failed to open file: %s", filename.c_str());
@@ -405,7 +401,7 @@ void Mesh::saveOBJ(const std::string& filename) const {
     writer.close();
 }
 
-void Mesh::savePLY(const std::string& filename) const {
+void Mesh::savePLY(const std::string &filename) const {
     using namespace tinyply;
 
     std::filebuf buffer;
@@ -415,7 +411,7 @@ void Mesh::savePLY(const std::string& filename) const {
     if (outstream.fail()) {
         FatalError("Failed to open file: %s", filename.c_str());
     }
-    
+
     std::vector<float> vertexData(vertices_.size() * 3);
     for (int i = 0; i < vertices_.size(); i++) {
         const Vec3 v = vertices_[i]->pos();
@@ -447,11 +443,11 @@ void Mesh::savePLY(const std::string& filename) const {
 
     PlyFile plyfile;
 
-    plyfile.add_properties_to_element("vertex", {"x", "y", "z"},
-        Type::FLOAT32, vertexData.size() / 3, reinterpret_cast<uint8_t*>(vertexData.data()), Type::INVALID, 0);
+    plyfile.add_properties_to_element("vertex", { "x", "y", "z" }, Type::FLOAT32, vertexData.size() / 3,
+                                      reinterpret_cast<uint8_t *>(vertexData.data()), Type::INVALID, 0);
 
-    plyfile.add_properties_to_element("face", {"vertex_indices"},
-        Type::UINT32, indexData.size() / 3, reinterpret_cast<uint8_t*>(indexData.data()), Type::UINT8, 3);
+    plyfile.add_properties_to_element("face", { "vertex_indices" }, Type::UINT32, indexData.size() / 3,
+                                      reinterpret_cast<uint8_t *>(indexData.data()), Type::UINT8, 3);
 
     plyfile.get_comments().push_back("generated by tinyply 2.2");
 
@@ -609,7 +605,7 @@ bool Mesh::splitHE(Halfedge *he) {
     return true;
 }
 
-bool Mesh::collapseHE(Halfedge* he) {
+bool Mesh::collapseHE(Halfedge *he) {
     // Collapse halfedge v0->v2.
     //       v1
     //     /  \
@@ -652,7 +648,7 @@ bool Mesh::collapseHE(Halfedge* he) {
     }
 
     // Collect neighboring vertices of the one to be removed
-    std::vector<Vertex*> neighbors;
+    std::vector<Vertex *> neighbors;
     for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
         neighbors.push_back(it->dst());
@@ -662,11 +658,11 @@ bool Mesh::collapseHE(Halfedge* he) {
 
     // Check unsafe collapse (# of shared vertices)
     int numUnion = 0;
-    std::set<Vertex*> neighborSet(neighbors.begin(), neighbors.end());
+    std::set<Vertex *> neighborSet(neighbors.begin(), neighbors.end());
     for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
         if (neighborSet.find(it->dst()) != neighborSet.end()) {
-            numUnion += 1;            
+            numUnion += 1;
         }
     }
 
@@ -769,7 +765,7 @@ bool Mesh::collapseHE(Halfedge* he) {
     return true;
 }
 
-bool Mesh::flipHE(Halfedge* he) {    
+bool Mesh::flipHE(Halfedge *he) {
     Halfedge *rev = he->rev_;
     if (!rev) {
         FatalError("Flip is called boundary halfedge!");
@@ -835,7 +831,7 @@ bool Mesh::flipHE(Halfedge* he) {
     return true;
 }
 
-bool Mesh::triangulate(Face* face) {
+bool Mesh::triangulate(Face *face) {
     /*
      * This is an triangulation algorithm described in the following paper.
      * Barequet and Sharir, "Filling Gaps in the Boundary of a Polyhedron", 1995.
@@ -844,9 +840,9 @@ bool Mesh::triangulate(Face* face) {
     using E = IndexPair;
     using T = std::tuple<uint32_t, uint32_t, uint32_t>;
 
-    std::vector<Vertex*> vs;
-    std::unordered_map<E, Halfedge*, IndexPairHash> pair2he;
-    std::unordered_map<Halfedge*, E> he2pair;
+    std::vector<Vertex *> vs;
+    std::unordered_map<E, Halfedge *, IndexPairHash> pair2he;
+    std::unordered_map<Halfedge *, E> he2pair;
 
     Halfedge *it = face->halfedge_;
     do {
@@ -925,7 +921,7 @@ bool Mesh::triangulate(Face* face) {
         }
     }
 
-    std::vector<Face*> new_faces;
+    std::vector<Face *> new_faces;
     for (const auto &t : tris) {
         const int i0 = std::get<0>(t);
         const int i1 = std::get<1>(t);
@@ -1007,23 +1003,13 @@ bool Mesh::triangulate(Face* face) {
         } while (he != f->halfedge_);
     }
 
-    for (auto f : new_faces) {
-        Halfedge *he = f->halfedge_;
-        do {
-            if (he->rev_ == NULL) printf("Error#1\n");
-            if (he->rev_->rev_ == NULL) printf("Error#2\n");
-
-            he = he->next_;
-        } while (he != f->halfedge_);
-    }
-
     removeFace(face);
 
     return true;
 }
 
 double Mesh::K(Vertex *v) const {
-    std::vector<Vertex*> neighbors;
+    std::vector<Vertex *> neighbors;
     for (auto it = v->v_begin(); it != v->v_end(); ++it) {
         neighbors.push_back(it.ptr());
     }
@@ -1042,7 +1028,7 @@ double Mesh::K(Vertex *v) const {
 }
 
 double Mesh::H(Vertex *v) const {
-    std::vector<Vertex*> neighbors;
+    std::vector<Vertex *> neighbors;
     for (auto it = v->v_begin(); it != v->v_end(); ++it) {
         neighbors.push_back(it.ptr());
     }
@@ -1122,7 +1108,7 @@ bool Mesh::verify() const {
     return success;
 }
 
-bool Mesh::verifyVertex(Vertex* v) const {
+bool Mesh::verifyVertex(Vertex *v) const {
     bool success = true;
     if (v->index() >= vertices_.size()) {
         fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)vertices_.size());
@@ -1130,7 +1116,8 @@ bool Mesh::verifyVertex(Vertex* v) const {
     }
 
     Vec3 p = v->pos();
-    if (std::isinf(p[0]) || std::isnan(p[0]) || std::isinf(p[1]) || std::isnan(p[1]) || std::isinf(p[2]) || std::isnan(p[2])) {
+    if (std::isinf(p[0]) || std::isnan(p[0]) || std::isinf(p[1]) || std::isnan(p[1]) || std::isinf(p[2]) ||
+        std::isnan(p[2])) {
         fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p[0], p[1], p[2]);
         success = false;
     }
@@ -1165,13 +1152,13 @@ void Mesh::addFace(Face *f) {
     faces_.emplace_back(f);
 }
 
-void Mesh::removeVertex(Vertex* v) {
+void Mesh::removeVertex(Vertex *v) {
     Assertion((*v) == (*vertices_[v->index_]), "Invalid vertex indexing!");
     Assertion(v->index_ < vertices_.size(), "Vertex index out of range!");
 
     if (v->index_ < vertices_.size() - 1) {
         std::swap(vertices_[v->index_], vertices_[vertices_.size() - 1]);
-        std::swap(vertices_[v->index_]->index_ , vertices_[vertices_.size() - 1]->index_);
+        std::swap(vertices_[v->index_]->index_, vertices_[vertices_.size() - 1]->index_);
     }
     vertices_.resize(vertices_.size() - 1);
 }

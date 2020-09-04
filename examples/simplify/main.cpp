@@ -7,7 +7,7 @@ namespace fs = std::experimental::filesystem;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
-        std::cout << "usage: hello_tinymesh [input mesh] [ratio]" << std::endl;
+        std::cout << "usage: read_write [input mesh] [ratio]" << std::endl;
         return 1;
     }
 

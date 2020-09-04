@@ -1,27 +1,24 @@
 #include <iostream>
-#include <experimental/filesystem>
-
 #include "tinymesh/tinymesh.h"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
+namespace mesh = tinymesh;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
-        std::cout << "usage: hello_tinymesh [input mesh]" << std::endl;
+        std::cout << "usage: read_write [input mesh]" << std::endl;
         return 1;
     }
 
     // Load
-    tinymesh::Mesh mesh(argv[1]);
+    mesh::Mesh mesh(argv[1]);
     for (int i = 0; i < mesh.num_faces(); i++) {
         mesh.face(i)->setIsStatic(true);
     }
 
-    // Simplify
-    tinymesh::holeFill(mesh);
-    //tinymesh::implicit_fairing(mesh);
-    //tinymesh::smooth(mesh);
-    tinymesh::remeshIncremental(mesh);
+    // Fill holes & remesh
+    mesh::holeFill(mesh);
+    mesh::remeshIncremental(mesh);
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));
