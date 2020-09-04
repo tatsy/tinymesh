@@ -179,9 +179,9 @@ std::vector<Vec3> vectors = {
     Vec3(1.0e-8, 1.0e-8, 1.0e-8)
 };
 
-INSTANTIATE_TEST_CASE_P(, VecUnaryTest,
+INSTANTIATE_TEST_SUITE_P(, VecUnaryTest,
     ::testing::ValuesIn(vectors));
 
-INSTANTIATE_TEST_CASE_P(, VecPairwiseTest,
+INSTANTIATE_TEST_SUITE_P(, VecPairwiseTest,
     ::testing::Combine(::testing::ValuesIn(vectors),
 ::testing::ValuesIn(vectors)));

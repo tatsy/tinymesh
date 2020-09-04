@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "core/common.h"
+#include "core/vec.h"
 
 namespace tinymesh {
 
@@ -21,10 +22,12 @@ class TINYMESH_API Mesh {
 public:
     // Public methods
     Mesh();
-    Mesh(const std::string &filename);
+    explicit Mesh(const std::string &filename);
+    Mesh(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices);
 
     void load(const std::string &filename);
     void save(const std::string &filename) const;
+    void construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices);
 
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
@@ -33,7 +36,7 @@ public:
 
     bool verify() const;
 
-    Vertex *vertex(int index) const {
+    Vertex* vertex(int index) const {
         Assertion(index >= 0 && index < vertices_.size(), "Vertex index out of bounds!");
         return vertices_[index].get();
     }
@@ -63,6 +66,8 @@ private:
     void loadPLY(const std::string &filename);
     void saveOBJ(const std::string &filename) const;
     void savePLY(const std::string &filename) const;
+
+    void construct();
 
     void addVertex(Vertex *v);
     void addEdge(Edge *e);

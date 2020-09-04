@@ -6,7 +6,7 @@
 
 namespace tinymesh {
 
-void holeFill(Mesh& mesh) {
+void hole_fill(Mesh& mesh) {
     for (int i = 0; i < mesh.num_faces(); i++) {
         Face *f = mesh.face(i);
         if (f->isBoundary()) {

@@ -3,7 +3,7 @@
 
 #include "tinymesh/tinymesh.h"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
     // Simplify
     const int target = (int)(ratio * mesh.num_vertices());
     tinymesh::simplifyIncremental(mesh, target);
-    tinymesh::holeFill(mesh);
+    tinymesh::hole_fill(mesh);
     tinymesh::remeshIncremental(mesh);
 
     // Save

@@ -117,6 +117,10 @@ public:
         return *this;
     }
 
+    Float & operator[](int i) {
+        return elems[i];
+    }
+
     Float operator[](int i) const {
         return elems[i];
     }

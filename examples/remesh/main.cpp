@@ -6,7 +6,7 @@ namespace mesh = tinymesh;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
-        std::cout << "usage: read_write [input mesh]" << std::endl;
+        std::cout << "usage: remesh [input mesh]" << std::endl;
         return 1;
     }
 
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     }
 
     // Fill holes & remesh
-    mesh::holeFill(mesh);
+    mesh::hole_fill(mesh);
     mesh::remeshIncremental(mesh);
 
     // Save

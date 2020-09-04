@@ -41,6 +41,10 @@ Mesh::Mesh() {}
 
 Mesh::Mesh(const std::string &filename) { load(filename); }
 
+Mesh::Mesh(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
+    construct(vertices, indices);
+}
+
 void Mesh::load(const std::string &filename) {
     // Clear existing elements
     vertices_.clear();
@@ -58,6 +62,32 @@ void Mesh::load(const std::string &filename) {
         FatalError("Unsupported file extension: %s", ext.c_str());
     }
 
+    construct();
+}
+
+void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
+    // Clear existing elements
+    vertices_.clear();
+    edges_.clear();
+    halfedges_.clear();
+    faces_.clear();
+
+    std::unordered_map<Vec3, uint32_t> uniqueVertices;
+    vertices_.clear();
+    for (uint32_t i : indices) {
+        const Vec3 &pos = vertices[i];
+
+        if (uniqueVertices.count(pos) == 0) {
+            uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
+            vertices_.push_back(std::make_shared<Vertex>(pos));
+        }
+        indices_.push_back(uniqueVertices[pos]);
+    }
+
+    construct();
+}
+
+void Mesh::construct() {
     for (int i = 0; i < indices_.size(); i += 3) {
         if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
             indices_[i + 2] == indices_[i + 0]) {

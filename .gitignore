@@ -10,5 +10,12 @@ build/*
 
 test_config.h
 
+*.a
+*.so
+*.lib
+*.dll
+*.pyd
+*.dylib
+
 *.ply
 *.obj

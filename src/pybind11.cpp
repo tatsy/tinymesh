@@ -1,0 +1,118 @@
+#include "tinymesh/tinymesh.h"
+using namespace tinymesh;
+
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/numpy.h>
+namespace py = pybind11;
+
+// type caster: Matrix <-> NumPy-array
+namespace pybind11 {
+namespace detail {
+
+template <typename Float, int Dims>
+struct type_caster<Vec<Float, Dims>> {
+public:
+    using Type = Vec<Float, Dims>;
+    PYBIND11_TYPE_CASTER(Type, _("Vec<Float, Dims>"));
+
+    // Conversion part 1 (Python -> C++)
+    bool load(py::handle src, bool convert) {
+        if (!convert && !py::array_t<Float>::check_(src)) return false;
+
+        auto buf = py::array_t<Float, py::array::c_style | py::array::forcecast>::ensure(src);
+        if (!buf) return false;
+
+        auto dims = buf.ndim();
+        if (dims != 1) return false;
+        auto elems = buf.shape()[0];
+        if (elems != Dims) return false;
+
+        value = Vec<Float, Dims>();
+        const Float *ptr = buf.data();
+        for (int d = 0; d < Dims; d++) {
+            value[d] = ptr[d];
+        }
+
+        return true;
+    }
+
+    //Conversion part 2 (C++ -> Python)
+    static py::handle cast(const Vec<Float, Dims> &src, py::return_value_policy policy, py::handle parent) {
+        std::vector<size_t> shape  (1, 3);
+        std::vector<size_t> strides(1, 3 * sizeof(Vec<Float, Dims>));
+        py::array a(std::move(shape), std::move(strides), &src[0]);
+        return a.release();
+    }
+};
+
+}  // namespace detail
+}  // namespace pybind11
+
+PYBIND11_MODULE(pytinymesh, m) {
+    py::class_<Mesh>(m, "Mesh")
+        .def(py::init<>())
+        .def(py::init<const std::string &>())
+        .def(py::init<const std::vector<Vec3>&, const std::vector<uint32_t>&>())
+        .def("load", &Mesh::load)
+        .def("save", &Mesh::save)
+        .def("vertex", &Mesh::vertex, py::return_value_policy::reference)
+        .def("face", &Mesh::face, py::return_value_policy::reference)
+        .def("num_vertices", &Mesh::num_vertices)
+        .def("num_faces", &Mesh::num_faces);
+
+    py::class_<Vertex, std::shared_ptr<Vertex>>(m, "Vertex")
+        .def(py::init<>())
+        .def("is_boundary", &Vertex::isBoundary)
+        .def("is_static", &Vertex::isStatic);
+
+    py::class_<Face, std::shared_ptr<Face>>(m, "Face")
+        .def(py::init<>())
+        .def("is_boundary", &Face::isBoundary)
+        .def("is_static", &Face::isStatic)
+        .def("set_is_static", &Face::setIsStatic);
+
+
+    /*** Smoothing ***/
+
+    m.def("laplace_smooth", &laplace_smooth,
+          "Laplacian smoothing",
+          py::arg("mesh"),
+          py::arg("epsilon") = 1.0,
+          py::arg("iterations") = 3);
+
+    m.def("taubin_smooth", &taubin_smooth,
+          "Taubin smoothing",
+          py::arg("mesh"),
+          py::arg("shrink") = 1.0,
+          py::arg("inflate") = 1.0,
+          py::arg("iterations") = 3);
+
+    m.def("implicit_fair", &implicit_fair,
+          "Implicit fairing",
+          py::arg("mesh"),
+          py::arg("epsilon") = 1.0e-3,
+          py::arg("iterations") = 1);
+
+    /*** Remesh ***/
+
+    m.def("remesh_incremental", &remeshIncremental,
+          "Incremental remeshing",
+          py::arg("mesh"),
+          py::arg("ratio_lower") = 0.8,
+          py::arg("ratio_upper") = 1.333,
+          py::arg("iterations") = 5);
+
+    /*** Simplification ***/
+
+    m.def("simplify_incremental", &simplifyIncremental,
+          "Incremental simplification",
+          py::arg("mesh"),
+          py::arg("n_triangles"));
+
+    /*** Hole filling ***/
+
+    m.def("hole_fill", &hole_fill,
+          "Max-area hole filling",
+          py::arg("mesh"));
+}

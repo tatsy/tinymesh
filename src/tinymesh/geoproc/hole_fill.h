@@ -9,7 +9,7 @@
 
 namespace tinymesh {
 
-TINYMESH_API void holeFill(Mesh &mesh);
+TINYMESH_API void hole_fill(Mesh &mesh);
 
 }  // namespace tinymesh
 

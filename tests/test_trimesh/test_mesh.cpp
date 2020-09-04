@@ -56,4 +56,4 @@ std::vector<std::string> filenames = {
     "plane.obj",
 };
 
-INSTANTIATE_TEST_CASE_P(, MeshTest, ::testing::ValuesIn(filenames));
+INSTANTIATE_TEST_SUITE_P(, MeshTest, ::testing::ValuesIn(filenames));
