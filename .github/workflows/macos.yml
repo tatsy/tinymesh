@@ -1,0 +1,96 @@
+name: MacOS CI
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+
+env:
+  BUILD_TYPE: Release
+  GNU_CC: /usr/local/bin/gcc-9
+  GNU_CXX: /usr/local/bin/g++-9
+  LLVM_CC: /usr/local/opt/llvm/bin/clang
+  LLVM_CXX: /usr/local/opt/llvm/bin/clang++
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    
+    - name: Install GNU C/C++ Compiler
+      if: ${{ matrix.compiler == 'gcc' }}
+      run: |
+        brew install gcc@9
+
+    - name: Install LLVM Clang
+      if: ${{ matrix.compiler == 'clang' }}
+      run: |
+        brew install llvm
+
+    - name: Install Eigen3
+      run: |
+        brew install eigen
+
+    - name: Install Google Test
+      env:
+        C_COMPILER: ${{ matrix.compiler }}
+      run: |
+        git clone https://github.com/google/googletest.git --depth 1
+        cd googletest
+        mkdir build
+        cd build
+
+        if [ "$C_COMPILER" = "gcc" ]; then
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DCMAKE_C_COMPILER=$GNU_CC \
+            -DCMAKE_CXX_COMPILER=$GNU_CXX
+        fi
+
+        if [ "$C_COMPILER" = "clang" ]; then
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DCMAKE_C_COMPILER=$LLVM_CC \
+            -DCMAKE_CXX_COMPILER=$LLVM_CXX
+        fi
+
+        cmake --build . --config $BUILD_TARGET --parallel 2
+        cmake --build . --target install
+
+    - name: CMake Build
+      env:
+        C_COMPILER: ${{ matrix.compiler }}
+      run: |
+        cmake -E make_directory ${{runner.workspace}}/build
+        cd ${{runner.workspace}}/build
+
+        if [ "$C_COMPILER" = "gcc" ]; then
+          cmake $GITHUB_WORKSPACE \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DCMAKE_C_COMPILER=$GNU_CC \
+            -DCMAKE_CXX_COMPILER=$GNU_CXX \
+                
+        fi
+
+        if [ "$C_COMPILER" = "clang" ]; then
+          cmake $GITHUB_WORKSPACE \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DCMAKE_C_COMPILER=$LLVM_CC \
+            -DCMAKE_CXX_COMPILER=$LLVM_CXX 
+        fi
+
+        cmake --build . --config $BUILD_TYPE --parallel 2
+
+    - name: Unit Test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: ctest -C $BUILD_TYPE

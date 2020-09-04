@@ -40,7 +40,7 @@ function(ADD_EXAMPLE EXPNAME)
 
     if (MSVC)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
-        set_property(TARGET ${EXPNAME} APPEND PROPERTY LINK_FLAGS "/DEBUG /PROFILE")
+        set_property(TARGET ${EXP_EXE_NAME} APPEND PROPERTY LINK_FLAGS "/DEBUG /PROFILE")
     endif()
 endfunction(ADD_EXAMPLE)
 

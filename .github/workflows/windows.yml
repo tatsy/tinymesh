@@ -1,0 +1,62 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    
+    - name: Checkout submodules
+      run: git submodule update --init --recursive
+
+    - name: Install Eigen3
+      run: |
+        git clone https://github.com/eigenteam/eigen-git-mirror --depth 1
+        cd eigen-git-mirror
+        mkdir build
+        cd build
+        cmake .. `
+          -G "Visual Studio 16 2019" -A x64 `
+          -DCMAKE_INSTALL_PREFIX="C:/Program Files/Eigen"
+        cmake --build . --config "$env:BUILD_TYPE"
+        cmake --build . --config "$env:BUILD_TYPE" --target INSTALL
+
+    - name: Install Google Test
+      run: |
+        git clone https://github.com/google/googletest.git --depth 1
+        cd googletest
+        mkdir build
+        cd build
+        cmake .. `
+          -G "Visual Studio 16 2019" -A x64 `
+          -DCMAKE_INSTALL_PREFIX="C:/Program Files/GoogleTest/"
+        cmake --build . --config "$env:BUILD_TYPE"
+        cmake --build . --config "$env:BUILD_TYPE" --target INSTALL
+
+    - name: CMake Build
+      run: |
+        cmake -E make_directory ${{ runner.workspace }}/build
+        cd ${{ runner.workspace }}/build
+        cmake "$env:GITHUB_WORKSPACE" `
+          -G "Visual Studio 16 2019" -A x64 `
+          -DEIGEN3_INCLUDE_DIR="C:/Program Files/Eigen/include/eigen3" `
+          -DGoogleTest_DIR="C:/Program Files/GoogleTest" `
+          -DBUILD_TESTS=ON `
+          -DBUILD_EXAMPLES=ON
+        cmake --build . --config "$env:BUILD_TYPE"
+
+    - name: Unit Test
+      working-directory: ${{ runner.workspace }}/build
+      shell: bash
+      run: ctest -C $BUILD_TYPE
