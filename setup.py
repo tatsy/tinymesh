@@ -64,13 +64,14 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
+
 setup(
-    name='pytinymesh',
+    name='tinymesh',
     version='0.1.0',
     author='Tatsuya Yatagawa',
     author_email='tatsy.mail@gmail.com',
     description='TinyMesh is a light-weight mesh processing library',
     long_description='',
-    ext_modules=[CMakeExtension('pytinymesh')],
+    ext_modules=[CMakeExtension('tinymesh')],
     cmdclass=dict(build_ext=CMakeBuild)
 )

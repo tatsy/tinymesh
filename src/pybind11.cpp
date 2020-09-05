@@ -39,9 +39,9 @@ public:
 
     //Conversion part 2 (C++ -> Python)
     static py::handle cast(const Vec<Float, Dims> &src, py::return_value_policy policy, py::handle parent) {
-        std::vector<size_t> shape  (1, 3);
-        std::vector<size_t> strides(1, 3 * sizeof(Vec<Float, Dims>));
-        py::array a(std::move(shape), std::move(strides), &src[0]);
+        std::vector<size_t> shape  (1, Dims);
+        std::vector<size_t> strides(1, sizeof(Float));
+        py::array a(std::move(shape), std::move(strides), (Float*)&src);
         return a.release();
     }
 };
@@ -49,7 +49,7 @@ public:
 }  // namespace detail
 }  // namespace pybind11
 
-PYBIND11_MODULE(pytinymesh, m) {
+PYBIND11_MODULE(tinymesh, m) {
     py::class_<Mesh>(m, "Mesh")
         .def(py::init<>())
         .def(py::init<const std::string &>())
@@ -58,6 +58,8 @@ PYBIND11_MODULE(pytinymesh, m) {
         .def("save", &Mesh::save)
         .def("vertex", &Mesh::vertex, py::return_value_policy::reference)
         .def("face", &Mesh::face, py::return_value_policy::reference)
+        .def("get_vertices", &Mesh::getVertices)
+        .def("get_vertex_indices", &Mesh::getVertexIndices)
         .def("num_vertices", &Mesh::num_vertices)
         .def("num_faces", &Mesh::num_faces);
 
@@ -99,8 +101,9 @@ PYBIND11_MODULE(pytinymesh, m) {
     m.def("remesh_incremental", &remeshIncremental,
           "Incremental remeshing",
           py::arg("mesh"),
-          py::arg("ratio_lower") = 0.8,
-          py::arg("ratio_upper") = 1.333,
+          py::arg("short_length") = 0.8,
+          py::arg("long_rength") = 1.333,
+          py::arg("angle_thresh") = 0.2,
           py::arg("iterations") = 5);
 
     /*** Simplification ***/

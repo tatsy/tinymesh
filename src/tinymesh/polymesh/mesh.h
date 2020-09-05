@@ -29,6 +29,9 @@ public:
     void save(const std::string &filename) const;
     void construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices);
 
+    std::vector<Vec3> getVertices() const;
+    std::vector<uint32_t> getVertexIndices() const;
+
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);

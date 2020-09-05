@@ -15,12 +15,12 @@
 
 namespace tinymesh {
 
-void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int maxiter) {
+void remeshIncremental(Mesh &mesh, double shortLength, double longLength, double angleThresh, int iterations) {
     Assertion(mesh.verify(), "Invalid mesh!");
 
     // Compute average edge length
     int count;
-    double Lavg, Lvar, Lstd;
+    double Lavg, Lvar;
     Lavg = 0.0;
     Lvar = 0.0;
 
@@ -35,7 +35,6 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
 
     Lavg = Lavg / count;
     Lvar = Lvar / count - Lavg * Lavg;
-    Lstd = std::sqrt(Lvar);
 
     // Initialize random number generator
     std::vector<uint32_t> indices;
@@ -43,7 +42,7 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
     std::mt19937 rnd(randev());
 
     // Remesh loop
-    for (int k = 0; k < maxiter; k++) {
+    for (int k = 0; k < iterations; k++) {
         printf("*** Original #%d ***\n", k + 1);
         printf("#vert: %d\n", (int)mesh.num_vertices());
         printf("#face: %d\n", (int)mesh.num_faces());
@@ -66,9 +65,8 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
                 const Vec3 p1 = he->src()->pos();
                 const Vec3 p2 = he->dst()->pos();
                 const double l = length(p1 - p2);
-                const double p = (l - Lavg) / Lstd;
 
-                if (l >= Lavg * ratioUpper) {
+                if (l >= Lavg * longLength) {
                     mesh.splitHE(he);
                 }
             }
@@ -98,14 +96,14 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
                 const Vec3 p1 = he->src()->pos();
                 const Vec3 p2 = he->dst()->pos();
                 const double l = length(p1 - p2);
-                const double p = (l - Lavg) / Lstd;
-                if (l <= Lavg * ratioLower) {
+
+                if (l <= Lavg * shortLength) {
                     // Check if collapse does not generate long edge
                     Vertex *a = he->src();
                     Vertex *b = he->dst();
                     bool collapseOK = true;
                     for (auto vit = b->v_begin(); vit != b->v_end(); ++vit) {
-                        if (length(a->pos() - vit->pos()) >= Lavg * ratioUpper) {
+                        if (length(a->pos() - vit->pos()) >= Lavg * longLength) {
                             collapseOK = false;
                             break;
                         }
@@ -138,6 +136,20 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
             Vertex *v1 = he->dst();
             Vertex *v2 = he->next()->dst();
             Vertex *v3 = he->rev()->next()->dst();
+
+            // Compute dihedral angle before and after flip
+            const Vec3 p0 = v0->pos();
+            const Vec3 p1 = v1->pos();
+            const Vec3 p2 = v2->pos();
+            const Vec3 p3 = v3->pos();
+            const Vec3 n0 = cross(p1 - p0, p2 - p0);
+            const Vec3 n1 = cross(p1 - p0, p3 - p0);
+            if (length(n0) == 0.0 || length(n1) == 0.0) {
+                continue;
+            }
+
+            if (dot(n0, n1) / (length(n0) * length(n1)) > angleThresh) continue;
+
             const int d0 = v0->degree();
             const int d1 = v1->degree();
             const int d2 = v2->degree();
@@ -156,7 +168,7 @@ void remeshIncremental(Mesh &mesh, double ratioLower, double ratioUpper, int max
 
         // Smoothing
         for (int loop = 0; loop < 3; loop++) {
-            laplace_smooth(mesh);
+           laplace_smooth(mesh);
         }
     }
 }

@@ -1,21 +1,31 @@
+# IDE
 .idea/*
+.vscode/*
+build/*
 cmake-build-debug/*
 cmake-build-release/*
 Testing/*
-
-build/*
 
 *.TMP
 .DS_Store
 
 test_config.h
 
+# C/C++ libraries
 *.a
 *.so
 *.lib
 *.dll
-*.pyd
 *.dylib
 
+# Python cache files
+*.pyc
+*.pyd
+__pycache__/*
+
+
+# Mesh file format
 *.ply
 *.obj
+*.off
+*.stl

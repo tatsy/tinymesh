@@ -1,6 +1,6 @@
 import os
 import sys
-from pytinymesh import Mesh, hole_fill, remesh_incremental
+from tinymesh import Mesh, hole_fill, remesh_incremental
 
 
 def main(filename):

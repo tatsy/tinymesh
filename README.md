@@ -29,7 +29,7 @@ Here is the list of modules and reference papers for that.
 
 * [Eigen 3.x](http://eigen.tuxfamily.org/index.php)
 
-### Build
+### C++ Library and Examples
 
 You can build a shared library and all the examples by `CMake` with the following commands.
 
@@ -40,13 +40,38 @@ $ mkdir build && cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON ..
 $ cmake --build . --config Release --parallel 2
 ```
-
-### Examples
+#### Run examples
 
 ```shell
-$ ./build/bin/example data/models/bunny.ply
+$ ./build/bin/example_simplify data/models/bunny.ply
 ```
+
+### Python module
+
+By the following shell command, you can build the module, which will be placed on the root of this repo.
+
+```shell
+$ python setup.py build_ext -i
+```
+
+Otherwise, you can build the module also using `CMake`.
+
+```shell
+$ mkdir build && cd build
+$ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON_MODULE=ON ..
+$ cmake --build . --config Release --parallel 2
+```
+
+#### Run examples
+
+```shell
+$ python examples/python/fill_and_fair.py data/models/bunny.ply
+```
+
+## Screen shots
+
+
 
 ## License
 
-Mozilla Public License v2 (c) Tatsuya Yatagawa 2019
+Mozilla Public License v2 (c) Tatsuya Yatagawa 2020

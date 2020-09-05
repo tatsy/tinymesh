@@ -203,7 +203,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
             Vertex *v_i = mesh.vertex(ii);
             Vertex *v_j = mesh.vertex(jj);
 
-            // Skip boundary vertice3s
+            // Skip boundary vertices
             if (v_i->isBoundary() || v_j->isBoundary()) {
                 continue;
             }
@@ -296,7 +296,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
                 continue;
             }
 
-            // Update remove halfedges
+            // Update removed halfedges
             removedHalfedges.insert(qn.he);
             removedHalfedges.insert(qn.he->next());
             removedHalfedges.insert(qn.he->next()->next());

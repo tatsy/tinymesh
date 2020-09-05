@@ -16,7 +16,7 @@ option(BUILD_TESTS "Build unit tests." OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O2")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
     if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
@@ -31,7 +31,7 @@ endif()
 # ----------
 set(TINYMESH_LIBRARY "tinymesh")
 set(TINYMESH_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
-set(TINYMESH_PYTHON_MODULE "pytinymesh")
+set(TINYMESH_PYTHON_MODULE "tinymesh-python")
 
 # ----------
 # Required packages

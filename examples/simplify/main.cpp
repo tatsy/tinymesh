@@ -18,8 +18,8 @@ int main(int argc, char **argv) {
 
     // Simplify
     const int target = (int)(ratio * mesh.num_vertices());
-    tinymesh::simplifyIncremental(mesh, target);
     tinymesh::hole_fill(mesh);
+    tinymesh::simplifyIncremental(mesh, target);
     tinymesh::remeshIncremental(mesh);
 
     // Save

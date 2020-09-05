@@ -87,6 +87,32 @@ void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32
     construct();
 }
 
+std::vector<Vec3> Mesh::getVertices() const {
+    std::vector<Vec3> ret;
+    for (const auto &v : vertices_) {
+        ret.push_back(v->pos());
+    }
+    printf("%f %f %f\n", ret[0].x(), ret[0].y(), ret[0].z());
+    return ret;
+}
+
+std::vector<uint32_t> Mesh::getVertexIndices() const {
+    std::vector<uint32_t> ret;
+    for (const auto &f : faces_) {
+        if (f->isBoundary()) {
+            continue;
+        }
+
+        const int i0 = f->halfedge_->src()->index();
+        const int i1 = f->halfedge_->next()->src()->index();
+        const int i2 = f->halfedge_->prev()->src()->index();
+        ret.push_back(i0);
+        ret.push_back(i1);
+        ret.push_back(i2);
+    }
+    return ret;
+}
+
 void Mesh::construct() {
     for (int i = 0; i < indices_.size(); i += 3) {
         if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
@@ -707,6 +733,11 @@ bool Mesh::collapseHE(Halfedge *he) {
         const Vec3 e1 = neighbors[i]->pos() - v2->pos();
         const Vec3 e2 = neighbors[j]->pos() - v2->pos();
         norm += cross(e1, e2);
+    }
+
+    // Degenerated face if norm is zero-length
+    if (length(norm) == 0.0) {
+        return false;
     }
     norm = normalize(norm);
 
