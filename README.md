@@ -70,7 +70,13 @@ $ python examples/python/fill_and_fair.py data/models/bunny.ply
 
 ## Screen shots
 
+| Input | Before | Simplified |
+|--------|--------|--------|
+|![](figures/dragon.jpg)|![](figures/dragon_before_simplify.jpg)|![](figures/dragon_after_simplify.jpg)|
 
+## Warning
+
+The modules are not perfect and their process will fail for problematic meshes, e.g., with non-manifold faces. In such cases, you can fix the problem by repairing the mesh using [MeshFix](https://github.com/MarcoAttene/MeshFix-V2.1).
 
 ## License
 

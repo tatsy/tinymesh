@@ -167,9 +167,7 @@ void remeshIncremental(Mesh &mesh, double shortLength, double longLength, double
         }
 
         // Smoothing
-        for (int loop = 0; loop < 3; loop++) {
-           laplace_smooth(mesh);
-        }
+        laplace_smooth(mesh);
     }
 }
 
