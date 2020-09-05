@@ -92,7 +92,6 @@ std::vector<Vec3> Mesh::getVertices() const {
     for (const auto &v : vertices_) {
         ret.push_back(v->pos());
     }
-    printf("%f %f %f\n", ret[0].x(), ret[0].y(), ret[0].z());
     return ret;
 }
 

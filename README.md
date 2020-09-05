@@ -36,6 +36,7 @@ You can build a shared library and all the examples by `CMake` with the followin
 ```shell
 $ git clone https://github.com/tatsy/tinymesh.git --depth 1
 $ cd tinymesh
+$ git submodule update --init --recursive
 $ mkdir build && cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON ..
 $ cmake --build . --config Release --parallel 2
