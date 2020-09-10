@@ -40,6 +40,7 @@ jobs:
         cd build
         cmake .. `
           -G "Visual Studio 16 2019" -A x64 `
+          -Dgtest_force_shared_crt=ON `
           -DCMAKE_INSTALL_PREFIX="C:/Program Files/GoogleTest/"
         cmake --build . --config "$env:BUILD_TYPE"
         cmake --build . --config "$env:BUILD_TYPE" --target INSTALL

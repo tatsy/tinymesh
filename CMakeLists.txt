@@ -8,7 +8,6 @@ include(Macros)
 # Options
 # ----------
 option(WITH_OPENMP "Use OpenMP or not" ON)
-option(BUILD_STATIC_LIB "Build static link library" OFF)
 option(BUILD_PYTHON_MODULE "Build Python module" OFF)
 option(BUILD_EXAMPLES "Build examples." OFF)
 option(BUILD_TESTS "Build unit tests." OFF)

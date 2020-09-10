@@ -2,6 +2,8 @@
 .idea/*
 .vscode/*
 build/*
+Debug/*
+Release/*
 cmake-build-debug/*
 cmake-build-release/*
 Testing/*
@@ -15,6 +17,8 @@ test_config.h
 *.a
 *.so
 *.lib
+*.exp
+*.pdb
 *.dll
 *.dylib
 

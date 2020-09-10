@@ -16,6 +16,15 @@ class CMakeExtension(Extension):
 
 
 class CMakeBuild(build_ext):
+    description = "Build module using CMake"
+    user_options = build_ext.user_options + [
+        ('cmake-build-args=', None, 'CMake additional build arguments')
+    ]
+
+    def initialize_options(self):
+        build_ext.initialize_options(self)
+        self.cmake_build_args = None
+
     def run(self):
         try:
             out = subprocess.check_output(['cmake', '--version'])
@@ -38,10 +47,16 @@ class CMakeBuild(build_ext):
         if not extdir.endswith(os.path.sep):
             extdir += os.path.sep
 
-        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-                      '-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=' + extdir,
+        cmake_args = ['-DPYTHON_MODULE_OUTPUT_DIRECTORY=' + extdir,
                       '-DPYTHON_EXECUTABLE=' + sys.executable,
                       '-DBUILD_PYTHON_MODULE=ON']
+
+        if self.cmake_build_args is not None:
+            args = self.cmake_build_args.split('-D')
+            args = [arg.strip() for arg in args]
+            for arg in args:
+                if arg != '':
+                    cmake_args.append('-D' + arg)
 
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]

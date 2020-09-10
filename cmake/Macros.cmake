@@ -23,16 +23,13 @@ function(ADD_EXAMPLE EXPNAME)
 
     file(GLOB SOURCE_FILES "${EXPNAME}/*.cpp" "${EXPNAME}/*.h")
 
-    include_directories(${TINYMESH_INCLUDE_DIR})
-    link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
     message(STATUS "Example: ${EXPNAME}")
 
     set(EXP_EXE_NAME "example_${EXPNAME}")
     add_executable(${EXP_EXE_NAME} ${SOURCE_FILES} ${SHADER_FILES})
-    add_dependencies(${EXP_EXE_NAME} ${TINYMESH_LIBRARY})
-
-    target_link_libraries(${EXP_EXE_NAME} ${TINYMESH_LIBRARY} ${CXX_FS_LIBRARY})
+    target_include_directories(${EXP_EXE_NAME} PRIVATE ${TINYMESH_INCLUDE_DIR})
+    target_link_libraries(${EXP_EXE_NAME} PRIVATE ${TINYMESH_LIBRARY} ${CXX_FS_LIBRARY})
 
     set_target_properties(${EXP_EXE_NAME} PROPERTIES FOLDER "Examples")
     set_target_properties(${EXP_EXE_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})

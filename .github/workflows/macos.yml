@@ -78,14 +78,17 @@ jobs:
             -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DCMAKE_C_COMPILER=$GNU_CC \
             -DCMAKE_CXX_COMPILER=$GNU_CXX \
-                
+            -DBUILD_EXAMPLES=ON \
+            -DBUILD_TESTS=ON 
         fi
 
         if [ "$C_COMPILER" = "clang" ]; then
           cmake $GITHUB_WORKSPACE \
             -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DCMAKE_C_COMPILER=$LLVM_CC \
-            -DCMAKE_CXX_COMPILER=$LLVM_CXX 
+            -DCMAKE_CXX_COMPILER=$LLVM_CXX \
+            -DBUILD_EXAMPLES=ON \
+            -DBUILD_TESTS=ON 
         fi
 
         cmake --build . --config $BUILD_TYPE --parallel 2

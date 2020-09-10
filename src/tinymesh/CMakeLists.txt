@@ -1,5 +1,3 @@
-set(BUILD_TARGET ${TINYMESH_LIBRARY})
-
 # ----------
 # Common target names
 # ----------
@@ -19,18 +17,14 @@ add_folder(SOURCE_FILES "core")
 add_folder(SOURCE_FILES "polymesh")
 add_folder(SOURCE_FILES "geoproc")
 
-if (BUILD_STATIC_LIB)
-    add_library(${BUILD_TARGET} STATIC ${SOURCE_FILES})
-else()
-    add_library(${BUILD_TARGET} SHARED ${SOURCE_FILES})
-endif()
+add_library(${TINYMESH_LIBRARY} STATIC ${SOURCE_FILES})
 
 source_group("Source Files" FILES ${SOURCE_FILES})
 
-target_include_directories(${BUILD_TARGET} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(${BUILD_TARGET} ${CXX_FS_LIBRARY})
+target_include_directories(${TINYMESH_LIBRARY} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+target_link_libraries(${TINYMESH_LIBRARY} INTERFACE ${CXX_FS_LIBRARY})
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
-    set_property(TARGET ${BUILD_TARGET} APPEND PROPERTY LINK_FLAGS "/DEBUG /PROFILE")
+    set_property(TARGET ${TINYMESH_LIBRARY} APPEND PROPERTY LINK_FLAGS "/DEBUG /PROFILE")
 endif()

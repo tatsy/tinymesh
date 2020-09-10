@@ -8,6 +8,7 @@
 #include <map>
 #include <queue>
 #include <tuple>
+#include <functional>
 #include <unordered_map>
 
 #include <Eigen/Core>
@@ -25,7 +26,7 @@ namespace fs = std::filesystem;
 
 using IndexPair = std::pair<uint32_t, uint32_t>;
 
-struct IndexPairHash : public std::unary_function<IndexPair, std::size_t> {
+struct IndexPairHash : public std::function<size_t(IndexPair)> {
     std::size_t operator()(const IndexPair& k) const {
         return std::get<0>(k) ^ std::get<1>(k);
     }
