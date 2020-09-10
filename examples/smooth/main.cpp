@@ -1,4 +1,5 @@
 #include <iostream>
+
 #include "tinymesh/tinymesh.h"
 
 namespace fs = std::filesystem;

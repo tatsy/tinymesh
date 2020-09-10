@@ -1,23 +1,69 @@
 language: cpp
 sudo: required
+dist: bionic
 compiler:
   - gcc
+  - clang
 
 before_install:
+  # Compiler
+  - if [ $CC == "gcc" ]; then export CC=gcc-9 && CXX=g++-9; fi
+  - if [ $CC == "clang" ]; then export CC=clang-10 && CXX=clang++-10; fi
+  # Eigen
   - sudo apt-get install libeigen3-dev
+  # Google Test
+  - git clone https://github.com/google/googletest.git
+  - mkdir -p googletest/build && cd googletest/build
+  - cmake -D CMAKE_BUILD_TYPE=Release ..
+  - cmake --build . --parallel 4
+  - sudo make install
+  - cd -
+  # Miniconda
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - source "$HOME/miniconda/etc/profile.d/conda.sh"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n tinymesh python=$TRAVIS_PYTHON_VERSION numpy nose matplotlib
+  - conda activate tinymesh
+  - conda install -c conda-forge plyfile
 
 install:
+  # C/C++
   - mkdir build && cd build
-  - cmake -D BUILD_EXAMPLE=ON -D BUILD_TESTS=ON .. 
+  - cmake -DBUILD_EXAMPLE=ON -DBUILD_TESTS=ON .. 
   - cmake --build . --parallel 4
+  - cd -
+  # Python
+  - python setup.py build_ext -i
 
 script:
-  - ctest . --output-on-failure
+  # C/C++
+  - make -C ./build check
+  - nosetests .
 
 branches:
   only:
     - master
     - dev
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchan-bionic-10
+    packages:
+      - gcc-9
+      - g++-9
+      - clang-10
+
+env:
+  matrix:
+    - TRAVIS_PYTHON_VERSION=3.6
+    - TRAVIS_PYTHON_VERSION=3.7
+    - TRAVIS_PYTHON_VERSION=3.8
 
 notifications:
   email:

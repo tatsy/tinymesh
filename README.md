@@ -1,6 +1,7 @@
 TinyMesh
 ===
 
+[![Build Status](https://travis-ci.com/tatsy/tinymesh.svg?branch=master)](https://travis-ci.com/tatsy/tinymesh)
 ![Windows CI](https://github.com/tatsy/tinymesh/workflows/Windows%20CI/badge.svg)
 ![MacOS CI](https://github.com/tatsy/tinymesh/workflows/MacOS%20CI/badge.svg)
 ![Ubuntu CI](https://github.com/tatsy/tinymesh/workflows/Ubuntu%20CI/badge.svg)
@@ -27,6 +28,14 @@ Here is the list of modules and reference papers for that.
 
 ### Dependency
 
+The module is tested its compilation using the following compilers.
+
+* **Windows** - Visual Studio 2019
+* **MacOS** - Apple Clang 11.0 (MacOS 10.15)
+* **Linux** - LLVM Clang 10.0, GNU C Compiler 9.3.0
+
+Also, the module depends on Eigen for the linear algebra.
+
 * [Eigen 3.x](http://eigen.tuxfamily.org/index.php)
 
 ### C++ Library and Examples
@@ -41,6 +50,7 @@ $ mkdir build && cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON ..
 $ cmake --build . --config Release --parallel 2
 ```
+
 #### Run examples
 
 ```shell
@@ -53,6 +63,12 @@ By the following shell command, you can build the module, which will be placed o
 
 ```shell
 $ python setup.py build_ext -i
+```
+
+Also, you can pass the CMake build arguments to `setup.py`.
+
+```shell
+$ python setup.py build_ext -i --cmake-build-args "-DEIGEN3_INCLUDE_DIR=[Your Eigen3 Location]"
 ```
 
 Otherwise, you can build the module also using `CMake`.

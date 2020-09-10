@@ -22,7 +22,7 @@ add_library(${TINYMESH_LIBRARY} STATIC ${SOURCE_FILES})
 source_group("Source Files" FILES ${SOURCE_FILES})
 
 target_include_directories(${TINYMESH_LIBRARY} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(${TINYMESH_LIBRARY} INTERFACE ${CXX_FS_LIBRARY})
+target_link_libraries(${TINYMESH_LIBRARY} ${CXX_FS_LIBRARY})
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
