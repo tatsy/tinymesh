@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import os
-import sys
 import requests
 import zipfile
 import tarfile
@@ -89,7 +88,7 @@ def unarchive(filename, target, extract_to):
         else:
             raise Exception('Unknown extension: %s' % ext)
 
-    except e as Exception:
+    except Exception as e:
         raise e
 
     print('File is unarchived: {:s}'.format(extract_to))

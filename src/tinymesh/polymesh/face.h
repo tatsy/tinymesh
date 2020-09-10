@@ -37,7 +37,7 @@ public:
 
 private:
     Halfedge *halfedge_ = nullptr;
-    int index_;
+    int index_ = -1;
     bool isBoundary_ = false;
     bool isStatic_ = false;
 

@@ -389,12 +389,9 @@ void Mesh::loadPLY(const std::string &filename) {
 
         // Copy vertex data
         const size_t numVerts = vert_data->count;
-        std::vector<float> raw_vertices, raw_normals, raw_uv;
-        if (vert_data) {
-            raw_vertices.resize(numVerts * 3);
-            std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
-        }
-
+        std::vector<float> raw_vertices(numVerts * 3);
+        std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
+        
         const size_t numFaces = face_data->count;
         std::vector<uint32_t> raw_indices(numFaces * 3);
         std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
@@ -402,12 +399,7 @@ void Mesh::loadPLY(const std::string &filename) {
         std::unordered_map<Vec3, uint32_t> uniqueVertices;
         vertices_.clear();
         for (uint32_t i : raw_indices) {
-            Vec3 pos;
-
-            if (vert_data) {
-                pos = Vec3(raw_vertices[i * 3 + 0], raw_vertices[i * 3 + 1], raw_vertices[i * 3 + 2]);
-            }
-
+            const Vec3 pos = Vec3(raw_vertices[i * 3 + 0], raw_vertices[i * 3 + 1], raw_vertices[i * 3 + 2]);
             if (uniqueVertices.count(pos) == 0) {
                 uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
                 vertices_.push_back(std::make_shared<Vertex>(pos));

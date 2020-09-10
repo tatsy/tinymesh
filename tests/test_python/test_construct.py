@@ -1,6 +1,6 @@
 try:
     import unittest2 as unittest
-except:
+except ImportError:
     import unittest
 
 import numpy as np
@@ -13,5 +13,5 @@ class TestConstruct(unittest.TestCase):
         b = np.asarray([0, 1, 2, 0, 2, 3, 0, 3, 1, 3, 2, 1], dtype='uint32')
         try:
             mesh = Mesh(a, b)
-        except Exception as e:
+        except Exception:
             self.fail('Mesh construction from vertices/indices was failed!')
