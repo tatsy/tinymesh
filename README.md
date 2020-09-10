@@ -16,15 +16,15 @@ Modules
 Here is the list of modules and reference papers for that.
 
 *   **Smoothing**
-  * Laplacian smoothing
-  * Taubin smoothing [[Taubin 1995]](https://dl.acm.org/doi/10.1145/218380.218473)
-  * Implicit fairing [[Desbrun 1999]](https://dl.acm.org/doi/10.1145/311535.311576)
+    *   Laplacian smoothing
+    *   Taubin smoothing [[Taubin 1995]](https://dl.acm.org/doi/10.1145/218380.218473)
+    *   Implicit fairing [[Desbrun 1999]](https://dl.acm.org/doi/10.1145/311535.311576)
 *   **Remeshing**
-  * Uniform triangulation [[Hoppe 1996]](https://dl.acm.org/doi/10.1145/237170.237216)
+    *   Uniform triangulation [[Hoppe 1996]](https://dl.acm.org/doi/10.1145/237170.237216)
 *   **Simplification**
-  * Quadric error metrics (QEM) [[Garland and Heckbert 1997]](https://dl.acm.org/doi/10.1145/258734.258849)
+    *   Quadric error metrics (QEM) [[Garland and Heckbert 1997]](https://dl.acm.org/doi/10.1145/258734.258849)
 *   **Hole filling**
-  * Min-area hole filling [[Barequet and Sharir 1995]](https://www.sciencedirect.com/science/article/pii/016783969400011G?via%3Dihub)
+    *   Min-area hole filling [[Barequet and Sharir 1995]](https://www.sciencedirect.com/science/article/pii/016783969400011G?via%3Dihub)
 
 Install
 ---
