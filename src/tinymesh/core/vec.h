@@ -249,6 +249,19 @@ Vec<Float, Dims> normalize(const Vec<Float, Dims> &v) {
     return v / length(v);
 }
 
+// Arithmetics for 3D vectors
+template <typename Float, int Dims>
+Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec<Float, Dims> &v3, const Vec<Float, Dims>& v1rev, typename std::enable_if<Dims == 3>::type * = 0) {
+    using V = Vec<Float, Dims>;
+    const V e12 = v2 - v1;
+    const V e13 = v3 - v1;
+    const V n1 = normalize(cross(e12, e13));
+    const V e42 = v2 - v1rev;
+    const V e43 = v3 - v1rev;
+    const V n4 = normalize(cross(e42, e43));
+    return std::acos(dot(n1, n4));
+}
+
 // Hash
 namespace std {
 

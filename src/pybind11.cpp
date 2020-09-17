@@ -93,7 +93,7 @@ PYBIND11_MODULE(tinymesh, m) {
     m.def("implicit_fair", &implicit_fair,
           "Implicit fairing",
           py::arg("mesh"),
-          py::arg("epsilon") = 1.0e-3,
+          py::arg("epsilon") = 1.0,
           py::arg("iterations") = 1);
 
     /*** Remesh ***/
@@ -117,5 +117,6 @@ PYBIND11_MODULE(tinymesh, m) {
 
     m.def("hole_fill", &hole_fill,
           "Max-area hole filling",
-          py::arg("mesh"));
+          py::arg("mesh"),
+          py::arg("dihedral_bound") = Pi);
 }

@@ -137,6 +137,11 @@ void taubin_smooth(Mesh &mesh, double shrink, double inflate, int iterations) {
 }
 
 void implicit_fair(Mesh &mesh, double epsilon, int iterations) {
+    /*
+     * This method is based on the following paper. The normalized version in Sec.5.5 is used.
+     * Desbrun et al. "Implicit Fairing of Irregular Meshes using Diffusion and Curvature Flow", 1999.
+     */
+
     for (int it = 0; it < iterations; it++) {
         // Indexing vertices
         const int n_verts = mesh.num_vertices();
@@ -167,6 +172,7 @@ void implicit_fair(Mesh &mesh, double epsilon, int iterations) {
 
             // Compute weights
             double sumW = 0.0;
+            std::vector<Triplet> tripletsInColumn;
             for (auto he_it = v->ohe_begin(); he_it != v->ohe_end(); ++he_it) {
                 Halfedge *ohe = he_it.ptr();
                 Halfedge *ihe = ohe->rev();
@@ -183,18 +189,25 @@ void implicit_fair(Mesh &mesh, double epsilon, int iterations) {
 
                 const Vec3 e_ab = vb - va;
                 const Vec3 e_ac = vc - va;
-                const double cot_a = dot(e_ab, e_ac) / length(cross(e_ab, e_ac));
+                const double cot_a = dot(e_ab, e_ac) / (length(cross(e_ab, e_ac)) + 1.0e-8);
 
                 const Vec3 e_db = vb - vd;
                 const Vec3 e_dc = vc - vd;
-                const double cot_d = dot(e_db, e_dc) / length(cross(e_db, e_dc));
+                const double cot_d = dot(e_db, e_dc) / (length(cross(e_db, e_dc)) + 1.0e-8);
 
-                const double W = (cot_a + cot_d) / (4.0 * A);
-                triplets.emplace_back(i, xb->index(), W);
+                const double W = (cot_a + cot_d);
+                tripletsInColumn.emplace_back(i, xb->index(), W);
+                if (std::isnan(W) || std::isinf(W)) {
+                    Warn("NaN of inf matrix entry is detedted!");
+                }
                 sumW += W;
             }
 
-            triplets.emplace_back(i, i, -sumW);
+            for (const auto& t : tripletsInColumn) {
+                triplets.emplace_back(t.row(), t.col(), t.value() / sumW);
+            }
+            triplets.emplace_back(i, i, -1.0);
+
             X(i, 0) = v->pos()[0];
             X(i, 1) = v->pos()[1];
             X(i, 2) = v->pos()[2];
@@ -210,8 +223,8 @@ void implicit_fair(Mesh &mesh, double epsilon, int iterations) {
         SparseMatrix A = I - epsilon * K;
 
         Eigen::BiCGSTAB<SparseMatrix> cg;
-        cg.setTolerance(1.0e-3);
-        cg.setMaxIterations(50);
+        cg.setTolerance(1.0e-6);
+        cg.setMaxIterations(1);
         cg.compute(A);
 
         Eigen::MatrixXd Xnext(n_verts, 3);

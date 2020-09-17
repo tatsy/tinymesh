@@ -150,7 +150,7 @@ void Mesh::construct() {
             const uint32_t b = indices_[i + (j + 1) % degree];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                Warn("An edge with vertices #%d and #%d is detected! Skip the face that includes this edge.", a, b);
+                Warn("An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes this edge.", a, b);
                 isDuplicated = true;
                 break;
             }
@@ -884,10 +884,14 @@ bool Mesh::flipHE(Halfedge *he) {
     return true;
 }
 
-bool Mesh::triangulate(Face *face) {
+bool Mesh::triangulate(Face *face, double dihedralBound) {
     /*
-     * This is an triangulation algorithm described in the following paper.
+     * The triangulation algorithm is based on the following papers.
      * Barequet and Sharir, "Filling Gaps in the Boundary of a Polyhedron", 1995.
+     * Liepa, "Filling Holes in Meshes", 2003.
+     * 
+     * Different from them, the triangularion is performed when the dihedral
+     * angle in resulting triangularion is less than "dihedralBound".
      */
 
     using E = IndexPair;
@@ -897,6 +901,7 @@ bool Mesh::triangulate(Face *face) {
     std::unordered_map<E, Halfedge *, IndexPairHash> pair2he;
     std::unordered_map<Halfedge *, E> he2pair;
 
+    // List all boundary vertices
     Halfedge *it = face->halfedge_;
     do {
         vs.push_back(it->src());
@@ -914,18 +919,31 @@ bool Mesh::triangulate(Face *face) {
         count += 1;
     } while (it != face->halfedge_);
 
-    Eigen::MatrixXd W(n_verts, n_verts);
+    Eigen::MatrixXd Warea(n_verts, n_verts);
+    Eigen::MatrixXd Wangle(n_verts, n_verts);
     Eigen::MatrixXi O(n_verts, n_verts);
-    W.setConstant(1.0e12);
+    Warea.setConstant(1.0e12);
+    Wangle.setConstant(1.0e12);
     O.setConstant(-1);
     for (int i = 0; i < n_verts - 1; i++) {
-        W(i, i + 1) = 0.0;
+        Warea(i, i + 1) = 0.0;
+        Wangle(i, i + 1) = 0.0;
         O(i, i + 1) = -1;
         if (i < n_verts - 2) {
             const Vec3 v0 = vs[i]->pos();
             const Vec3 v1 = vs[i + 1]->pos();
             const Vec3 v2 = vs[i + 2]->pos();
-            W(i, i + 2) = 0.5 * length(cross(v1 - v0, v2 - v0));
+            Warea(i, i + 2) = 0.5 * length(cross(v1 - v0, v2 - v0));
+
+            const auto he01 = pair2he[E(i, i + 1)];
+            const auto he12 = pair2he[E(i + 1, i + 2)];
+
+            const Vec3 v01rev = he01->rev()->next()->dst()->pos();
+            const Vec3 v12rev = he12->rev()->next()->dst()->pos();
+            const double a01 = Pi - dihedral(v2, v0, v1, v01rev);
+            const double a12 = Pi - dihedral(v0, v1, v2, v12rev);
+            Wangle(i, i + 2) = std::max(a01, a12);
+
             O(i, i + 2) = i + 1;
         }
     }
@@ -938,9 +956,32 @@ bool Mesh::triangulate(Face *face) {
                 const Vec3 v1 = vs[m]->pos();
                 const Vec3 v2 = vs[k]->pos();
                 const double F = 0.5 * length(cross(v1 - v0, v2 - v0));
-                const double Wnew = W(i, m) + W(m, k) + F;
-                if (Wnew < W(i, k)) {
-                    W(i, k) = Wnew;
+                const double WareaNew = Warea(i, m) + Warea(m, k) + F;
+
+                Vec3 v01rev;
+                if (abs(m - i) == 1) {
+                    const auto he01 = pair2he[E(i, m)];
+                    v01rev = he01->rev()->next()->dst()->pos();
+                } else {
+                    v01rev = vs[O(i, m)]->pos();
+                }
+
+                Vec3 v12rev;
+                if (abs(k - m) == 1) {
+                    const auto he12 = pair2he[E(m, k)];
+                    v12rev = he12->rev()->next()->dst()->pos();
+                } else {
+                    v12rev = vs[O(m, k)]->pos();
+                }
+
+                const double a01 = Pi - dihedral(v2, v0, v1, v01rev);
+                const double a12 = Pi - dihedral(v0, v1, v2, v12rev);
+                const double D = std::max(a01, a12);
+                const double WangleNew = std::max(D, std::max(Wangle(i, m), Wangle(m, k)));
+
+                if (WangleNew < Wangle(i, k) || abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k)) {
+                    Warea(i, k) = WareaNew;
+                    Wangle(i, k) = WangleNew;
                     O(i, k) = m;
                 }
             }

@@ -5,6 +5,7 @@ import platform
 import subprocess
 
 from setuptools import setup, Extension
+from setuptools.command.install import install
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
@@ -15,15 +16,24 @@ class CMakeExtension(Extension):
         self.sourcedir = os.path.abspath(sourcedir)
 
 
-class CMakeBuild(build_ext):
-    description = "Build module using CMake"
-    user_options = build_ext.user_options + [
-        ('cmake-build-args=', None, 'CMake additional build arguments')
+class CommandMixin(object):
+    user_options = [
+        ('cmake-build-args=', None, 'CMake additonal build arguments')
     ]
 
     def initialize_options(self):
-        build_ext.initialize_options(self)
+        super().initialize_options()
         self.cmake_build_args = None
+
+
+class InstallCommand(CommandMixin, install):
+    description = "Install modules"
+    user_options = getattr(install, 'user_options', []) + CommandMixin.user_options
+
+
+class CMakeBuild(CommandMixin, build_ext):
+    description = "Build modules using CMake"
+    user_options = getattr(build_ext, 'user_options', []) + CommandMixin.user_options
 
     def run(self):
         try:
@@ -87,6 +97,10 @@ setup(
     author_email='tatsy.mail@gmail.com',
     description='TinyMesh is a light-weight mesh processing library',
     long_description='',
+    license='MPL-v2',
     ext_modules=[CMakeExtension('tinymesh')],
-    cmdclass=dict(build_ext=CMakeBuild)
+    cmdclass={
+        'install': InstallCommand,
+        'build_ext': CMakeBuild
+    }
 )
