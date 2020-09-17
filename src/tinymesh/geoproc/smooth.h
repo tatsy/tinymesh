@@ -16,7 +16,7 @@ TINYMESH_API void laplace_smooth(Mesh &mesh, double strength = 1.0, int iteratio
 TINYMESH_API void taubin_smooth(Mesh &mesh, double shrink = 1.0, double inflate = 1.0, int iterations = 3);
 
 //! Implicit fairing [Gesbrun et al. 1999]
-TINYMESH_API void implicit_fair(Mesh &mesh, double lambda = 1.e-3, int iterations = 1);
+TINYMESH_API void implicit_fair(Mesh &mesh, double lambda = 1.0, int iterations = 1);
 
 }  // namespace tinymesh
 

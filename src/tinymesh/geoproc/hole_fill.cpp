@@ -6,11 +6,11 @@
 
 namespace tinymesh {
 
-void hole_fill(Mesh& mesh) {
+void hole_fill(Mesh& mesh, double dihedralBound) {
     for (int i = 0; i < mesh.num_faces(); i++) {
         Face *f = mesh.face(i);
         if (f->isBoundary()) {
-            mesh.triangulate(f);
+            mesh.triangulate(f, dihedralBound);
         }
     }
 }

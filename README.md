@@ -25,6 +25,7 @@ Here is the list of modules and reference papers for that.
     *   Quadric error metrics (QEM) [[Garland and Heckbert 1997]](https://dl.acm.org/doi/10.1145/258734.258849)
 *   **Hole filling**
     *   Min-area hole filling [[Barequet and Sharir 1995]](https://www.sciencedirect.com/science/article/pii/016783969400011G?via%3Dihub)
+    *   Min-dihedral angle [[Liepa 2003]](http://diglib.eg.org/handle/10.2312/SGP.SGP03.200-206)
 
 Install
 ---
@@ -62,16 +63,22 @@ $ ./build/bin/example_simplify data/models/bunny.ply
 
 ### Python module
 
-By the following shell command, you can build the module, which will be placed on the root of this repo.
+You can install the Python module using `setup.py`
 
 ```shell
-$ python setup.py build_ext -i
+$ python setup.py install
 ```
 
 Also, you can pass the CMake build arguments to `setup.py`.
 
 ```shell
-$ python setup.py build_ext -i --cmake-build-args "-DEIGEN3_INCLUDE_DIR=[Your Eigen3 Location]"
+$ python setup.py install --cmake-build-args "-DEIGEN3_INCLUDE_DIR=[Your Eigen3 Location]"
+```
+
+Alternatively, you can only build the module, which will be placed on the root of this repo.
+
+```shell
+$ python setup.py install -i
 ```
 
 Otherwise, you can build the module also using `CMake`.

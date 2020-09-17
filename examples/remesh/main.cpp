@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     }
 
     // Fill holes & remesh
-    mesh::hole_fill(mesh);
+    mesh::hole_fill(mesh, Pi / 6.0);
     mesh::remeshIncremental(mesh);
 
     // Save
