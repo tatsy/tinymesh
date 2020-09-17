@@ -224,7 +224,7 @@ void implicit_fair(Mesh &mesh, double epsilon, int iterations) {
 
         Eigen::BiCGSTAB<SparseMatrix> cg;
         cg.setTolerance(1.0e-6);
-        cg.setMaxIterations(1);
+        cg.setMaxIterations(50);
         cg.compute(A);
 
         Eigen::MatrixXd Xnext(n_verts, 3);
