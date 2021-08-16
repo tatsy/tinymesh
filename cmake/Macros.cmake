@@ -13,21 +13,17 @@ endfunction()
 # ----------
 # Add example module
 # ----------
-function(ADD_EXAMPLE EXPNAME)
+function(ADD_EXAMPLE)
     set(options)
-    set(oneValueArgs)
-    set(multiValueArgs)
+    set(oneValueArgs NAME)
+    set(multiValueArgs SOURCES)
     cmake_parse_arguments(ADD_EXAMPLE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set(TARGET_EXAMPLE_DIR "${CMAKE_CURRENT_LIST_DIR}/${EXPNAME}")
+    message(STATUS "Example: ${ADD_EXAMPLE_NAME}")
+    set(EXP_EXE_NAME "example_${ADD_EXAMPLE_NAME}")
+    add_executable(${EXP_EXE_NAME} ${ADD_EXAMPLE_SOURCES})
+    add_dependencies(${EXP_EXE_NAME} ${TINYMESH_LIBRARY})
 
-    file(GLOB SOURCE_FILES "${EXPNAME}/*.cpp" "${EXPNAME}/*.h")
-
-
-    message(STATUS "Example: ${EXPNAME}")
-
-    set(EXP_EXE_NAME "example_${EXPNAME}")
-    add_executable(${EXP_EXE_NAME} ${SOURCE_FILES} ${SHADER_FILES})
     target_include_directories(${EXP_EXE_NAME} PRIVATE ${TINYMESH_INCLUDE_DIR})
     target_link_libraries(${EXP_EXE_NAME} PRIVATE ${TINYMESH_LIBRARY} ${CXX_FS_LIBRARY})
 

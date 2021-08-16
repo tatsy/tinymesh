@@ -1,5 +1,5 @@
 #define TINYMESH_API_EXPORT
-#include "smooth.h"
+#include "filters.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -12,19 +12,19 @@ using IndexType = int64_t;
 using Triplet = Eigen::Triplet<ScalarType, IndexType>;
 using SparseMatrix = Eigen::SparseMatrix<ScalarType>;
 
+#include "core/debug.h"
 #include "core/openmp.h"
-#include "polymesh/face.h"
-#include "polymesh/vertex.h"
-#include "polymesh/halfedge.h"
+#include "core/face.h"
+#include "core/vertex.h"
+#include "core/halfedge.h"
 
 namespace tinymesh {
 
-void laplace_smooth(Mesh &mesh, double epsilon, int iterations) {
+void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iterations) {
     for (int it = 0; it < iterations; it++) {
         // Volonoi tessellation
         const int nv = mesh.num_vertices();
         std::vector<Vec3> centroids(nv);
-        std::vector<Vec3> normals(nv);
 
         // Compute centroids and tangent planes
         omp_parallel_for(int i = 0; i < mesh.num_vertices(); i++) {
@@ -37,26 +37,30 @@ void laplace_smooth(Mesh &mesh, double epsilon, int iterations) {
                 pts.push_back(vit->pos());
             }
 
-            // Compute centroids, tangents, and binormals
+            // Compute centroids
             Vec3 cent(0.0);
-            Vec3 norm(0.0);
+            double sum_weight = 0.0;
             for (int i = 0; i < pts.size(); i++) {
-                const int j = (i + 1) % pts.size();
-                Vec3 e1 = pts[i] - org;
-                Vec3 e2 = pts[j] - org;
-                Vec3 g = (org + pts[i] + pts[j]) / 3.0;
+                double weight = 1.0;
+                if (cotangent_weight) {
+                    const Vec3 &p0 = org;
+                    const Vec3 &p1 = pts[i];
+                    const Vec3 &p2 = pts[(i + 1) % pts.size()];
+                    const Vec3 &p3 = pts[(i - 1 + pts.size()) % pts.size()];
+                    const double sin_a = length(cross(p2 - p0, p2 - p1));
+                    const double cos_a = dot(p2 - p0, p2 - p1);
+                    const double sin_b = length(cross(p3 - p1, p3 - p0));
+                    const double cos_b = dot(p3 - p1, p3 - p0);
+                    const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
+                    const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
+                    weight = 0.5 * (cot_a + cot_b);
+                }
 
-                cent += g;
-                norm += cross(e1, e2);
+                cent += weight * pts[i];
+                sum_weight += weight;
             }
 
-            cent /= pts.size();
-            const double l = length(norm);
-
-            if (l != 0.0) {
-                centroids[i] = cent;
-                normals[i] = norm / l;
-            }
+            centroids[i] = cent / sum_weight;
         }
 
         // Update vertex positions
@@ -66,23 +70,19 @@ void laplace_smooth(Mesh &mesh, double epsilon, int iterations) {
                 continue;
             }
 
-            if (length(normals[i]) != 0.0) {
-                const Vec3 pt = v->pos();
-                Vec3 e = centroids[i] - pt;
-                e -= normals[i] * dot(e, normals[i]);
-                Vec3 newPos = (1.0 - epsilon) * v->pos() + epsilon * (pt + e);
-                v->setPos(newPos);
-            }
+            const Vec3 pt = v->pos();
+            const Vec3 e = centroids[i] - pt;
+            const Vec3 newPos = (1.0 - epsilon) * pt + epsilon * (pt + e);
+            v->setPos(newPos);
         }
     }
 }
 
-void taubin_smooth(Mesh &mesh, double shrink, double inflate, int iterations) {
+void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
     for (int it = 0; it < iterations * 2; it++) {
         // Volonoi tessellation
         const int nv = mesh.num_vertices();
         std::vector<Vec3> centroids(nv);
-        std::vector<Vec3> normals(nv);
 
         // Compute centroids and tangent planes
         omp_parallel_for(int i = 0; i < mesh.num_vertices(); i++) {
@@ -95,26 +95,12 @@ void taubin_smooth(Mesh &mesh, double shrink, double inflate, int iterations) {
                 pts.push_back(vit->pos());
             }
 
-            // Compute centroids, tangents, and binormals
+            // Compute centroids
             Vec3 cent(0.0);
-            Vec3 norm(0.0);
             for (int i = 0; i < pts.size(); i++) {
-                const int j = (i + 1) % pts.size();
-                Vec3 e1 = pts[i] - org;
-                Vec3 e2 = pts[j] - org;
-                Vec3 g = (org + pts[i] + pts[j]) / 3.0;
-
-                cent += g;
-                norm += cross(e1, e2);
+                cent += pts[i];
             }
-
-            cent /= pts.size();
-            const double l = length(norm);
-
-            if (l != 0.0) {
-                centroids[i] = cent;
-                normals[i] = norm / l;
-            }
+            centroids[i] = cent / (double)pts.size();
         }
 
         // Update vertex positions
@@ -125,18 +111,15 @@ void taubin_smooth(Mesh &mesh, double shrink, double inflate, int iterations) {
                 continue;
             }
 
-            if (length(normals[i]) != 0.0) {
-                const Vec3 pt = v->pos();
-                Vec3 e = centroids[i] - pt;
-                e -= normals[i] * dot(e, normals[i]);
-                Vec3 newPos = (1.0 - epsilon) * v->pos() + epsilon * (pt + e);
-                v->setPos(newPos);
-            }
+            const Vec3 pt = v->pos();
+            const Vec3 e = centroids[i] - pt;
+            const Vec3 newPos = (1.0 - epsilon) * v->pos() + epsilon * (pt + e);
+            v->setPos(newPos);
         }
     }
 }
 
-void implicit_fair(Mesh &mesh, double epsilon, int iterations) {
+void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
     /*
      * This method is based on the following paper. The normalized version in Sec.5.5 is used.
      * Desbrun et al. "Implicit Fairing of Irregular Meshes using Diffusion and Curvature Flow", 1999.

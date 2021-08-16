@@ -1,7 +1,7 @@
 # ----------
 # Add example directories
 # ----------
-add_example(read_write)
-add_example(remesh)
-add_example(simplify)
-add_example(smooth)
+add_example(NAME read_write SOURCES example_read_write.cpp)
+add_example(NAME remesh SOURCES example_remesh.cpp)
+add_example(NAME simplify SOURCES example_simplify.cpp)
+add_example(NAME smooth SOURCES example_smooth.cpp)

@@ -1,6 +1,6 @@
 import os
 import sys
-from tinymesh import Mesh, hole_fill, remesh_incremental
+from tinymesh import Mesh, hole_fill, remesh_triangular
 
 
 def main(filename):
@@ -15,7 +15,7 @@ def main(filename):
     hole_fill(mesh)
 
     # Then, remesh
-    remesh_incremental(mesh)
+    remesh_triangular(mesh)
 
     # Save
     base, ext = os.path.splitext(filename)

@@ -1,7 +1,7 @@
 #define TINYMESH_API_EXPORT
 #include "edge.h"
 
-#include "polymesh/halfedge.h"
+#include "core/halfedge.h"
 
 namespace tinymesh {
 
