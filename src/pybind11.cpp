@@ -103,7 +103,7 @@ PYBIND11_MODULE(tinymesh, m) {
           "Triangle remeshing",
           py::arg("mesh"),
           py::arg("short_length") = 0.8,
-          py::arg("long_rength") = 1.333,
+          py::arg("long_length") = 1.333,
           py::arg("angle_thresh") = 0.2,
           py::arg("iterations") = 5);
 

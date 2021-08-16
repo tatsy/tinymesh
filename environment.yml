@@ -1,8 +1,0 @@
-name: tinymesh
-channels:
-  - conda-forge
-dependencies:
-  - numpy
-  - nose
-  - matplotlib
-  - conda-forge::plyfile

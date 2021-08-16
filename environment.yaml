@@ -1,0 +1,13 @@
+name: tinymesh
+channels:
+  - defaults
+dependencies:
+  - numpy
+  - matplotlib
+  - nose
+  - flake8
+  - mypy
+  - yapf
+  - pip
+  - pip:
+    - plyfile
