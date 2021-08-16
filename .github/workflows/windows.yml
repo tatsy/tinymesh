@@ -69,7 +69,7 @@ jobs:
 
     - name: Setup Python Env
       run: |
-        pip install numpy nose matplotlib plyfile
+        pip install numpy nose matplotlib pybind11 plyfile
 
     - name: Python Module Build
       run: |

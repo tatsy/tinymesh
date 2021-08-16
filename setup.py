@@ -15,15 +15,22 @@ include_dirs = [
     'src/tinymesh', 'src/tinymesh/ext/tinyobjloader', 'src/tinymesh/ext/tinyply/source'
 ]
 
+extra_compile_args = []
 define_macros = []
 if platform.system() == "Windows":
     define_macros.append(('_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING', 1))
+elif platform.system() == "Darwin":
+    extra_compile_args.append('-std=c++17')
+    extra_compile_args.append('-mmacosx-version-min=10.15')
+else:
+    extra_compile_args.append('-std=c++17')
 
 ext_modules = [
     Pybind11Extension('tinymesh',
                       sources,
-                      language='c++17',
+                      language='c++',
                       include_dirs=include_dirs,
+                      extra_compile_args=extra_compile_args,
                       define_macros=define_macros)
 ]
 
