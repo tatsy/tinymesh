@@ -109,7 +109,7 @@ jobs:
 
     - name: Python Module Build
       run: |
-        python setup.py build_ext -i
+        python setup.py build_ext -i -I/usr/include/eigen3
 
     - name: Python Module Test
       run: |
