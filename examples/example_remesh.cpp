@@ -7,7 +7,7 @@ namespace mesh = tinymesh;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
-        std::cout << "usage: remesh [input mesh]" << std::endl;
+        printf("usage: %s [input mesh]\n", argv[0]);
         return 1;
     }
 

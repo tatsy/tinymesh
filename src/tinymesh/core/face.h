@@ -1,6 +1,6 @@
 #ifdef _MSC_VER
 #pragma once
-#endif 
+#endif
 
 #ifndef TINYMESH_FACE_H
 #define TINYMESH_FACE_H
@@ -15,6 +15,7 @@ class TINYMESH_API Face {
 public:
     // Forward declaration
     class VertexIterator;
+    class FaceIterator;
 
 public:
     Face();
@@ -29,11 +30,21 @@ public:
 
     VertexIterator v_begin();
     VertexIterator v_end();
+    FaceIterator f_begin();
+    FaceIterator f_end();
 
-    int index() const { return index_; }
-    bool isBoundary() const { return isBoundary_; }
-    bool isStatic() const { return isStatic_; }
-    void setIsStatic(bool flag) { isStatic_ = flag; }
+    int index() const {
+        return index_;
+    }
+    bool isBoundary() const {
+        return isBoundary_;
+    }
+    bool isStatic() const {
+        return isStatic_;
+    }
+    void setIsStatic(bool flag) {
+        isStatic_ = flag;
+    }
 
 private:
     Halfedge *halfedge_ = nullptr;
@@ -53,6 +64,20 @@ public:
     Vertex *ptr() const;
     VertexIterator &operator++();
     VertexIterator operator++(int);
+
+private:
+    Halfedge *halfedge_, *iter_;
+};
+
+class TINYMESH_API Face::FaceIterator {
+public:
+    explicit FaceIterator(Halfedge *he);
+    bool operator!=(const FaceIterator &it) const;
+    Face &operator*();
+    Face *operator->() const;
+    Face *ptr() const;
+    FaceIterator &operator++();
+    FaceIterator operator++(int);
 
 private:
     Halfedge *halfedge_, *iter_;

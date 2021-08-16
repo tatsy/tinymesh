@@ -8,7 +8,7 @@ include(Macros)
 # Options
 # ----------
 option(WITH_OPENMP "Use OpenMP or not" ON)
-option(BUILD_PYTHON_MODULE "Build Python module" OFF)
+# option(BUILD_PYTHON_MODULE "Build Python module" OFF)
 option(BUILD_EXAMPLES "Build examples." OFF)
 option(BUILD_TESTS "Build unit tests." OFF)
 
@@ -30,7 +30,7 @@ endif()
 # ----------
 set(TINYMESH_LIBRARY "tinymesh")
 set(TINYMESH_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
-set(TINYMESH_PYTHON_MODULE "tinymesh-python")
+# set(TINYMESH_PYTHON_MODULE "tinymesh-python")
 
 # ----------
 # Required packages
@@ -76,6 +76,10 @@ set(CMAKE_DEBUG_POSTFIX "-debug")
 # OS specific settings
 # ----------
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+if (MSVC)
+    add_compile_options("/wd4251")
+endif()
 
 if (APPLE)
     set(CMAKE_MACOSX_RPATH 1)

@@ -5,7 +5,7 @@
 
 namespace tinymesh {
 
-Face::Face() {   
+Face::Face() {
 }
 
 bool Face::operator==(const Face &other) const {
@@ -22,6 +22,14 @@ Face::VertexIterator Face::v_begin() {
 
 Face::VertexIterator Face::v_end() {
     return Face::VertexIterator(nullptr);
+}
+
+Face::FaceIterator Face::f_begin() {
+    return Face::FaceIterator(halfedge_);
+}
+
+Face::FaceIterator Face::f_end() {
+    return Face::FaceIterator(nullptr);
 }
 
 // ----------
@@ -64,6 +72,48 @@ Face::VertexIterator Face::VertexIterator::operator++(int) {
         iter_ = nullptr;
     }
     return Face::VertexIterator(tmp);
+}
+
+// ----------
+// FaceIterator
+// ----------
+
+Face::FaceIterator::FaceIterator(Halfedge *he)
+    : halfedge_{ he }
+    , iter_{ he } {
+}
+
+bool Face::FaceIterator::operator!=(const Face::FaceIterator &it) const {
+    return iter_ != it.iter_;
+}
+
+Face &Face::FaceIterator::operator*() {
+    return *iter_->rev()->face();
+}
+
+Face *Face::FaceIterator::ptr() const {
+    return iter_->rev()->face();
+}
+
+Face *Face::FaceIterator::operator->() const {
+    return iter_->rev()->face();
+}
+
+Face::FaceIterator &Face::FaceIterator::operator++() {
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return *this;
+}
+
+Face::FaceIterator Face::FaceIterator::operator++(int) {
+    Halfedge* tmp = iter_;
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return Face::FaceIterator(tmp);
 }
 
 }  // namespace tinymesh

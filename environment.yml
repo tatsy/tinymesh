@@ -4,5 +4,10 @@ channels:
 dependencies:
   - numpy
   - nose
-  - matplotlib
-  - conda-forge::plyfile
+  - flake8
+  - mypy
+  - yapf
+  - pip
+  - pip:
+    - plyfile
+    - pybind11

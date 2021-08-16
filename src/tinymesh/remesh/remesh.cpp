@@ -167,7 +167,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         }
 
         // Smoothing
-        smoothLaplacian(mesh);
+        smoothTaubin(mesh);
     }
 }
 

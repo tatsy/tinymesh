@@ -5,7 +5,7 @@
 #ifndef TINYMESH_ABFXX_H
 #define TINYMESH_ABFXX_H
 
-#include "core/common.h"
+#include "core/api.h"
 
 namespace tinymesh {
 

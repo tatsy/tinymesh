@@ -10,14 +10,21 @@
 #include <map>
 #include <unordered_map>
 
-#include "core/eigen.h"
-#include "polymesh/vertex.h"
-#include "polymesh/face.h"
-#include "polymesh/mesh.h"
-#include "polymesh/halfedge.h"
-
+using Float = double;
+#include <Eigen/Core>
+using EigenMatrix = Eigen::Matrix<Float, Eigen::Dynamic, Eigen::Dynamic>;
+using EigenVector = Eigen::Matrix<Float, Eigen::Dynamic, 1>;
+#include <Eigen/SparseCore>
+using EigenTriplet = Eigen::Triplet<Float>;
+using EigenSparse = Eigen::SparseMatrix<Float>;
 #include <Eigen/IterativeLinearSolvers>
 using LinearSolver = Eigen::LeastSquaresConjugateGradient<EigenSparse>;
+
+#include "core/vertex.h"
+#include "core/face.h"
+#include "core/mesh.h"
+#include "core/halfedge.h"
+
 
 namespace {
 
