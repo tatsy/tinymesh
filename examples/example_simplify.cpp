@@ -3,30 +3,30 @@
 #include "tinymesh/tinymesh.h"
 
 namespace fs = std::filesystem;
-namespace mesh = tinymesh;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
-        std::cout << "usage: remesh [input mesh]" << std::endl;
+        std::cout << "usage: read_write [input mesh] [ratio]" << std::endl;
         return 1;
     }
 
-    // Load
-    mesh::Mesh mesh(argv[1]);
-    for (int i = 0; i < mesh.num_faces(); i++) {
-        mesh.face(i)->setIsStatic(true);
-    }
+    const double ratio = argc <= 2 ? 0.1 : atof(argv[2]);
 
-    // Fill holes & remesh
-    mesh::hole_fill(mesh, Pi / 6.0);
-    mesh::remeshIncremental(mesh);
+    // Load
+    tinymesh::Mesh mesh(argv[1]);
+
+    // Simplify
+    const int target = (int)(ratio * mesh.num_vertices());
+    tinymesh::holeFill(mesh);
+    tinymesh::simplifyQEM(mesh, target);
+    tinymesh::remeshTriangular(mesh);
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));
     const fs::path dirpath = filepath.parent_path();
     const std::string extension = filepath.extension().string();
     const std::string basename = filepath.stem().string();
-    const std::string outfile = (dirpath / fs::path((basename + "_remesh" + extension).c_str())).string();
+    const std::string outfile = (dirpath / fs::path((basename + "_simplify" + extension).c_str())).string();
     mesh.save(outfile);
     printf("Save: %s\n", outfile.c_str());
 }

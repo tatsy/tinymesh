@@ -7,15 +7,15 @@
 
 #include "core/vec.h"
 #include "core/openmp.h"
-#include "polymesh/mesh.h"
-#include "polymesh/vertex.h"
-#include "polymesh/halfedge.h"
-#include "polymesh/face.h"
-#include "geoproc/smooth.h"
+#include "core/mesh.h"
+#include "core/vertex.h"
+#include "core/halfedge.h"
+#include "core/face.h"
+#include "filters/filters.h"
 
 namespace tinymesh {
 
-void remeshIncremental(Mesh &mesh, double shortLength, double longLength, double angleThresh, int iterations) {
+void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double angleThresh, int iterations) {
     Assertion(mesh.verify(), "Invalid mesh!");
 
     // Compute average edge length
@@ -167,7 +167,7 @@ void remeshIncremental(Mesh &mesh, double shortLength, double longLength, double
         }
 
         // Smoothing
-        laplace_smooth(mesh);
+        smoothLaplacian(mesh);
     }
 }
 

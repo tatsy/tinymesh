@@ -22,8 +22,8 @@ int main(int argc, char **argv) {
     // Smooth (Laplacian)
     {
         mesh::Mesh mesh(argv[1]);
-        mesh::hole_fill(mesh);
-        mesh::laplace_smooth(mesh, 1.0, 20);
+        mesh::holeFill(mesh);
+        mesh::smoothLaplacian(mesh, 0.5, true, 100);
         const std::string outfile =
             (dirpath / fs::path((basename + "_laplace_smooth" + extension).c_str())).string();
         mesh.save(outfile);
@@ -33,8 +33,8 @@ int main(int argc, char **argv) {
     // Smooth (Taubin)
     {
         mesh::Mesh mesh(argv[1]);
-        mesh::hole_fill(mesh);
-        mesh::taubin_smooth(mesh, 1.0, 1.0,20);
+        mesh::holeFill(mesh);
+        mesh::smoothTaubin(mesh, 0.5, 0.53, 100);
         const std::string outfile =
             (dirpath / fs::path((basename + "_taubin_smooth" + extension).c_str())).string();
         mesh.save(outfile);
@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
     // Smooth (implicit fairing)
     {
         mesh::Mesh mesh(argv[1]);
-        mesh::hole_fill(mesh);
-        mesh::implicit_fair(mesh, 1.0e-4, 1);
+        mesh::holeFill(mesh);
+        mesh::implicitFairing(mesh, 1.0e-2, 1);
         const std::string outfile =
             (dirpath / fs::path((basename + "_implicit_fair" + extension).c_str())).string();
         mesh.save(outfile);

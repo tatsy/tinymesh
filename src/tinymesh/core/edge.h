@@ -5,7 +5,7 @@
 #ifndef TINYMESH_EDGE_H
 #define TINYMESH_EDGE_H
 
-#include "core/common.h"
+#include "core/api.h"
 
 namespace tinymesh {
 

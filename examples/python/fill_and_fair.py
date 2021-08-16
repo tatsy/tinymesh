@@ -1,7 +1,8 @@
 import os
 import sys
+
 import numpy as np
-from tinymesh import Mesh, hole_fill, remesh_incremental, implicit_fair
+from tinymesh import Mesh, hole_fill, remesh_triangular
 
 
 def main(filename):
@@ -17,12 +18,16 @@ def main(filename):
     print('[ OK ] hole filling')
 
     # Then, remesh
+<<<<<<< HEAD
     remesh_incremental(mesh, short_length=0.5, long_length=2.0)
     print('[ OK ] remeshing')
 
     # Finally, fair
     implicit_fair(mesh)
     print('[ OK ] fairing')
+=======
+    remesh_triangular(mesh)
+>>>>>>> 23851cb (Update file and folder names.)
 
     # Save
     base, ext = os.path.splitext(filename)

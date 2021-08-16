@@ -5,19 +5,18 @@
 #ifndef TINYMESH_H
 #define TINYMESH_H
 
-#include "core/common.h"
+#include "core/api.h"
+#include "core/debug.h"
 #include "core/vec.h"
 #include "core/openmp.h"
 #include "core/filesystem.h"
 
-#include "polymesh/mesh.h"
-#include "polymesh/vertex.h"
-#include "polymesh/halfedge.h"
-#include "polymesh/face.h"
+#include "core/mesh.h"
+#include "core/vertex.h"
+#include "core/halfedge.h"
+#include "core/face.h"
 
-#include "geoproc/remesh.h"
-#include "geoproc/simplify.h"
-#include "geoproc/smooth.h"
-#include "geoproc/hole_fill.h"
+#include "remesh/remesh.h"
+#include "filters/filters.h"
 
 #endif  // TINYMESH_H

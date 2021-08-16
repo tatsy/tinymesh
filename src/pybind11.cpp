@@ -77,20 +77,21 @@ PYBIND11_MODULE(tinymesh, m) {
 
     /*** Smoothing ***/
 
-    m.def("laplace_smooth", &laplace_smooth,
+    m.def("smooth_laplacian", &smoothLaplacian,
           "Laplacian smoothing",
           py::arg("mesh"),
           py::arg("epsilon") = 1.0,
+          py::arg("cotangent_weight") = false,
           py::arg("iterations") = 3);
 
-    m.def("taubin_smooth", &taubin_smooth,
+    m.def("smooth_taubin", &smoothTaubin,
           "Taubin smoothing",
           py::arg("mesh"),
           py::arg("shrink") = 1.0,
           py::arg("inflate") = 1.0,
           py::arg("iterations") = 3);
 
-    m.def("implicit_fair", &implicit_fair,
+    m.def("implicit_fairing", &implicitFairing,
           "Implicit fairing",
           py::arg("mesh"),
           py::arg("epsilon") = 1.0,
@@ -98,8 +99,8 @@ PYBIND11_MODULE(tinymesh, m) {
 
     /*** Remesh ***/
 
-    m.def("remesh_incremental", &remeshIncremental,
-          "Incremental remeshing",
+    m.def("remesh_triangular", &remeshTriangular,
+          "Triangle remeshing",
           py::arg("mesh"),
           py::arg("short_length") = 0.8,
           py::arg("long_length") = 1.333,
@@ -108,14 +109,14 @@ PYBIND11_MODULE(tinymesh, m) {
 
     /*** Simplification ***/
 
-    m.def("simplify_incremental", &simplifyIncremental,
-          "Incremental simplification",
+    m.def("simplify_qem", &simplifyQEM,
+          "QEM-based simplification",
           py::arg("mesh"),
           py::arg("n_triangles"));
 
     /*** Hole filling ***/
 
-    m.def("hole_fill", &hole_fill,
+    m.def("hole_fill", &holeFill,
           "Max-area hole filling",
           py::arg("mesh"),
           py::arg("dihedral_bound") = Pi);

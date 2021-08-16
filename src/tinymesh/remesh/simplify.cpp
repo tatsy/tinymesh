@@ -1,5 +1,5 @@
 #define TINYMESH_API_EXPORT
-#include "simplify.h"
+#include "remesh.h"
 
 #include <vector>
 #include <queue>
@@ -12,14 +12,15 @@
 using Matrix4 = Eigen::Matrix4d;
 using Vector4 = Eigen::Vector4d;
 
+#include "core/debug.h"
 #include "core/vec.h"
 #include "core/progress.h"
 #include "core/openmp.h"
-#include "polymesh/mesh.h"
-#include "polymesh/face.h"
-#include "polymesh/halfedge.h"
-#include "polymesh/vertex.h"
-#include "geoproc/smooth.h"
+#include "core/mesh.h"
+#include "core/face.h"
+#include "core/halfedge.h"
+#include "core/vertex.h"
+#include "filters/filters.h"
 
 namespace {
 
@@ -110,7 +111,7 @@ double computeQEM(const Matrix4 &m1, const Matrix4 &m2, const Vertex &v1, const 
     return qem;
 }
 
-void simplifyIncremental(Mesh &mesh, int numTarget) {
+void simplifyQEM(Mesh &mesh, int numTarget) {
     static const double Eps = 1.0e-12;
     const int numTargetRemove = mesh.num_vertices() - numTarget;
     if (numTarget <= 0) {
@@ -121,7 +122,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
     ProgressBar pbar(numTargetRemove);
 
     // Pre-smoothing
-    laplace_smooth(mesh);
+    smoothLaplacian(mesh);
 
     // Simplification
     int numRemoved = 0;
@@ -336,7 +337,7 @@ void simplifyIncremental(Mesh &mesh, int numTarget) {
         }
 
         // Smoothing
-        laplace_smooth(mesh);
+        smoothLaplacian(mesh);
 
         if (numRemoved >= numTargetRemove) {
             break;
