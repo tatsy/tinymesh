@@ -6,7 +6,7 @@ namespace fs = std::filesystem;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
-        std::cout << "usage: read_write [input mesh] [ratio]" << std::endl;
+        printf("usage: %s [input mesh] [ratio]\n", argv[0]);
         return 1;
     }
 

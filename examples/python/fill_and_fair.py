@@ -1,7 +1,9 @@
 import os
 import sys
+
 import numpy as np
-from tinymesh import Mesh, hole_fill, remesh_triangular, implicit_fairing
+
+from tinymesh import Mesh, hole_fill, implicit_fairing, remesh_triangular
 
 
 def main(filename):

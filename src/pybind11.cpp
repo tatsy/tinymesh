@@ -65,6 +65,8 @@ PYBIND11_MODULE(tinymesh, m) {
 
     py::class_<Vertex, std::shared_ptr<Vertex>>(m, "Vertex")
         .def(py::init<>())
+        .def("pos", &Vertex::pos)
+        .def("set_pos", &Vertex::setPos)
         .def("is_boundary", &Vertex::isBoundary)
         .def("is_static", &Vertex::isStatic);
 
@@ -87,8 +89,8 @@ PYBIND11_MODULE(tinymesh, m) {
     m.def("smooth_taubin", &smoothTaubin,
           "Taubin smoothing",
           py::arg("mesh"),
-          py::arg("shrink") = 1.0,
-          py::arg("inflate") = 1.0,
+          py::arg("shrink") = 0.5,
+          py::arg("inflate") = 0.53,
           py::arg("iterations") = 3);
 
     m.def("implicit_fairing", &implicitFairing,
@@ -96,6 +98,14 @@ PYBIND11_MODULE(tinymesh, m) {
           py::arg("mesh"),
           py::arg("epsilon") = 1.0,
           py::arg("iterations") = 1);
+
+    /*** Denoising ***/
+
+    m.def("denoise_normal_gaussian", &denoiseNormalGaussian,
+        "Denoising by normal Gaussian filter",
+        py::arg("mesh"),
+        py::arg("sigma") = 0.2,
+        py::arg("iterations") = 3);
 
     /*** Remesh ***/
 

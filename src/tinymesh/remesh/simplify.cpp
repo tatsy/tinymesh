@@ -337,7 +337,7 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
         }
 
         // Smoothing
-        smoothLaplacian(mesh);
+        smoothTaubin(mesh);
 
         if (numRemoved >= numTargetRemove) {
             break;

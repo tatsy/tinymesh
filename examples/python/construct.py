@@ -1,7 +1,9 @@
 import os
 import sys
-from plyfile import PlyData, PlyElement
+
 import numpy as np
+from plyfile import PlyData, PlyElement
+
 from tinymesh import Mesh
 
 
@@ -25,9 +27,10 @@ def main(filename):
     faces = np.asarray(faces, dtype='int32').reshape((-1, 3))
 
     vert_el = np.array([tuple(v) for v in verts], dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
-    face_el = np.array([(tuple(f),) for f in faces], dtype=[('vertex_indices', 'i4', (3,))])
-    plydata = PlyData([PlyElement.describe(vert_el, 'vertex'),
-                       PlyElement.describe(face_el, 'face')], text=False)
+    face_el = np.array([(tuple(f), ) for f in faces], dtype=[('vertex_indices', 'i4', (3, ))])
+    plydata = PlyData(
+        [PlyElement.describe(vert_el, 'vertex'),
+         PlyElement.describe(face_el, 'face')], text=False)
 
     base, ext = os.path.splitext(filename)
     outfile = base + "_copy" + ext
