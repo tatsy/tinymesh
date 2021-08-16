@@ -11,3 +11,4 @@ dependencies:
   - pip
   - pip:
     - plyfile
+    - pybind11
