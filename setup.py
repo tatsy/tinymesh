@@ -1,14 +1,9 @@
-import os
 import re
-import sys
 import pathlib
 import platform
-import subprocess
-from distutils.sysconfig import get_python_inc, get_python_lib
 
-from setuptools import Extension, setup
+from setuptools import setup
 from pybind11.setup_helpers import Pybind11Extension
-from setuptools.command.install import install
 from setuptools.command.build_ext import build_ext
 
 exclude = ['src/tinymesh/ext']

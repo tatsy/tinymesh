@@ -73,7 +73,7 @@ jobs:
 
     - name: Python Module Build
       run: |
-        python setup.py build_ext -i --cmake-build-args="-DEIGEN3_INCLUDE_DIR=C:/Program Files/Eigen/include/eigen3"
+        python setup.py build_ext -i -I"C:/Program Files/Eigen/include/eigen3"
 
     - name: Python Module Test
       run: |
