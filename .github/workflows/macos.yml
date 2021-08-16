@@ -68,7 +68,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=$LLVM_CXX
         fi
 
-        cmake --build . --config $BUILD_TARGET --parallel 2
+        cmake --build . --config $BUILD_TYPE --parallel 2
         cmake --build . --target install
 
     - name: CMake Build
