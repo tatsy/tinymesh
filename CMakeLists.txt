@@ -8,7 +8,6 @@ include(Macros)
 # Options
 # ----------
 option(WITH_OPENMP "Use OpenMP or not" ON)
-# option(BUILD_PYTHON_MODULE "Build Python module" OFF)
 option(BUILD_EXAMPLES "Build examples." OFF)
 option(BUILD_TESTS "Build unit tests." OFF)
 
@@ -30,12 +29,11 @@ endif()
 # ----------
 set(TINYMESH_LIBRARY "tinymesh")
 set(TINYMESH_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
-# set(TINYMESH_PYTHON_MODULE "tinymesh-python")
 
 # ----------
 # Required packages
 # ----------
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 REQUIRED 3)
 
 # ----------
 # OpenMP

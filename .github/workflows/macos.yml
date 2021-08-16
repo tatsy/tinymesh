@@ -105,11 +105,11 @@ jobs:
 
     - name: Setup Python Env
       run: |
-        pip install numpy nose matplotlib plyfile
+        pip install numpy nose matplotlib pybind11 plyfile
 
     - name: Python Module Build
       run: |
-        python setup.py build_ext -i
+        python setup.py build_ext -i -I/usr/local/include/eigen3
 
     - name: Python Module Test
       run: |
