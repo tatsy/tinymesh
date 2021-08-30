@@ -1,6 +1,7 @@
 v.0.1.1
 ---
 
+*   Add mesh denoising via bilateral filter [Zheng et al. 2011] and L0 smoothing [He and Schaefer 2013]
 *   Update Python module build to use Python-side `pybind11` installation
 *   Add mesh denoising via normal Gaussian filter [Ohtake et al. 2001].
 *   Implicit fairing `implicit_fair` is updated to its normalized version.
