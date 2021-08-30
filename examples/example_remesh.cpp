@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 
     // Load
     mesh::Mesh mesh(argv[1]);
-    for (int i = 0; i < mesh.num_faces(); i++) {
+    for (int i = 0; i < mesh.numFaces(); i++) {
         mesh.face(i)->setIsStatic(true);
     }
 

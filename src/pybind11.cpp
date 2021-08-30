@@ -60,8 +60,10 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("face", &Mesh::face, py::return_value_policy::reference)
         .def("get_vertices", &Mesh::getVertices)
         .def("get_vertex_indices", &Mesh::getVertexIndices)
-        .def("num_vertices", &Mesh::num_vertices)
-        .def("num_faces", &Mesh::num_faces);
+        .def("num_vertices", &Mesh::numVertices)
+        .def("num_edges", &Mesh::numEdges)
+        .def("num_halfedges", &Mesh::numHalfedges)
+        .def("num_faces", &Mesh::numFaces);
 
     py::class_<Vertex, std::shared_ptr<Vertex>>(m, "Vertex")
         .def(py::init<>())
@@ -106,6 +108,19 @@ PYBIND11_MODULE(tinymesh, m) {
         py::arg("mesh"),
         py::arg("sigma") = 0.2,
         py::arg("iterations") = 3);
+
+    m.def("denoise_normal_bilateral", &denoiseNormalBilateral,
+        "Denoising by normal bilateral filter",
+        py::arg("mesh"),
+        py::arg("sigma_c") = 0.2,
+        py::arg("sigma_s") = 0.1,
+        py::arg("iterations") = 3);
+
+    m.def("denoise_l0_smooth", &denoiseL0Smooth,
+        "Denoising by L0 smoothing",
+        py::arg("mesh"),
+        py::arg("alpha") = 0.1,
+        py::arg("beta") = 0.001);
 
     /*** Remesh ***/
 

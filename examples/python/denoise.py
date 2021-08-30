@@ -3,7 +3,7 @@ import sys
 
 import numpy as np
 
-from tinymesh import Mesh, hole_fill, smooth_taubin, denoise_normal_gaussian
+from tinymesh import Mesh, hole_fill, denoise_normal_bilateral
 
 
 def main(filename):
@@ -24,7 +24,7 @@ def main(filename):
     mesh.save(outfile)
 
     # Then, denoise
-    denoise_normal_gaussian(mesh, sigma=0.2, iterations=10)
+    denoise_normal_bilateral(mesh, sigma_c=0.2, sigma_s=0.1, iterations=10)
     print('[ OK ] denoising')
 
     # Save

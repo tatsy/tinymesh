@@ -69,32 +69,32 @@ namespace tinymesh {
 
 void abfxx(Mesh &mesh, int maxiter, double epsilon) {
     // Check input mesh indices
-    for (int vi = 0; vi < (int)mesh.num_vertices(); vi++) {
+    for (int vi = 0; vi < (int)mesh.numVertices(); vi++) {
         if (vi != mesh.vertex(vi)->index()) {
             throw std::runtime_error("Vertex order and its index do not match!");
         }
     }
 
-    for (int fi = 0; fi < (int)mesh.num_faces(); fi++) {
+    for (int fi = 0; fi < (int)mesh.numFaces(); fi++) {
         if (fi != mesh.face(fi)->index()) {
             throw std::runtime_error("Face order and its index do not match!");
         }
     }
 
     // Compute average edge length
-    const int nFaces = mesh.num_faces();
-    const int nVertices = mesh.num_vertices();
+    const int nFaces = mesh.numFaces();
+    const int nVertices = mesh.numVertices();
     double avgLength = 0.0;
-    for (int i = 0; i < (int)mesh.num_halfedges(); i++) {
+    for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
         avgLength += mesh.halfedge(i)->length();
     }
-    avgLength /= mesh.num_halfedges();
+    avgLength /= mesh.numHalfedges();
     printf("Avg: %f\n", avgLength);
 
     // Traverse all the angles
     std::vector<AngleData> angles;
     int count = 0;
-    for (int faceID = 0; faceID < (int)mesh.num_faces(); faceID++) {
+    for (int faceID = 0; faceID < (int)mesh.numFaces(); faceID++) {
         Face *t = mesh.face(faceID);
         std::vector<Vertex*> vs;
         for (auto vit = t->v_begin(); vit != t->v_end(); ++vit) {

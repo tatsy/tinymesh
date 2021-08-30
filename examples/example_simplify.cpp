@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
-    const int target = (int)(ratio * mesh.num_vertices());
+    const int target = (int)(ratio * mesh.numVertices());
     tinymesh::holeFill(mesh);
     tinymesh::simplifyQEM(mesh, target);
     tinymesh::remeshTriangular(mesh);

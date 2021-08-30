@@ -113,9 +113,9 @@ double computeQEM(const Matrix4 &m1, const Matrix4 &m2, const Vertex &v1, const 
 
 void simplifyQEM(Mesh &mesh, int numTarget) {
     static const double Eps = 1.0e-12;
-    const int numTargetRemove = mesh.num_vertices() - numTarget;
+    const int numTargetRemove = mesh.numVertices() - numTarget;
     if (numTarget <= 0) {
-        Warn("#vertices is already less than #target: %d < %d", (int)mesh.num_vertices(), numTarget);
+        Warn("#vertices is already less than #target: %d < %d", (int)mesh.numVertices(), numTarget);
         return;
     }
 
@@ -128,9 +128,9 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
     int numRemoved = 0;
     while (true) {
         // Current mesh status
-        const int numVertices = (int)mesh.num_vertices();
-        const int numHalfedges = (int)mesh.num_halfedges();
-        const int numFaces = (int)mesh.num_faces();
+        const int numVertices = (int)mesh.numVertices();
+        const int numHalfedges = (int)mesh.numHalfedges();
+        const int numFaces = (int)mesh.numFaces();
 
         // Compute quadric metric tensor for current vertices.
         std::vector<Matrix4> Qs(numVertices, Matrix4::Zero());
@@ -314,7 +314,7 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
         }
 
         // Flip edges
-        for (int i = 0; i < mesh.num_halfedges(); i++) {
+        for (int i = 0; i < mesh.numHalfedges(); i++) {
             Halfedge *he = mesh.halfedge(i);
             if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
                 continue;

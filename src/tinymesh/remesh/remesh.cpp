@@ -25,7 +25,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
     Lvar = 0.0;
 
     count = 0;
-    for (int i = 0; i < mesh.num_halfedges(); i++) {
+    for (int i = 0; i < mesh.numHalfedges(); i++) {
         Halfedge *he = mesh.halfedge(i);
         const double l = he->length();
         Lavg += l;
@@ -44,19 +44,19 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
     // Remesh loop
     for (int k = 0; k < iterations; k++) {
         printf("*** Original #%d ***\n", k + 1);
-        printf("#vert: %d\n", (int)mesh.num_vertices());
-        printf("#face: %d\n", (int)mesh.num_faces());
+        printf("#vert: %d\n", (int)mesh.numVertices());
+        printf("#face: %d\n", (int)mesh.numFaces());
 
         // Split long edges
         indices.clear();
-        for (int i = 0; i < mesh.num_halfedges(); i++) {
+        for (int i = 0; i < mesh.numHalfedges(); i++) {
             indices.push_back(i);
         }
 
         std::shuffle(indices.begin(), indices.end(), rnd);
 
         for (int i : indices) {
-            if (i >= 0 && i < mesh.num_halfedges()) {
+            if (i >= 0 && i < mesh.numHalfedges()) {
                 Halfedge *he = mesh.halfedge(i);
                 if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
                     continue;
@@ -73,21 +73,21 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         }
 
         printf("*** After split ***\n");
-        printf("#vert: %d\n", (int)mesh.num_vertices());
-        printf("#face: %d\n", (int)mesh.num_faces());
+        printf("#vert: %d\n", (int)mesh.numVertices());
+        printf("#face: %d\n", (int)mesh.numFaces());
 
         mesh.verify();
 
         // Collapse short edges
         indices.clear();
-        for (int i = 0; i < mesh.num_halfedges(); i++) {
+        for (int i = 0; i < mesh.numHalfedges(); i++) {
             indices.push_back(i);
         }
 
         std::shuffle(indices.begin(), indices.end(), rnd);
 
         for (int i : indices) {
-            if (i >= 0 && i < mesh.num_halfedges()) {
+            if (i >= 0 && i < mesh.numHalfedges()) {
                 Halfedge *he = mesh.halfedge(i);
                 if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
                     continue;
@@ -118,11 +118,11 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         }
 
         printf("*** After collapse ***\n");
-        printf("#vert: %d\n", (int)mesh.num_vertices());
-        printf("#face: %d\n", (int)mesh.num_faces());
+        printf("#vert: %d\n", (int)mesh.numVertices());
+        printf("#face: %d\n", (int)mesh.numFaces());
 
         // Flip edges
-        for (int i = 0; i < mesh.num_halfedges(); i++) {
+        for (int i = 0; i < mesh.numHalfedges(); i++) {
             Halfedge *he = mesh.halfedge(i);
             if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
                 continue;

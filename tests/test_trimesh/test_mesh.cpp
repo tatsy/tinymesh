@@ -39,11 +39,12 @@ TEST_P(MeshTest, MeshLoad) {
     mesh.load(filename);
     ASSERT_TRUE(mesh.verify());
 
-    ASSERT_GT(mesh.num_vertices(), 0);
-    ASSERT_GT(mesh.num_faces(), 0);
-    ASSERT_GT(mesh.num_halfedges(), 0);
+    ASSERT_GT(mesh.numVertices(), 0);
+    ASSERT_GT(mesh.numFaces(), 0);
+    ASSERT_GT(mesh.numEdges(), 0);
+    ASSERT_GT(mesh.numHalfedges(), 0);
 
-    const int nVerts = mesh.num_vertices();
+    const int nVerts = mesh.numVertices();
     for (int i = 0; i < nVerts; i++) {
         ASSERT_GT(mesh.vertex(i)->degree(), 0);
     }

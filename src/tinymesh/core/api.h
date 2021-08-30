@@ -2,8 +2,8 @@
 #pragma once
 #endif
 
-#ifndef TINYMESH_COMMON_H
-#define TINYMESH_COMMON_H
+#ifndef TINYMESH_API_H
+#define TINYMESH_API_H
 
 #include <cmath>
 #include <cstdlib>
@@ -76,4 +76,4 @@ do { \
 
 
 
-#endif // TINYMESH_COMMON_H
+#endif // TINYMESH_API_H

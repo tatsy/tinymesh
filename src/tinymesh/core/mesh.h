@@ -44,6 +44,11 @@ public:
         return vertices_[index].get();
     }
 
+    Edge* edge(int index) const {
+        Assertion(index >= 0 && index < edges_.size(), "Edge index out of bounds!");
+        return edges_[index].get();
+    }
+
     Halfedge* halfedge(int index) const {
         Assertion(index >= 0 && index < halfedges_.size(), "Halfedge index out of bounds!");
         return halfedges_[index].get();
@@ -59,9 +64,10 @@ public:
     //! Compute mean curvature at a vertex
     double H(Vertex *v) const;
 
-    size_t num_vertices() { return vertices_.size(); }
-    size_t num_halfedges() { return halfedges_.size(); }
-    size_t num_faces() { return faces_.size(); }
+    size_t numVertices() { return vertices_.size(); }
+    size_t numEdges() { return edges_.size(); }
+    size_t numHalfedges() { return halfedges_.size(); }
+    size_t numFaces() { return faces_.size(); }
 
 private:
     // Private methods
