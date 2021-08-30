@@ -19,6 +19,8 @@ Here is the list of modules and reference papers for that.
     *   Laplacian smoothing
     *   Taubin smoothing [[Taubin 1995]](https://dl.acm.org/doi/10.1145/218380.218473)
     *   Implicit fairing [[Desbrun 1999]](https://dl.acm.org/doi/10.1145/311535.311576)
+*   **Denoising**
+    *   Normal Guassian filter [[Ohtake et al. 2001]](https://www.semanticscholar.org/paper/Mesh-Smoothing-by-Adaptive-and-Anisotropic-Gaussian-Ohtake-Belyaev/19b431c843f4b37d2218e7efcd8f64b6ff589c1f)
 *   **Remeshing**
     *   Uniform triangulation [[Hoppe 1996]](https://dl.acm.org/doi/10.1145/237170.237216)
 *   **Simplification**
@@ -63,30 +65,18 @@ $ ./build/bin/example_simplify data/models/bunny.ply
 
 ### Python module
 
-You can install the Python module using `setup.py`
+You can install the Python module using `Pip`.
 
 ```shell
-$ python setup.py install
+$ pip install git+https://github.com/tatsy/tinymesh.git \
+    --global-option=build_ext \
+    --global-option=/path/to/eigen3
 ```
 
-Also, you can pass the CMake build arguments to `setup.py`.
+You can also use `setup.py` directly for installation.
 
 ```shell
-$ python setup.py install --cmake-build-args "-DEIGEN3_INCLUDE_DIR=[Your Eigen3 Location]"
-```
-
-Alternatively, you can only build the module, which will be placed on the root of this repo.
-
-```shell
-$ python setup.py install -i
-```
-
-Otherwise, you can build the module also using `CMake`.
-
-```shell
-$ mkdir build && cd build
-$ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON_MODULE=ON ..
-$ cmake --build . --config Release --parallel 2
+$ python setup.py install -I/path/to/eigen3
 ```
 
 #### Run examples (Python)
@@ -110,4 +100,4 @@ The modules are not perfect and their process will fail for problematic meshes, 
 License
 ---
 
-Mozilla Public License v2 (c) Tatsuya Yatagawa 2020
+Mozilla Public License v2 (c) Tatsuya Yatagawa 2020-2021

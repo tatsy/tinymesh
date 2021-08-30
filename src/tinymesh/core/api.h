@@ -74,6 +74,4 @@ do { \
 #define Assertion(PREDICATE, ...) do {} while (false)
 #endif // NDEBUG
 
-
-
 #endif // TINYMESH_API_H
