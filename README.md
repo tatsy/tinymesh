@@ -50,18 +50,18 @@ Also, the module depends on Eigen for the linear algebra.
 You can build a shared library and all the examples by `CMake` with the following commands.
 
 ```shell
-$ git clone https://github.com/tatsy/tinymesh.git --depth 1
-$ cd tinymesh
-$ git submodule update --init --recursive
-$ mkdir build && cd build
-$ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON ..
-$ cmake --build . --config Release --parallel 2
+git clone https://github.com/tatsy/tinymesh.git --depth 1
+cd tinymesh
+git submodule update --init --recursive
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON ..
+cmake --build . --config Release --parallel 2
 ```
 
 #### Run examples (C++)
 
 ```shell
-$ ./build/bin/example_simplify data/models/bunny.ply
+./build/bin/example_simplify data/models/bunny.ply
 ```
 
 ### Python module
@@ -69,21 +69,21 @@ $ ./build/bin/example_simplify data/models/bunny.ply
 You can install the Python module using `Pip`.
 
 ```shell
-$ pip install git+https://github.com/tatsy/tinymesh.git
+pip install git+https://github.com/tatsy/tinymesh.git
 ```
 
 You can also use `poetry` to install from source codes.
 
 ```shell
-$ git clone https://github.com/tatsy/tinymesh
-$ cd tinymesh
-$ poetry install
+git clone https://github.com/tatsy/tinymesh
+cd tinymesh
+poetry install
 ```
 
 #### Run examples (Python)
 
 ```shell
-$ python examples/python/fill_and_fair.py data/models/bunny.ply
+python examples/python/fill_and_fair.py data/models/bunny.ply
 ```
 
 Screen shots
