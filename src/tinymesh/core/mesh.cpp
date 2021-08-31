@@ -115,10 +115,10 @@ std::vector<uint32_t> Mesh::getVertexIndices() const {
 }
 
 void Mesh::construct() {
-    for (int i = 0; i < indices_.size(); i += 3) {
+    for (size_t i = 0; i < indices_.size(); i += 3) {
         if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
             indices_[i + 2] == indices_[i + 0]) {
-            int size = (int)indices_.size();
+            const int size = (int)indices_.size();
             std::swap(indices_[i + 0], indices_[size - 3]);
             std::swap(indices_[i + 1], indices_[size - 2]);
             std::swap(indices_[i + 2], indices_[size - 1]);
@@ -127,12 +127,12 @@ void Mesh::construct() {
     }
 
     // Put vertex indices
-    for (int i = 0; i < vertices_.size(); i++) {
+    for (size_t i = 0; i < vertices_.size(); i++) {
         vertices_[i]->index_ = i;
     }
 
     // Check if all triangles consist of three distinct vertices
-    for (int i = 0; i < indices_.size(); i += 3) {
+    for (size_t i = 0; i < indices_.size(); i += 3) {
         if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
             indices_[i + 2] == indices_[i + 0]) {
             FatalError("Each triangle must have three distinct vertices!");
@@ -143,7 +143,7 @@ void Mesh::construct() {
     static const int degree = 3;
     std::map<IndexPair, Halfedge *> pairToHalfedge;
     std::map<uint32_t, uint32_t> vertexDegree;
-    for (int i = 0; i < indices_.size(); i += degree) {
+    for (int i = 0; i < (int)indices_.size(); i += degree) {
         // Check polygon duplication
         bool isDuplicated = false;
         for (int j = 0; j < degree; j++) {
@@ -434,6 +434,7 @@ void Mesh::saveOBJ(const std::string &filename) const {
         writer << "v " << v->pos().x() << " " << v->pos().y() << " " << v->pos().z() << std::endl;
     }
 
+    const int nv = (int)vertices_.size();
     for (const auto &f : faces_) {
         if (f->isBoundary()) {
             continue;
@@ -442,7 +443,7 @@ void Mesh::saveOBJ(const std::string &filename) const {
         const int i0 = f->halfedge_->src()->index();
         const int i1 = f->halfedge_->next()->src()->index();
         const int i2 = f->halfedge_->prev()->src()->index();
-        if (i0 < vertices_.size() && i1 <= vertices_.size() && i2 <= vertices_.size()) {
+        if (i0 < nv && i1 < nv && i2 < nv) {
             writer << "f " << (i0 + 1) << " " << (i1 + 1) << " " << (i2 + 1) << std::endl;
         }
     }
@@ -462,7 +463,7 @@ void Mesh::savePLY(const std::string &filename) const {
     }
 
     std::vector<float> vertexData(vertices_.size() * 3);
-    for (int i = 0; i < vertices_.size(); i++) {
+    for (size_t i = 0; i < vertices_.size(); i++) {
         const Vec3 v = vertices_[i]->pos();
         vertexData[i * 3 + 0] = (float)v.x();
         vertexData[i * 3 + 1] = (float)v.y();
@@ -668,8 +669,8 @@ bool Mesh::collapseHE(Halfedge *he) {
 
     Edge *e = he->edge_;
     Halfedge *rev = he->rev_;
-    Assertion(he->index_ < halfedges_.size(), "Daemon halfedge detected!");
-    Assertion(rev->index_ < halfedges_.size(), "Daemon halfedge detected!");
+    Assertion(he->index_ < (int)halfedges_.size(), "Daemon halfedge detected!");
+    Assertion(rev->index_ < (int)halfedges_.size(), "Daemon halfedge detected!");
 
     // Merge vertex to the one with smaller degree
     const int d0 = he->src()->degree();
@@ -689,10 +690,10 @@ bool Mesh::collapseHE(Halfedge *he) {
     Vertex *v2 = rev->src();
     Vertex *v3 = rev->prev()->src();
 
-    Assertion(v0->index_ < vertices_.size(), "Daemon vertex detected!");
-    Assertion(v1->index_ < vertices_.size(), "Daemon vertex detected!");
-    Assertion(v2->index_ < vertices_.size(), "Daemon vertex detected!");
-    Assertion(v3->index_ < vertices_.size(), "Daemon vertex detected!");
+    Assertion(v0->index_ < (int)vertices_.size(), "Daemon vertex detected!");
+    Assertion(v1->index_ < (int)vertices_.size(), "Daemon vertex detected!");
+    Assertion(v2->index_ < (int)vertices_.size(), "Daemon vertex detected!");
+    Assertion(v3->index_ < (int)vertices_.size(), "Daemon vertex detected!");
 
     if (v0->degree() <= 3 || v1->degree() <= 4 || v2->degree() <= 3 || v3->degree() <= 4) {
         return false;
@@ -723,8 +724,8 @@ bool Mesh::collapseHE(Halfedge *he) {
 
     // Check unsafe collapse (face flip)
     Vec3 norm(0.0);
-    for (int i = 0; i < neighbors.size(); i++) {
-        const int j = (i + 1) % neighbors.size();
+    for (size_t i = 0; i < neighbors.size(); i++) {
+        const size_t j = (i + 1) % neighbors.size();
         const Vec3 e1 = neighbors[i]->pos() - v2->pos();
         const Vec3 e2 = neighbors[j]->pos() - v2->pos();
         norm += cross(e1, e2);
@@ -737,8 +738,8 @@ bool Mesh::collapseHE(Halfedge *he) {
     norm = normalize(norm);
 
     double sign = 0.0;
-    for (int i = 0; i < neighbors.size(); i++) {
-        const int j = (i + 1) % neighbors.size();
+    for (size_t i = 0; i < neighbors.size(); i++) {
+        const size_t j = (i + 1) % neighbors.size();
         const Vec3 e1 = neighbors[i]->pos() - v0->pos();
         const Vec3 e2 = neighbors[j]->pos() - v0->pos();
         const double s = dot(norm, cross(e1, e2));
@@ -751,8 +752,8 @@ bool Mesh::collapseHE(Halfedge *he) {
     // Update origins of all outward halfedges
     Vertex *v_remove = v2;
     Vertex *v_remain = v0;
-    Assertion(v_remain->index() < vertices_.size(), "Something is wrong1!");
-    Assertion(v_remove->index() < vertices_.size(), "Something is wrong2!");
+    Assertion(v_remain->index() < (int)vertices_.size(), "Something is wrong1!");
+    Assertion(v_remove->index() < (int)vertices_.size(), "Something is wrong2!");
     Assertion(v_remove != v_remain, "Something is wrong3!");
     for (auto it = v_remove->ohe_begin(); it != v_remove->ohe_end(); ++it) {
         Assertion(it->src() == v_remove, "Invalid halfedge origin detected!");
@@ -982,7 +983,7 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
                 const double D = std::max(a01, a12);
                 const double WangleNew = std::max(D, std::max(Wangle(i, m), Wangle(m, k)));
 
-                if (WangleNew < Wangle(i, k) || abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k)) {
+                if (WangleNew < Wangle(i, k) || (abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k))) {
                     Warea(i, k) = WareaNew;
                     Wangle(i, k) = WangleNew;
                     O(i, k) = m;
@@ -1154,7 +1155,7 @@ double Mesh::H(Vertex *v) const {
 
 bool Mesh::verify() const {
     bool success = true;
-    for (int i = 0; i < vertices_.size(); i++) {
+    for (int i = 0; i < (int)vertices_.size(); i++) {
         Vertex *v = vertices_[i].get();
         if (v->index() != i) {
             Warn("Vertex index does not match array index: v[%d].index = %d", i, v->index());
@@ -1163,7 +1164,7 @@ bool Mesh::verify() const {
         success &= verifyVertex(v);
     }
 
-    for (int i = 0; i < edges_.size(); i++) {
+    for (int i = 0; i < (int)edges_.size(); i++) {
         Edge *e = edges_[i].get();
         if (e->index() != i) {
             Warn("Edge index does not match array index: e[%d].index = %d", i, e->index());
@@ -1176,7 +1177,7 @@ bool Mesh::verify() const {
         }
     }
 
-    for (int i = 0; i < halfedges_.size(); i++) {
+    for (int i = 0; i < (int)halfedges_.size(); i++) {
         auto he = halfedges_[i];
         if (he->index() != i) {
             Warn("Halfedge index does not match array index: he[%d].index = %d", i, he->index());
@@ -1189,7 +1190,7 @@ bool Mesh::verify() const {
         }
     }
 
-    for (int i = 0; i < faces_.size(); i++) {
+    for (int i = 0; i < (int)faces_.size(); i++) {
         auto f = faces_[i];
         if (f->index() != i) {
             Warn("Face index does not match array index: f[%d].index = %d", i, f->index());
@@ -1207,7 +1208,7 @@ bool Mesh::verify() const {
 
 bool Mesh::verifyVertex(Vertex *v) const {
     bool success = true;
-    if (v->index() >= vertices_.size()) {
+    if (v->index() >= (int)vertices_.size()) {
         fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)vertices_.size());
         success = false;
     }
@@ -1250,43 +1251,49 @@ void Mesh::addFace(Face *f) {
 }
 
 void Mesh::removeVertex(Vertex *v) {
+    const int nVerts = (int)vertices_.size();
     Assertion((*v) == (*vertices_[v->index_]), "Invalid vertex indexing!");
-    Assertion(v->index_ < vertices_.size(), "Vertex index out of range!");
+    Assertion(v->index_ < nVerts, "Vertex index out of range!");
 
-    if (v->index_ < vertices_.size() - 1) {
-        std::swap(vertices_[v->index_], vertices_[vertices_.size() - 1]);
-        std::swap(vertices_[v->index_]->index_, vertices_[vertices_.size() - 1]->index_);
+    if (v->index_ < nVerts - 1) {
+        std::swap(vertices_[v->index_], vertices_[nVerts - 1]);
+        std::swap(vertices_[v->index_]->index_, vertices_[nVerts - 1]->index_);
     }
-    vertices_.resize(vertices_.size() - 1);
+    vertices_.resize(nVerts - 1);
 }
 
 void Mesh::removeEdge(Edge *e) {
+    const int nEdges = (int)edges_.size();
     Assertion((*e) == (*edges_[e->index_]), "Invalid edge indexing!");
-    Assertion(e->index_ < edges_.size(), "Edge index out of range!");
+    Assertion(e->index_ < nEdges, "Edge index out of range!");
 
-    if (e->index_ < edges_.size() - 1) {
-        std::swap(edges_[e->index_], edges_[edges_.size() - 1]);
-        std::swap(edges_[e->index_]->index_, edges_[edges_.size() - 1]->index_);
+    if (e->index_ < nEdges - 1) {
+        std::swap(edges_[e->index_], edges_[nEdges - 1]);
+        std::swap(edges_[e->index_]->index_, edges_[nEdges - 1]->index_);
     }
-    edges_.resize(edges_.size() - 1);
+    edges_.resize(nEdges - 1);
 }
 
 void Mesh::removeHalfedge(Halfedge *he) {
+    const int nHEs = (int)halfedges_.size();
     Assertion((*he) == (*halfedges_[he->index_]), "Invalid halfedge indexing!");
+    Assertion(he->index_ < nHEs, "Halfedge index out of range!");
 
-    if (he->index_ < halfedges_.size() - 1) {
-        std::swap(halfedges_[he->index_], halfedges_[halfedges_.size() - 1]);
-        std::swap(halfedges_[he->index_]->index_, halfedges_[halfedges_.size() - 1]->index_);
+    if (he->index_ < nHEs - 1) {
+        std::swap(halfedges_[he->index_], halfedges_[nHEs - 1]);
+        std::swap(halfedges_[he->index_]->index_, halfedges_[nHEs - 1]->index_);
     }
-    halfedges_.resize(halfedges_.size() - 1);
+    halfedges_.resize(nHEs - 1);
 }
 
 void Mesh::removeFace(Face *f) {
+    const int nFaces = (int)faces_.size();
     Assertion((*f) == (*faces_[f->index_]), "Invalid face indexing!");
+    Assertion(f->index_ < nFaces, "Face index out of range!");
 
-    if (f->index_ < faces_.size() - 1) {
-        std::swap(faces_[f->index_], faces_[faces_.size() - 1]);
-        std::swap(faces_[f->index_]->index_, faces_[faces_.size() - 1]->index_);
+    if (f->index_ < nFaces - 1) {
+        std::swap(faces_[f->index_], faces_[nFaces - 1]);
+        std::swap(faces_[f->index_]->index_, faces_[nFaces - 1]->index_);
     }
     faces_.resize(faces_.size() - 1);
 }

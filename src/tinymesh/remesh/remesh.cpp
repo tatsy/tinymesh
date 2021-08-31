@@ -25,7 +25,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
     Lvar = 0.0;
 
     count = 0;
-    for (int i = 0; i < mesh.numHalfedges(); i++) {
+    for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
         Halfedge *he = mesh.halfedge(i);
         const double l = he->length();
         Lavg += l;
@@ -49,14 +49,14 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
 
         // Split long edges
         indices.clear();
-        for (int i = 0; i < mesh.numHalfedges(); i++) {
+        for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
             indices.push_back(i);
         }
 
         std::shuffle(indices.begin(), indices.end(), rnd);
 
         for (int i : indices) {
-            if (i >= 0 && i < mesh.numHalfedges()) {
+            if (i >= 0 && i < (int)mesh.numHalfedges()) {
                 Halfedge *he = mesh.halfedge(i);
                 if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
                     continue;
@@ -80,14 +80,14 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
 
         // Collapse short edges
         indices.clear();
-        for (int i = 0; i < mesh.numHalfedges(); i++) {
+        for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
             indices.push_back(i);
         }
 
         std::shuffle(indices.begin(), indices.end(), rnd);
 
         for (int i : indices) {
-            if (i >= 0 && i < mesh.numHalfedges()) {
+            if (i >= 0 && i < (int)mesh.numHalfedges()) {
                 Halfedge *he = mesh.halfedge(i);
                 if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
                     continue;
@@ -122,7 +122,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         printf("#face: %d\n", (int)mesh.numFaces());
 
         // Flip edges
-        for (int i = 0; i < mesh.numHalfedges(); i++) {
+        for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
             Halfedge *he = mesh.halfedge(i);
             if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
                 continue;

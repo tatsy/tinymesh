@@ -37,7 +37,7 @@ namespace tinymesh {
 void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
     // Average edge length
     double avgEdge = 0.0;
-    for (int e = 0; e < mesh.numEdges(); e++) {
+    for (int e = 0; e < (int)mesh.numEdges(); e++) {
         avgEdge += mesh.edge(e)->length();
     }
     avgEdge /= mesh.numEdges();
@@ -107,7 +107,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
 void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, int iterations) {
     // Average edge length
     double avgEdge = 0.0;
-    for (int e = 0; e < mesh.numEdges(); e++) {
+    for (int e = 0; e < (int)mesh.numEdges(); e++) {
         avgEdge += mesh.edge(e)->length();
     }
     avgEdge /= mesh.numEdges();

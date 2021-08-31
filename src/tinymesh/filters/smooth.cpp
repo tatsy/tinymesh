@@ -40,7 +40,7 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iter
             // Compute centroids
             Vec3 cent(0.0);
             double sum_weight = 0.0;
-            for (int i = 0; i < pts.size(); i++) {
+            for (int i = 0; i < (int)pts.size(); i++) {
                 double weight = 1.0;
                 if (cotangent_weight) {
                     const Vec3 &p0 = org;
@@ -64,7 +64,7 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iter
         }
 
         // Update vertex positions
-        omp_parallel_for(int i = 0; i < mesh.numVertices(); i++) {
+        omp_parallel_for(int i = 0; i < (int)mesh.numVertices(); i++) {
             Vertex *v = mesh.vertex(i);
             if (v->isBoundary() || v->isStatic()) {
                 continue;
@@ -89,7 +89,6 @@ void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
             Vertex *v = mesh.vertex(i);
 
             // Collect surrounding vertices
-            Vec3 org = v->pos();
             std::vector<Vec3> pts;
             for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
                 pts.push_back(vit->pos());
@@ -97,7 +96,7 @@ void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
 
             // Compute centroids
             Vec3 cent(0.0);
-            for (int i = 0; i < pts.size(); i++) {
+            for (int i = 0; i < (int)pts.size(); i++) {
                 cent += pts[i];
             }
             centroids[i] = cent / (double)pts.size();
@@ -105,7 +104,7 @@ void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
 
         // Update vertex positions
         const double epsilon = it % 2 == 0 ? shrink : -inflate;
-        omp_parallel_for(int i = 0; i < mesh.numVertices(); i++) {
+        omp_parallel_for(int i = 0; i < (int)mesh.numVertices(); i++) {
             Vertex *v = mesh.vertex(i);
             if (v->isBoundary() || v->isStatic()) {
                 continue;

@@ -7,7 +7,7 @@
 namespace tinymesh {
 
 void holeFill(Mesh& mesh, double dihedralBound) {
-    for (int i = 0; i < mesh.numFaces(); i++) {
+    for (int i = 0; i < (int)mesh.numFaces(); i++) {
         Face *f = mesh.face(i);
         if (f->isBoundary()) {
             mesh.triangulate(f, dihedralBound);

@@ -236,7 +236,6 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
         // Update for C_len
         {
             for (int vi = 0; vi < nVertices; vi++) {
-                Vertex *k = mesh.vertex(vi);
                 double prodForward = 1.0;
                 double prodBackward = 1.0;
                 for (int i = 0; i < (int)forwardGroup[vi].size(); i++) {
@@ -327,7 +326,6 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
     std::vector<Vec3> vertices;
     std::vector<uint32_t> indices;
     {
-        using Pair = std::pair<int, int>;
         std::queue<Halfedge *> S;
         std::vector<int> visited(nFaces, 0);
         std::unordered_map<int, Vec3> project;
@@ -401,7 +399,7 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
                 writer << "v " << v.x() << " " << v.y() << " " << v.z() << std::endl;
             }
 
-            for (int i = 0; i < indices.size(); i += 3) {
+            for (size_t i = 0; i < indices.size(); i += 3) {
                 writer << "f " << (indices[i + 0] + 1) << " " << (indices[i + 1] + 1) << " " << (indices[i + 2] + 1)
                        << std::endl;
             }

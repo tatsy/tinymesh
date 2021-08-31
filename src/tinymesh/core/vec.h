@@ -51,7 +51,7 @@ public:
             throw std::runtime_error("Dimensions do not match!");
         }
 
-        for (int i = 0; i < Dims; i++) {
+        for (size_t i = 0; i < Dims; i++) {
             elems[i] += other.elems[i];
         }
 
@@ -60,7 +60,7 @@ public:
 
     Vec operator-() const {
         Vec<Float, Dims> ret;
-        for (int i = 0; i < elems.size(); i++) {
+        for (size_t i = 0; i < elems.size(); i++) {
             ret.elems[i] = -elems[i];
         }
         return ret;

@@ -40,22 +40,22 @@ public:
     bool verify() const;
 
     Vertex* vertex(int index) const {
-        Assertion(index >= 0 && index < vertices_.size(), "Vertex index out of bounds!");
+        Assertion(index >= 0 && index < (int)vertices_.size(), "Vertex index out of bounds!");
         return vertices_[index].get();
     }
 
     Edge* edge(int index) const {
-        Assertion(index >= 0 && index < edges_.size(), "Edge index out of bounds!");
+        Assertion(index >= 0 && index < (int)edges_.size(), "Edge index out of bounds!");
         return edges_[index].get();
     }
 
     Halfedge* halfedge(int index) const {
-        Assertion(index >= 0 && index < halfedges_.size(), "Halfedge index out of bounds!");
+        Assertion(index >= 0 && index < (int)halfedges_.size(), "Halfedge index out of bounds!");
         return halfedges_[index].get();
     }
 
     Face* face(int index) const {
-        Assertion(index >= 0 && index < faces_.size(), "Face index out of bounds!");
+        Assertion(index >= 0 && index < (int)faces_.size(), "Face index out of bounds!");
         return faces_[index].get();
     }
 

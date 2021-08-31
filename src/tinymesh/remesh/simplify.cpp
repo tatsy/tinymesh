@@ -246,7 +246,7 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
 
                 const Vec3 n0 = cross(ps[2] - ps[0], ps[1] - ps[0]);
                 bool isFound = false;
-                for (int i = 0; i < vs.size(); i++) {
+                for (size_t i = 0; i < vs.size(); i++) {
                     if (vs[i] == v_i || vs[i] == v_j) {
                         ps[i] = v_bar;
                         isFound = true;
@@ -312,7 +312,7 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
         }
 
         // Flip edges
-        for (int i = 0; i < mesh.numHalfedges(); i++) {
+        for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
             Halfedge *he = mesh.halfedge(i);
             if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
                 continue;
