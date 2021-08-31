@@ -20,7 +20,7 @@ Here is the list of modules and reference papers for that.
     *   Taubin smoothing [[Taubin 1995]](https://dl.acm.org/doi/10.1145/218380.218473)
     *   Implicit fairing [[Desbrun 1999]](https://dl.acm.org/doi/10.1145/311535.311576)
 *   **Denoising**
-    *   Normal Guassian filter [[Ohtake et al. 2001]](https://www.semanticscholar.org/paper/Mesh-Smoothing-by-Adaptive-and-Anisotropic-Gaussian-Ohtake-Belyaev/19b431c843f4b37d2218e7efcd8f64b6ff589c1f)
+    *   Normal Gaussian filter [[Ohtake et al. 2001]](https://www.semanticscholar.org/paper/Mesh-Smoothing-by-Adaptive-and-Anisotropic-Gaussian-Ohtake-Belyaev/19b431c843f4b37d2218e7efcd8f64b6ff589c1f)
     *   Normal bilateral filter [[Zheng et al. 2011]](https://ieeexplore.ieee.org/document/5674028)
     *   L0 mesh smoothing [[He and Schaefer 2013]](https://dl.acm.org/doi/10.1145/2461912.2461965)
 *   **Remeshing**
