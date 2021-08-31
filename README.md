@@ -2,7 +2,6 @@ TinyMesh
 ===
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/2fd9a7f621e44654ad8b81bc38138662)](https://www.codacy.com/manual/tatsy/tinymesh?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tatsy/tinymesh&amp;utm_campaign=Badge_Grade)
-[![Build Status](https://travis-ci.com/tatsy/tinymesh.svg?branch=master)](https://travis-ci.com/tatsy/tinymesh)
 ![Windows CI](https://github.com/tatsy/tinymesh/workflows/Windows%20CI/badge.svg)
 ![MacOS CI](https://github.com/tatsy/tinymesh/workflows/MacOS%20CI/badge.svg)
 ![Ubuntu CI](https://github.com/tatsy/tinymesh/workflows/Ubuntu%20CI/badge.svg)
