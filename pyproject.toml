@@ -23,4 +23,7 @@ build = "build.py"
 [tool.poetry.dependencies]
 python = "^3.6"
 toml = "^0.9"
-pybind11 = { version = "^2.6" }
+pybind11 = "^2.6.1"
+
+[tool.poetry.dev-dependencies]
+nose = "^1.3"

@@ -41,10 +41,6 @@ jobs:
       run: |
         brew install llvm
 
-    - name: Install Eigen3
-      run: |
-        brew install eigen
-
     - name: Install Google Test
       env:
         C_COMPILER: ${{ matrix.compiler }}
@@ -105,11 +101,12 @@ jobs:
 
     - name: Setup Python Env
       run: |
-        pip install numpy nose matplotlib pybind11 plyfile
+        pip install poetry
+        poetry install
 
     - name: Python Module Build
       run: |
-        python setup.py build_ext -i -I/usr/local/include/eigen3
+        poetry build
 
     - name: Python Module Test
       run: |

@@ -24,6 +24,7 @@ test_config.h
 
 # Python cache files
 setup.py
+poetry.lock
 *.pyc
 *.pyd
 dist/*

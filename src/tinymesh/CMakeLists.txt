@@ -1,7 +1,7 @@
 # ----------
 # Common target names
 # ----------
-include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_LIST_DIR}/ext/eigen)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader)
 set(SOURCE_FILES ${SOURCE_FILES};${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader/tiny_obj_loader.h)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source)

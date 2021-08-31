@@ -11,7 +11,10 @@ sources = [str(path).replace('\\', '/') for path in sources]
 sources = [path for path in sources if all([not re.search(e, path) for e in exclude])]
 
 include_dirs = [
-    'src/tinymesh', 'src/tinymesh/ext/tinyobjloader', 'src/tinymesh/ext/tinyply/source'
+    'src/tinymesh',
+    'src/tinymesh/ext/tinyobjloader',
+    'src/tinymesh/ext/tinyply/source',
+    'src/tinymesh/ext/eigen',
 ]
 
 extra_compile_args = []

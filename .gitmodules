@@ -4,6 +4,6 @@
 [submodule "src/tinymesh/ext/tinyply"]
 	path = src/tinymesh/ext/tinyply
 	url = https://github.com/ddiakopoulos/tinyply
-[submodule "src/tinymesh/ext/pybind11"]
-	path = src/tinymesh/ext/pybind11
-	url = https://github.com/wjakob/pybind11
+[submodule "src/tinymesh/ext/eigen"]
+	path = src/tinymesh/ext/eigen
+	url = https://gitlab.com/libeigen/eigen.git
