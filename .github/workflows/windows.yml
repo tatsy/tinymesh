@@ -44,7 +44,6 @@ jobs:
         cd ${{ runner.workspace }}/build
         cmake "$env:GITHUB_WORKSPACE" `
           -G "Visual Studio 16 2019" -A x64 `
-          -DEIGEN3_INCLUDE_DIR="C:/Program Files/Eigen/include/eigen3" `
           -DGoogleTest_DIR="C:/Program Files/GoogleTest" `
           -DBUILD_TESTS=ON `
           -DBUILD_EXAMPLES=ON

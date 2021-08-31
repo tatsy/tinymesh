@@ -127,7 +127,7 @@ void Mesh::construct() {
     }
 
     // Put vertex indices
-    for (size_t i = 0; i < vertices_.size(); i++) {
+    for (int i = 0; i < (int)vertices_.size(); i++) {
         vertices_[i]->index_ = i;
     }
 
