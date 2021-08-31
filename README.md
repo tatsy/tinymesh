@@ -70,15 +70,15 @@ $ ./build/bin/example_simplify data/models/bunny.ply
 You can install the Python module using `Pip`.
 
 ```shell
-$ pip install git+https://github.com/tatsy/tinymesh.git \
-    --global-option=build_ext \
-    --global-option=/path/to/eigen3
+$ pip install git+https://github.com/tatsy/tinymesh.git
 ```
 
-You can also use `setup.py` directly for installation.
+You can also use `poetry` to install from source codes.
 
 ```shell
-$ python setup.py install -I/path/to/eigen3
+$ git clone https://github.com/tatsy/tinymesh
+$ cd tinymesh
+$ poetry install
 ```
 
 #### Run examples (Python)
@@ -97,7 +97,7 @@ Screen shots
 Notice
 ---
 
-The modules are not perfect and their process will fail for problematic meshes, e.g., with non-manifold faces. In such cases, you can fix the problem by repairing the mesh using [MeshFix](https://github.com/MarcoAttene/MeshFix-V2.1).
+The functions provided by this repo are not perfect and their process will fail for problematic meshes, e.g., with non-manifold faces. In such cases, you can fix the problem by repairing the mesh using [MeshFix](https://github.com/MarcoAttene/MeshFix-V2.1).
 
 License
 ---

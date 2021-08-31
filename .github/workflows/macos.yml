@@ -104,11 +104,7 @@ jobs:
         pip install poetry
         poetry install
 
-    - name: Python Module Build
-      run: |
-        poetry build
-
     - name: Python Module Test
       run: |
-        nosetests .
+        poetry run nose2
 

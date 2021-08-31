@@ -370,13 +370,13 @@ void Mesh::loadPLY(const std::string &filename) {
         try {
             norm_data = file.request_properties_from_element("vertex", { "nx", "ny", "nz" });
         } catch (std::exception &e) {
-            std::cerr << "tinyply exception: " << e.what() << std::endl;
+            // std::cerr << "tinyply exception: " << e.what() << std::endl;
         }
 
         try {
             uv_data = file.request_properties_from_element("vertex", { "u", "v" });
         } catch (std::exception &e) {
-            std::cerr << "tinyply exception: " << e.what() << std::endl;
+            // std::cerr << "tinyply exception: " << e.what() << std::endl;
         }
 
         try {
