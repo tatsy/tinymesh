@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=42", "poetry_core>=1.0.0", "pybind11~=2.6.1"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "tinymesh"
+version = "0.1.0"
+description = "TinyMesh: a light-weight mesh processing library"
+
+license = "MPL-v2"
+
+authors = [
+    "Tatsuya Yatagawa <tatsy.mail@gmail.com>"
+]
+readme = 'README.md'
+repository = "https://github.com/tatsy/tinymesh"
+homepage = "https://github.com/tatsy/tinymesh"
+
+keywords = ['graphics', 'geometry']
+
+build = "build.py"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+toml = "^0.9"
+pybind11 = { version = "^2.6" }

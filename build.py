@@ -2,7 +2,6 @@ import re
 import pathlib
 import platform
 
-from setuptools import setup
 from pybind11.setup_helpers import Pybind11Extension
 from setuptools.command.build_ext import build_ext
 
@@ -34,14 +33,11 @@ ext_modules = [
                       define_macros=define_macros)
 ]
 
-setup(
-    name='tinymesh',
-    version='0.1.0',
-    author='Tatsuya Yatagawa',
-    author_email='tatsy.mail@gmail.com',
-    description='TinyMesh is a light-weight mesh processing library',
-    long_description='',
-    license='MPL-v2',
-    ext_modules=ext_modules,
-    cmdclass={'build_ext': build_ext},
-)
+
+def build(setup_kwargs):
+    setup_kwargs.update({
+        'ext_modules': ext_modules,
+        'cmdclass': {
+            'build_ext': build_ext
+        },
+    })

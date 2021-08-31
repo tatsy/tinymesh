@@ -23,6 +23,7 @@ test_config.h
 *.dylib
 
 # Python cache files
+setup.py
 *.pyc
 *.pyd
 dist/*
