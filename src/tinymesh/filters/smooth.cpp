@@ -23,11 +23,11 @@ namespace tinymesh {
 void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iterations) {
     for (int it = 0; it < iterations; it++) {
         // Volonoi tessellation
-        const int nv = mesh.numVertices();
+        const int nv = (int)mesh.numVertices();
         std::vector<Vec3> centroids(nv);
 
         // Compute centroids and tangent planes
-        omp_parallel_for(int i = 0; i < mesh.numVertices(); i++) {
+        omp_parallel_for(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
 
             // Collect surrounding vertices
@@ -81,11 +81,11 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iter
 void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
     for (int it = 0; it < iterations * 2; it++) {
         // Volonoi tessellation
-        const int nv = mesh.numVertices();
+        const int nv = (int)mesh.numVertices();
         std::vector<Vec3> centroids(nv);
 
         // Compute centroids and tangent planes
-        omp_parallel_for(int i = 0; i < mesh.numVertices(); i++) {
+        omp_parallel_for(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
 
             // Collect surrounding vertices
@@ -127,7 +127,7 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
 
     for (int it = 0; it < iterations; it++) {
         // Indexing vertices
-        const int n_verts = mesh.numVertices();
+        const int n_verts = (int)mesh.numVertices();
         std::unordered_map<Vertex *, int64_t> v2i;
         for (int i = 0; i < n_verts; i++) {
             v2i.insert(std::make_pair(mesh.vertex(i), i));

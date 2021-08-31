@@ -232,7 +232,7 @@ void Mesh::construct() {
     }
 
     // Construct new faces (possibly non-triangle) for each boundary components
-    const int numHalfedges = halfedges_.size();
+    const auto numHalfedges = static_cast<int>(halfedges_.size());
     for (int i = 0; i < numHalfedges; i++) {
         auto &he = halfedges_[i];
         Assertion(he.get() != nullptr, "Null halfedge detected!");
@@ -270,7 +270,7 @@ void Mesh::construct() {
 
             face->halfedge_ = boundaryHalfedges.front();
 
-            const int degree = boundaryHalfedges.size();
+            const auto degree = static_cast<int>(boundaryHalfedges.size());
             for (int j = 0; j < degree; j++) {
                 const int k = (j - 1 + degree) % degree;
                 boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
@@ -369,13 +369,13 @@ void Mesh::loadPLY(const std::string &filename) {
 
         try {
             norm_data = file.request_properties_from_element("vertex", { "nx", "ny", "nz" });
-        } catch (std::exception &e) {
+        } catch (std::exception &) {
             // std::cerr << "tinyply exception: " << e.what() << std::endl;
         }
 
         try {
             uv_data = file.request_properties_from_element("vertex", { "u", "v" });
-        } catch (std::exception &e) {
+        } catch (std::exception &) {
             // std::cerr << "tinyply exception: " << e.what() << std::endl;
         }
 
@@ -464,9 +464,9 @@ void Mesh::savePLY(const std::string &filename) const {
     std::vector<float> vertexData(vertices_.size() * 3);
     for (int i = 0; i < vertices_.size(); i++) {
         const Vec3 v = vertices_[i]->pos();
-        vertexData[i * 3 + 0] = v.x();
-        vertexData[i * 3 + 1] = v.y();
-        vertexData[i * 3 + 2] = v.z();
+        vertexData[i * 3 + 0] = (float)v.x();
+        vertexData[i * 3 + 1] = (float)v.y();
+        vertexData[i * 3 + 2] = (float)v.z();
     }
 
     std::vector<uint32_t> indexData;

@@ -29,7 +29,7 @@ struct UnionFindTree {
 
     explicit UnionFindTree(size_t n)
         : n{ n }
-        , values{ } {
+        , values{} {
         values.assign(n, -1);
     }
 
@@ -113,7 +113,7 @@ double computeQEM(const Matrix4 &m1, const Matrix4 &m2, const Vertex &v1, const 
 
 void simplifyQEM(Mesh &mesh, int numTarget) {
     static const double Eps = 1.0e-12;
-    const int numTargetRemove = mesh.numVertices() - numTarget;
+    const int numTargetRemove = (int)mesh.numVertices() - numTarget;
     if (numTarget <= 0) {
         Warn("#vertices is already less than #target: %d < %d", (int)mesh.numVertices(), numTarget);
         return;
@@ -160,10 +160,8 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
             const double d = -dot(norm, vs[0]->pos());
 
             Matrix4 Kp;
-            Kp << nx * nx, nx * ny, nx * nz, nx * d,
-                  ny * nx, ny * ny, ny * nz, ny * d,
-                  nz * nx, nz * ny, nz * nz, nz * d,
-                   d * nx,  d * ny,  d * nz,  d * d;
+            Kp << nx * nx, nx * ny, nx * nz, nx * d, ny * nx, ny * ny, ny * nz, ny * d, nz * nx, nz * ny, nz * nz,
+                nz * d, d * nx, d * ny, d * nz, d * d;
 
             Qs[vs[0]->index()] += Kp;
             Qs[vs[1]->index()] += Kp;
@@ -216,7 +214,7 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
 
             // Check face flip
             bool isFlip = false;
-            std::vector<Face*> faces;
+            std::vector<Face *> faces;
             for (auto it = v_i->f_begin(); it != v_i->f_end(); ++it) {
                 faces.push_back(it.ptr());
             }
@@ -228,7 +226,7 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
             for (Face *f : faces) {
                 bool has_i = false;
                 bool has_j = false;
-                std::vector<Vertex*> vs;
+                std::vector<Vertex *> vs;
                 std::vector<Vec3> ps;
                 for (auto it = f->v_begin(); it != f->v_end(); ++it) {
                     vs.push_back(it.ptr());
@@ -274,11 +272,11 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
             }
 
             // Check face degeneration
-            std::set<Vertex*> s_i;
+            std::set<Vertex *> s_i;
             for (auto it = v_i->v_begin(); it != v_i->v_end(); ++it) {
                 s_i.insert(it.ptr());
             }
-            std::vector<Vertex*> neighbors;
+            std::vector<Vertex *> neighbors;
             for (auto it = v_j->v_begin(); it != v_j->v_end(); ++it) {
                 if (s_i.count(it.ptr()) != 0) {
                     neighbors.push_back(it.ptr());

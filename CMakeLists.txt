@@ -67,7 +67,7 @@ set(CMAKE_DEBUG_POSTFIX "-debug")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if (MSVC)
-    add_compile_options("/wd4251")
+    add_compile_options("/wd4251" "/wd4819")
 endif()
 
 if (APPLE)

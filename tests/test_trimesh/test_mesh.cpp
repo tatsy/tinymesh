@@ -44,7 +44,7 @@ TEST_P(MeshTest, MeshLoad) {
     ASSERT_GT(mesh.numEdges(), 0);
     ASSERT_GT(mesh.numHalfedges(), 0);
 
-    const int nVerts = mesh.numVertices();
+    const int nVerts = (int)mesh.numVertices();
     for (int i = 0; i < nVerts; i++) {
         ASSERT_GT(mesh.vertex(i)->degree(), 0);
     }

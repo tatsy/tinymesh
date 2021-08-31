@@ -47,7 +47,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
         smoothTaubin(mesh);
 
         // Compute normals, centroids, and areas
-        const int nf = mesh.numFaces();
+        const int nf = (int)mesh.numFaces();
         std::vector<Vec3> normals(nf);
         std::vector<Vec3> centroids(nf);
         std::vector<double> areas(nf);
@@ -87,7 +87,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
         }
 
         // Update vertex positions
-        const int nv = mesh.numVertices();
+        const int nv = (int)mesh.numVertices();
         omp_parallel_for(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
 
@@ -117,7 +117,7 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
         smoothTaubin(mesh);
 
         // Compute normals, centroids, and areas
-        const int nf = mesh.numFaces();
+        const int nf = (int)mesh.numFaces();
         std::vector<Vec3> normals(nf);
         std::vector<Vec3> centroids(nf);
         std::vector<double> areas(nf);
@@ -161,7 +161,7 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
         }
 
         // Update vertex positions
-        const int nv = mesh.numVertices();
+        const int nv = (int)mesh.numVertices();
         omp_parallel_for(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
 
@@ -179,8 +179,8 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
 }
 
 void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
-    const int ne = mesh.numEdges();
-    const int nv = mesh.numVertices();
+    const int ne = (int)mesh.numEdges();
+    const int nv = (int)mesh.numVertices();
 
     // Construct sparse matrices D and R
     std::vector<EigenTriplet> tripR;

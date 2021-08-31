@@ -143,7 +143,7 @@ TEST_P(VecUnaryTest, NormAndNormalize) {
         EXPECT_EQ(v1.x() / nrm, w.x());
         EXPECT_EQ(v1.y() / nrm, w.y());
         EXPECT_EQ(v1.z() / nrm, w.z());
-        EXPECT_FLOAT_EQ(length(w), 1.0);
+        EXPECT_DOUBLE_EQ(length(w), 1.0);
     } else {
         ASSERT_DEATH(normalize(v1), "");
     }

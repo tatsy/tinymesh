@@ -25,8 +25,8 @@ public:
         auto now = std::chrono::system_clock::now();
 
         const double percent = 100.0 * m_step / m_total;
-        const double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-        const double time_msec_per_step = elapsed / m_step;
+        const int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+        const double time_msec_per_step = (double)elapsed / (double)m_step;
         const double rest_time = time_msec_per_step * (m_total - m_step);
 
         const int n_min = (int)(elapsed / 1000.0) / 60;

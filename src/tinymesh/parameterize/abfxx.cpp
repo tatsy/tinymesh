@@ -89,8 +89,8 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
     }
 
     // Compute average edge length
-    const int nFaces = mesh.numFaces();
-    const int nVertices = mesh.numVertices();
+    const int nFaces = (int)mesh.numFaces();
+    const int nVertices = (int)mesh.numVertices();
     double avgLength = 0.0;
     for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
         avgLength += mesh.halfedge(i)->length();
