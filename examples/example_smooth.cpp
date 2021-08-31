@@ -11,8 +11,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    const double ratio = argc <= 2 ? 0.1 : atof(argv[2]);
-
     // Basename of input file
     const fs::path filepath = fs::canonical(fs::path(argv[1]));
     const fs::path dirpath = filepath.parent_path();

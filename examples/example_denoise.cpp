@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
             mesh::holeFill(mesh, Pi / 6.0);
 
             // Add noise
-            for (int i = 0; i < mesh.numVertices(); i++) {
+            for (int i = 0; i < (int)mesh.numVertices(); i++) {
                 const Vec3 pos = mesh.vertex(i)->pos();
                 const Vec3 noise = Vec3(dist(mt), dist(mt), dist(mt));
                 mesh.vertex(i)->setPos(pos + noise);

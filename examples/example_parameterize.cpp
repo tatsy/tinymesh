@@ -13,9 +13,6 @@ int main(int argc, char **argv) {
 
     // Load
     mesh::Mesh mesh(argv[1]);
-    for (int i = 0; i < mesh.numFaces(); i++) {
-        mesh.face(i)->setIsStatic(true);
-    }
 
     // Fill holes & remesh
     mesh::holeFill(mesh, Pi / 6.0);
