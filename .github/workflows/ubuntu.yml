@@ -29,17 +29,21 @@ jobs:
     - name: Set up Python version
       uses: actions/setup-python@v2
       with:
-        python-version: 3.6
+        python-version: 3.7
 
     - name: Install GNU C/C++ Compiler
       if: ${{ matrix.compiler == 'gcc' }}
       run: |
         sudo apt-get install -y gcc-9 g++-9
+        export GNU_CC=gcc-9
+        export GNU_CXX=g++-9
 
     - name: Install LLVM Clang
       if: ${{ matrix.compiler == 'clang' }}
       run: |
         sudo apt-get install -y clang-10 clang++-10
+        export LLVM_CC=clang-10
+        export LLVM_CXX=clang++-10
 
     - name: Install Google Test
       env:

@@ -1,5 +1,5 @@
 #define TINYMESH_API_EXPORT
-#include "abfxx.h"
+#include "parameterize.h"
 
 #include <iostream>
 #include <fstream>
@@ -10,21 +10,15 @@
 #include <map>
 #include <unordered_map>
 
-using Float = double;
-#include <Eigen/Core>
-using EigenMatrix = Eigen::Matrix<Float, Eigen::Dynamic, Eigen::Dynamic>;
-using EigenVector = Eigen::Matrix<Float, Eigen::Dynamic, 1>;
-#include <Eigen/SparseCore>
-using EigenTriplet = Eigen::Triplet<Float>;
-using EigenSparse = Eigen::SparseMatrix<Float>;
-#include <Eigen/IterativeLinearSolvers>
-using LinearSolver = Eigen::LeastSquaresConjugateGradient<EigenSparse>;
-
 #include "core/vertex.h"
 #include "core/face.h"
 #include "core/mesh.h"
 #include "core/halfedge.h"
 
+#define EIGEN_ENABLE_SPARSE
+#include "core/eigen.h"
+#include <Eigen/IterativeLinearSolvers>
+using LinearSolver = Eigen::LeastSquaresConjugateGradient<EigenSparseMatrix>;
 
 namespace {
 
@@ -37,9 +31,18 @@ double calcAngle(const Vec3 &p0, const Vec3 &p1, const Vec3 &p2) {
 }  // anonymous namespace
 
 struct AngleData {
-    AngleData() {}
-    AngleData(int t, int k) : t(t), k(k) {}
-    AngleData(int t, int k, int i, double a) : t(t), k(k), i(i), a(a) {}
+    AngleData() {
+    }
+    AngleData(int t, int k)
+        : t(t)
+        , k(k) {
+    }
+    AngleData(int t, int k, int i, double a)
+        : t(t)
+        , k(k)
+        , i(i)
+        , a(a) {
+    }
 
     bool operator==(const AngleData &other) const {
         return t == other.t && k == other.k;
@@ -66,6 +69,10 @@ struct hash<AngleData> {
 }  // namespace std
 
 namespace tinymesh {
+
+// See the paper:
+// A. Sheffer and E. de Sturler, 2001
+// "Parameterization of Faceted Surfaces for Meshing using Angle-Based Flattening"
 
 void abfxx(Mesh &mesh, int maxiter, double epsilon) {
     // Check input mesh indices
@@ -96,7 +103,7 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
     int count = 0;
     for (int faceID = 0; faceID < (int)mesh.numFaces(); faceID++) {
         Face *t = mesh.face(faceID);
-        std::vector<Vertex*> vs;
+        std::vector<Vertex *> vs;
         for (auto vit = t->v_begin(); vit != t->v_end(); ++vit) {
             vs.push_back(vit.ptr());
         }
@@ -148,7 +155,7 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
     // Optimization loop
     int constID = 0;
     EigenVector invL(nAngles);
-    EigenSparse J(nConstraints, nAngles);
+    EigenSparseMatrix J(nConstraints, nAngles);
     EigenVector b1(nAngles);
     EigenVector b2(nConstraints);
     EigenVector deltaAlpha = EigenVector::Zero(nAngles);
@@ -291,7 +298,7 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
 
         // Update
         EigenVector b_star = J * (invL.asDiagonal() * b1) - b2;
-        EigenSparse AA = J * (invL.asDiagonal() * J.transpose());
+        EigenSparseMatrix AA = J * (invL.asDiagonal() * J.transpose());
         LinearSolver solver;
         solver.compute(AA);
         deltaLambda = solver.solve(b_star);
@@ -315,10 +322,7 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
         }
     }
 
-    // Flattening
-    // See the paper:
-    // A. Sheffer and E. de Sturler, 2001
-    // "Parameterization  of  Faceted  Surfaces  for  Meshing  using  Angle-BasedFlattening"
+    // Post-processing (remove boundary intersection)
     std::unordered_map<Vec3, uint32_t> uniqueVertices;
     std::vector<Vec3> vertices;
     std::vector<uint32_t> indices;
@@ -373,7 +377,8 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
                 project[c] = vc;
             }
 
-            if (length(va - vb) > avgLength * 2.0 || length(vb - vc) > avgLength * 2.0 || length(vc - va) > avgLength * 2.0) {
+            if (length(va - vb) > avgLength * 2.0 || length(vb - vc) > avgLength * 2.0 ||
+                length(vc - va) > avgLength * 2.0) {
                 continue;
             }
 
@@ -387,7 +392,7 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
 
             S.push(he->next()->rev());
             S.push(he->next()->next()->rev());
-       }
+        }
 
         // Save
         std::ofstream writer("project.obj", std::ios::out);
@@ -397,9 +402,8 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
             }
 
             for (int i = 0; i < indices.size(); i += 3) {
-                writer << "f " << (indices[i + 0] + 1)
-                       << " "  << (indices[i + 1] + 1)
-                       << " "  << (indices[i + 2] + 1) << std::endl;
+                writer << "f " << (indices[i + 0] + 1) << " " << (indices[i + 1] + 1) << " " << (indices[i + 2] + 1)
+                       << std::endl;
             }
         }
         writer.close();

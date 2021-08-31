@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python version
       uses: actions/setup-python@v2
       with:
-        python-version: 3.6
+        python-version: 3.7
 
     - name: Checkout submodules
       run: git submodule update --init --recursive

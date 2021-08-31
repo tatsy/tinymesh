@@ -18,5 +18,6 @@
 
 #include "remesh/remesh.h"
 #include "filters/filters.h"
+#include "parameterize/parameterize.h"
 
 #endif  // TINYMESH_H

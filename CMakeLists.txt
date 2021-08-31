@@ -17,11 +17,7 @@ if (UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fPIC -Wall")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O2")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
-    if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-        set(CXX_FS_LIBRARY "")
-    else()
-        set(CXX_FS_LIBRARY "stdc++fs")
-    endif()
+    set(CXX_FS_LIBRARY "stdc++fs")
 endif()
 
 # ----------

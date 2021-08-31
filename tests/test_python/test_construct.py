@@ -13,11 +13,41 @@ CWD = os.getcwd()
 
 
 class TestConstruct(unittest.TestCase):
-    def test_io(self):
+    def test_obj_io(self):
+        filename = os.path.join(CWD, 'data/models/torus.obj')
+        base, ext = os.path.splitext(filename)
+        try:
+            mesh = Mesh(filename)
+        except Exception:
+            self.fail('Failed to load mesh!')
+
+        self.assertGreater(mesh.num_vertices(), 0)
+        self.assertGreater(mesh.num_faces(), 0)
+        self.assertGreater(mesh.num_edges(), 0)
+        self.assertGreater(mesh.num_halfedges(), 0)
+
+        try:
+            mesh.save(base + '_test' + ext)
+        except Exception:
+            self.fail('Failed to save mesh!')
+
+    def test_ply_io(self):
         filename = os.path.join(CWD, 'data/models/bunny.ply')
         base, ext = os.path.splitext(filename)
-        mesh = Mesh(filename)
-        mesh.save(base + '_test' + ext)
+        try:
+            mesh = Mesh(filename)
+        except Exception:
+            self.fail('Failed to load mesh!')
+
+        self.assertGreater(mesh.num_vertices(), 0)
+        self.assertGreater(mesh.num_faces(), 0)
+        self.assertGreater(mesh.num_edges(), 0)
+        self.assertGreater(mesh.num_halfedges(), 0)
+
+        try:
+            mesh.save(base + '_test' + ext)
+        except Exception:
+            self.fail('Failed to save mesh!')
 
     def test_tetrahedron(self):
         # Construct a simple tetrahedron

@@ -22,10 +22,16 @@ define_macros = []
 if platform.system() == "Windows":
     define_macros.append(('_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING', 1))
 elif platform.system() == "Darwin":
-    extra_compile_args.append('-std=c++17')
-    extra_compile_args.append('-mmacosx-version-min=10.15')
+    extra_compile_args.extend([
+        '-std=c++17',
+        '-lstdc++fs',
+        '-mmacosx-version-min=10.15',
+    ])
 else:
-    extra_compile_args.append('-std=c++17')
+    extra_compile_args.extend([
+        '-std=c++17',
+        '-lstdc++fs',
+    ])
 
 ext_modules = [
     Pybind11Extension('tinymesh',

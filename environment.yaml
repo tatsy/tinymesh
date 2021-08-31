@@ -9,5 +9,6 @@ dependencies:
   - flake8
   - mypy
   - yapf
+  - pip
   - pip:
     - plyfile

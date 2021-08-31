@@ -29,17 +29,21 @@ jobs:
     - name: Set up Python version
       uses: actions/setup-python@v2
       with:
-        python-version: 3.6
+        python-version: 3.7
 
     - name: Install GNU C/C++ Compiler
       if: ${{ matrix.compiler == 'gcc' }}
       run: |
         brew install gcc@9
+        export GNU_CC=gcc-9
+        export GNU_CXX=g++-9
 
     - name: Install LLVM Clang
       if: ${{ matrix.compiler == 'clang' }}
       run: |
         brew install llvm
+        export LLVM_CC=clang-10
+        export LLVM_CXX=clang++-10
 
     - name: Install Google Test
       env:

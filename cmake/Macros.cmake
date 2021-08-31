@@ -25,7 +25,7 @@ function(ADD_EXAMPLE)
     add_dependencies(${EXP_EXE_NAME} ${TINYMESH_LIBRARY})
 
     target_include_directories(${EXP_EXE_NAME} PRIVATE ${TINYMESH_INCLUDE_DIR})
-    target_link_libraries(${EXP_EXE_NAME} PRIVATE ${TINYMESH_LIBRARY} ${CXX_FS_LIBRARY})
+    target_link_libraries(${EXP_EXE_NAME} PRIVATE ${TINYMESH_LIBRARY})
 
     set_target_properties(${EXP_EXE_NAME} PROPERTIES FOLDER "Examples")
     set_target_properties(${EXP_EXE_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})

@@ -655,14 +655,16 @@ bool Mesh::splitHE(Halfedge *he) {
 }
 
 bool Mesh::collapseHE(Halfedge *he) {
-    // Collapse halfedge v0->v2.
-    //       v1
-    //     /  \
-    //    /    \
-    //  v0 ---- v2
-    //    \    /
-    //     \  /
-    //      v3
+    /*
+     *  Collapse halfedge v0->v2.
+     *         v1
+     *       /  \
+     *      /    \
+     *    v0 ---- v2
+     *      \    /
+     *       \  /
+     *        v3
+     */
 
     Edge *e = he->edge_;
     Halfedge *rev = he->rev_;

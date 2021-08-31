@@ -63,7 +63,7 @@ public:
         for (int i = 0; i < elems.size(); i++) {
             ret.elems[i] = -elems[i];
         }
-        return std::move(ret);
+        return ret;
     }
 
     Vec &operator-=(const Vec &other) {
