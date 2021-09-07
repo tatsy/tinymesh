@@ -10,9 +10,9 @@ def main(filename):
     mesh = Mesh(filename)
 
     # Freeze faces
-    for i in range(mesh.num_faces()):
-        f = mesh.face(i)
-        f.set_is_static(True)
+    for i in range(mesh.num_vertices()):
+        v = mesh.vertex(i)
+        v.set_is_static(True)
 
     # Fill holes
     hole_fill(mesh, np.pi / 6.0)

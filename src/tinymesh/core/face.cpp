@@ -1,6 +1,7 @@
 #define TINYMESH_API_EXPORT
 #include "face.h"
 
+#include "vertex.h"
 #include "halfedge.h"
 
 namespace tinymesh {
@@ -12,8 +13,25 @@ bool Face::operator==(const Face &other) const {
     bool ret = true;
     ret &= (halfedge_ == other.halfedge_);
     ret &= (index_ == other.index_);
-    ret &= (isBoundary_ == other.isBoundary_);
     return ret;
+}
+
+bool Face::isBoundary() {
+    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
+        if (vit->isBoundary()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Face::isStatic() {
+    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
+        if (vit->isStatic()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 Face::VertexIterator Face::v_begin() {

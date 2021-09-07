@@ -8,6 +8,7 @@
 #include <set>
 #include <queue>
 #include <map>
+#include <numeric>
 #include <unordered_map>
 
 #include "core/vertex.h"
@@ -88,9 +89,39 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
         }
     }
 
-    // Compute average edge length
+    // Compute distortion of each edge
     const int nFaces = (int)mesh.numFaces();
     const int nVertices = (int)mesh.numVertices();
+    std::vector<double> sumAngles(nVertices);
+    std::vector<double> sumDiheds(nVertices);
+    for (int i = 0; i < nVertices; i++) {
+        Vertex *v = mesh.vertex(i);
+        std::vector<Vec3> neighbors;
+        for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
+            neighbors.push_back(vit->pos());
+        }
+
+        const auto nn = static_cast<int>(neighbors.size());
+        const Vec3 p0 = v->pos();
+        sumAngles[i] = 0.0;
+        sumDiheds[i] = 0.0;
+        for (int j = 0; j < nn; j++) {
+            const int k = (j + 1) % nn;
+            const int l = (j - 1 + nn) % nn;
+            const Vec3 p1 = neighbors[l];
+            const Vec3 p2 = neighbors[j];
+            const Vec3 p3 = neighbors[l];
+            const Vec3 e1 = normalize(p1 - p0);
+            const Vec3 e2 = normalize(p2 - p0);
+            sumAngles[i] += std::acos(dot(e1, e2));
+            sumDiheds[i] += dihedral(p1, p0, p2, p3);
+        }
+    }
+
+    // Select seed nodes
+
+
+    // Compute average edge length
     double avgLength = 0.0;
     for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
         avgLength += mesh.halfedge(i)->length();
@@ -101,7 +132,7 @@ void abfxx(Mesh &mesh, int maxiter, double epsilon) {
     // Traverse all the angles
     std::vector<AngleData> angles;
     int count = 0;
-    for (int faceID = 0; faceID < (int)mesh.numFaces(); faceID++) {
+    for (int faceID = 0; faceID < nFaces; faceID++) {
         Face *t = mesh.face(faceID);
         std::vector<Vertex *> vs;
         for (auto vit = t->v_begin(); vit != t->v_end(); ++vit) {

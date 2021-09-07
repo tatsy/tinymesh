@@ -15,7 +15,7 @@
 
 namespace tinymesh {
 
-void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double angleThresh, int iterations) {
+void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double keepAngleLessThan, int iterations) {
     Assertion(mesh.verify(), "Invalid mesh!");
 
     // Compute average edge length
@@ -35,6 +35,33 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
 
     Lavg = Lavg / count;
     Lvar = Lvar / count - Lavg * Lavg;
+
+    // Check whether each vertex is on feature line
+    std::vector<double> minDiheds(mesh.numVertices(), Pi);
+    for (int i = 0; i < (int)mesh.numVertices(); i++) {
+        Vertex *v = mesh.vertex(i);
+        std::vector<Vec3> neighbors;
+        for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
+            neighbors.push_back(vit->pos());
+        }
+
+        const auto nn = static_cast<int>(neighbors.size());
+        for (int j = 0; j < nn; j++) {
+            const int k = (j + 1) % nn;
+            const int l = (j - 1 + nn) % nn;
+
+            const Vec3 p0 = v->pos();
+            const Vec3 p1 = neighbors[j];
+            const Vec3 p2 = neighbors[k];
+            const Vec3 p3 = neighbors[l];
+            const double dihed = dihedral(p2, p0, p1, p3);
+            minDiheds[i] = std::min(dihed, minDiheds[i]);
+        }
+
+        if (minDiheds[i] < keepAngleLessThan) {
+            v->setIsStatic(true);
+        }
+    }
 
     // Initialize random number generator
     std::vector<uint32_t> indices;
@@ -58,10 +85,6 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         for (int i : indices) {
             if (i >= 0 && i < (int)mesh.numHalfedges()) {
                 Halfedge *he = mesh.halfedge(i);
-                if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
-                    continue;
-                }
-
                 const Vec3 p1 = he->src()->pos();
                 const Vec3 p2 = he->dst()->pos();
                 const double l = length(p1 - p2);
@@ -90,6 +113,12 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
             if (i >= 0 && i < (int)mesh.numHalfedges()) {
                 Halfedge *he = mesh.halfedge(i);
                 if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
+                    continue;
+                }
+
+                const int i1 = he->src()->index();
+                const int i2 = he->dst()->index();
+                if (he->src()->isStatic() || he->dst()->isStatic()) {
                     continue;
                 }
 
@@ -137,18 +166,9 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
             Vertex *v2 = he->next()->dst();
             Vertex *v3 = he->rev()->next()->dst();
 
-            // Compute dihedral angle before and after flip
-            const Vec3 p0 = v0->pos();
-            const Vec3 p1 = v1->pos();
-            const Vec3 p2 = v2->pos();
-            const Vec3 p3 = v3->pos();
-            const Vec3 n0 = cross(p1 - p0, p2 - p0);
-            const Vec3 n1 = cross(p1 - p0, p3 - p0);
-            if (length(n0) == 0.0 || length(n1) == 0.0) {
+            if (v0->isStatic() || v1->isStatic()) {
                 continue;
             }
-
-            if (dot(n0, n1) / (length(n0) * length(n1)) > angleThresh) continue;
 
             const int d0 = v0->degree();
             const int d1 = v1->degree();

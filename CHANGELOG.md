@@ -1,6 +1,7 @@
 v.0.1.1
 ---
 
+*   Add feature preservation in remeshing.
 *   Include Eigen to repo as a submodule.
 *   Update Python setup to use Poetry.
 *   Add mesh denoising via bilateral filter [Zheng et al. 2011] and L0 smoothing [He and Schaefer 2013].

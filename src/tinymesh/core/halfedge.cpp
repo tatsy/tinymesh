@@ -23,8 +23,12 @@ double Halfedge::length() const {
     return ::length(src()->pos() - dst()->pos());
 }
 
+bool Halfedge::isStatic() const {
+    return this->src()->isStatic() && this->dst()->isStatic();
+}
+
 bool Halfedge::isBoundary() const {
-    return face_->isBoundary();
+    return this->src()->isBoundary() && this->dst()->isBoundary();
 }
 
 }  // namespace tinymesh

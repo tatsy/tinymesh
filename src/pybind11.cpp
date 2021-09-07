@@ -70,14 +70,13 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("pos", &Vertex::pos)
         .def("set_pos", &Vertex::setPos)
         .def("is_boundary", &Vertex::isBoundary)
-        .def("is_static", &Vertex::isStatic);
+        .def("is_static", &Vertex::isStatic)
+        .def("set_is_static", &Vertex::setIsStatic);
 
     py::class_<Face, std::shared_ptr<Face>>(m, "Face")
         .def(py::init<>())
         .def("is_boundary", &Face::isBoundary)
-        .def("is_static", &Face::isStatic)
-        .def("set_is_static", &Face::setIsStatic);
-
+        .def("is_static", &Face::isStatic);
 
     /*** Smoothing ***/
 
@@ -129,7 +128,7 @@ PYBIND11_MODULE(tinymesh, m) {
           py::arg("mesh"),
           py::arg("short_length") = 0.8,
           py::arg("long_length") = 1.333,
-          py::arg("angle_thresh") = 0.2,
+          py::arg("angle_keep_less_than") = 0.0,
           py::arg("iterations") = 5);
 
     /*** Simplification ***/

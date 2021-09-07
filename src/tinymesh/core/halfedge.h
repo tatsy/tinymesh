@@ -40,6 +40,7 @@ public:
     Edge *edge() const { return edge_; }
     Face *face() const { return face_; }
     int index() const { return index_; }
+    bool isStatic() const;
     bool isBoundary() const;
 
 private:

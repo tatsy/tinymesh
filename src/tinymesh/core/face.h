@@ -36,21 +36,13 @@ public:
     int index() const {
         return index_;
     }
-    bool isBoundary() const {
-        return isBoundary_;
-    }
-    bool isStatic() const {
-        return isStatic_;
-    }
-    void setIsStatic(bool flag) {
-        isStatic_ = flag;
-    }
+
+    bool isBoundary();
+    bool isStatic();
 
 private:
     Halfedge *halfedge_ = nullptr;
     int index_ = -1;
-    bool isBoundary_ = false;
-    bool isStatic_ = false;
 
     friend class Mesh;
 };

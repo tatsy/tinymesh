@@ -239,7 +239,6 @@ void Mesh::construct() {
         if (he->rev_ == nullptr) {
             auto face = new Face();
             addFace(face);
-            face->isBoundary_ = true;
 
             std::vector<Halfedge *> boundaryHalfedges;
             Halfedge *it = he.get();
@@ -273,6 +272,7 @@ void Mesh::construct() {
             const auto degree = static_cast<int>(boundaryHalfedges.size());
             for (int j = 0; j < degree; j++) {
                 const int k = (j - 1 + degree) % degree;
+                boundaryHalfedges[j]->src_->isBoundary_ = true;
                 boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
             }
         }
@@ -289,13 +289,10 @@ void Mesh::construct() {
             FatalError("Some vertices are not referenced by any polygon!");
         }
 
-        uint32_t count = 0;
+        uint32_t count = v->isBoundary() ? -1 : 0;
         Halfedge *he = v->halfedge_;
         do {
-            if (!he->face()->isBoundary()) {
-                count += 1;
-            }
-
+            count += 1;
             he = he->rev()->next();
         } while (he != v->halfedge_);
 
@@ -897,7 +894,6 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
      * Different from them, the triangularion is performed when the dihedral
      * angle in resulting triangularion is less than "dihedralBound".
      */
-
     using E = IndexPair;
     using T = std::tuple<uint32_t, uint32_t, uint32_t>;
 
@@ -1097,6 +1093,7 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
                 }
             }
 
+            he->src_->isBoundary_ = false;
             he = he->next_;
         } while (he != f->halfedge_);
     }

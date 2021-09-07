@@ -255,11 +255,17 @@ Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec
     using V = Vec<Float, Dims>;
     const V e12 = v2 - v1;
     const V e13 = v3 - v1;
-    const V n1 = normalize(cross(e12, e13));
+    const V n1 = cross(e12, e13);
+    const Float l1 = length(n1);
     const V e42 = v2 - v1rev;
     const V e43 = v3 - v1rev;
-    const V n4 = normalize(cross(e42, e43));
-    return std::acos(dot(n1, n4));
+    const V n4 = cross(e42, e43);
+    const Float l4 = length(n4);
+    if (l1 == 0.0 || l4 == 0.0) {
+        return 0.0;
+    }
+
+    return std::acos(dot(n1, n4) / (l1 * l4));
 }
 
 // Hash

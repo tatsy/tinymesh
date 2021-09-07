@@ -49,13 +49,24 @@ public:
 
     int index() const { return index_; }
 
-    bool isBoundary();
-    bool isStatic();
+    bool isBoundary() const {
+        return isBoundary_;
+    }
+
+    bool isStatic() const {
+        return isStatic_;
+    }
+
+    void setIsStatic(bool flag) {
+        isStatic_ = flag;
+    }
 
 private:
     Vec3 pos_;
     Halfedge *halfedge_ = nullptr;
     int index_ = -1;
+    bool isStatic_ = false;
+    bool isBoundary_ = false;
 
     friend class Mesh;
 };

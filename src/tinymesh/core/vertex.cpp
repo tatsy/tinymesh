@@ -35,9 +35,7 @@ bool Vertex::operator==(const Vertex &other) const {
 int Vertex::degree() {
     int deg = 0;
     for (auto it = ohe_begin(); it != ohe_end(); ++it) {
-        if (!it->face()->isBoundary()) {
-            deg++;
-        }
+        deg++;
     }
     return deg;
 }
@@ -58,24 +56,6 @@ Vec3 Vertex::normal() {
     norm += cross(e1, e2);
 
     return normalize(norm);
-}
-
-bool Vertex::isBoundary() {
-    for (auto it = ohe_begin(); it != ohe_end(); ++it) {
-        if (it->isBoundary()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool Vertex::isStatic() {
-    for (auto it = f_begin(); it != f_end(); ++it) {
-        if (it->isStatic()) {
-            return true;
-        }
-    }
-    return false;
 }
 
 Vertex::VertexIterator Vertex::v_begin() {
