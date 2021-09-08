@@ -111,11 +111,15 @@ double computeQEM(const Matrix4 &m1, const Matrix4 &m2, const Vertex &v1, const 
     return qem;
 }
 
-void simplifyQEM(Mesh &mesh, int numTarget) {
+void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
     static const double Eps = 1.0e-12;
-    const int numTargetRemove = (int)mesh.numVertices() - numTarget;
-    if (numTarget <= 0) {
-        Warn("#vertices is already less than #target: %d < %d", (int)mesh.numVertices(), numTarget);
+    const int numTargetRemove = (int)mesh.numFaces() - numTarget;
+    if (numTarget == 0) {
+        Assertion(numTarget > 0, "Target face number is equal or less than 0!");
+    }
+
+    if (numTargetRemove <= 0) {
+        Warn("#vertices is already less than #target: %d < %d", (int)mesh.numFaces(), numTarget);
         return;
     }
 
@@ -126,11 +130,12 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
 
     // Simplification
     int numRemoved = 0;
-    while (true) {
+    for (int trial = 0; trial < maxTrials; trial++) {
         // Current mesh status
         const int numVertices = (int)mesh.numVertices();
         const int numHalfedges = (int)mesh.numHalfedges();
         const int numFaces = (int)mesh.numFaces();
+        std::vector<int> checked(numVertices, 0);
 
         // Compute quadric metric tensor for current vertices.
         std::vector<Matrix4> Qs(numVertices, Matrix4::Zero());
@@ -201,6 +206,11 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
 
             Vertex *v_i = mesh.vertex(ii);
             Vertex *v_j = mesh.vertex(jj);
+
+            // Skip checked vertices
+            if (checked[v_i->index()] || checked[v_j->index()]) {
+                continue;
+            }
 
             // Skip boundary vertices
             if (v_i->isBoundary() || v_j->isBoundary()) {
@@ -305,9 +315,14 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
 
             // Collapse halfedge
             qn.he->src()->setPos(qn.v);
+            checked[qn.he->src()->index()] = 1;
             if (mesh.collapseHE(qn.he)) {
-                numRemoved += 1;
-                pbar.step();
+                numRemoved += 2;
+                if (verbose) pbar.step(2);
+            }
+
+            if (numRemoved >= numTargetRemove) {
+                break;
             }
         }
 
@@ -340,10 +355,17 @@ void simplifyQEM(Mesh &mesh, int numTarget) {
         if (numRemoved >= numTargetRemove) {
             break;
         }
-    }
-    printf("\n");
 
-    Info("%d vertices removed (%6.2f%% achievement)", numRemoved, 100.0 * numRemoved / numTargetRemove);
+        if (numFaces > mesh.numFaces()) {
+            trial = 0;
+        }
+    }
+
+    if (verbose) pbar.finish();
+
+    if (verbose) {
+        Info("%d faces removed (%6.2f%% achievement)", numRemoved, 100.0 * numRemoved / numTargetRemove);
+    }
 }
 
 }  // namespace tinymesh

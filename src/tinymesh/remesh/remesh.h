@@ -10,19 +10,20 @@
 namespace tinymesh {
 
 /**
+ * Minimum direhdral hole filling [Leipa 2003]
+ */
+TINYMESH_API void holeFill(Mesh &mesh, double dihedralBound = Pi);
+
+/**
  * Triangular remeshing [Hoppe 1996]
  */
-TINYMESH_API void remeshTriangular(Mesh &mesh, double shortLength = 0.8, double longLength = 1.333, double keepAngleLessThan = 0.0, int maxiter = 5);
+TINYMESH_API void remeshTriangular(Mesh &mesh, double shortLength = 0.8, double longLength = 1.333,
+                                   double keepAngleLessThan = 0.0, int maxiter = 5, bool verbose = false);
 
 /**
  * QEM-based simplification [Garland and Heckbert 1997]
  */
-TINYMESH_API void simplifyQEM(Mesh &mesh, int numTarget);
-
-/**
- * Minimum direhdral hole filling [Leipa 2003]
- */
-TINYMESH_API void holeFill(Mesh &mesh, double dihedralBound = Pi);
+TINYMESH_API void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials = 10, bool verbose = false);
 
 }  // namespace tinymesh
 

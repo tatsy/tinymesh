@@ -61,4 +61,4 @@ jobs:
 
     - name: Python Module Test
       run: |
-        poetry run nose2
+        poetry run nose2 -s tests/python

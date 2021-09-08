@@ -1,38 +1,26 @@
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
 import os
+import unittest
 
 import numpy as np
+from nose2.tools import params
 
 from tinymesh import Mesh
 
 CWD = os.getcwd()
 
+model_dir = 'data/models'
+filenames = [
+    'box.obj',
+    'torus.obj',
+    'fandisk.ply',
+    'bunny.ply',
+]
+
 
 class TestConstruct(unittest.TestCase):
-    def test_obj_io(self):
-        filename = os.path.join(CWD, 'data/models/torus.obj')
-        base, ext = os.path.splitext(filename)
-        try:
-            mesh = Mesh(filename)
-        except Exception:
-            self.fail('Failed to load mesh!')
-
-        self.assertGreater(mesh.num_vertices(), 0)
-        self.assertGreater(mesh.num_faces(), 0)
-        self.assertGreater(mesh.num_edges(), 0)
-        self.assertGreater(mesh.num_halfedges(), 0)
-
-        try:
-            mesh.save(base + '_test' + ext)
-        except Exception:
-            self.fail('Failed to save mesh!')
-
-    def test_ply_io(self):
-        filename = os.path.join(CWD, 'data/models/bunny.ply')
+    @params(*filenames)
+    def test_mesh_io(self, filename):
+        filename = os.path.join(CWD, model_dir, filename)
         base, ext = os.path.splitext(filename)
         try:
             mesh = Mesh(filename)

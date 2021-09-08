@@ -20,8 +20,8 @@ public:
     }
     virtual ~ProgressBar() {}
 
-    void step() {
-        m_step += 1;
+    void step(int n = 1) {
+        m_step += n;
         auto now = std::chrono::system_clock::now();
 
         const double percent = 100.0 * m_step / m_total;
@@ -52,6 +52,10 @@ public:
         if (m_step == m_total) {
             printf("\n");
         }
+    }
+
+    void finish() {
+        printf("\n");
     }
 
 private:

@@ -63,7 +63,8 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("num_vertices", &Mesh::numVertices)
         .def("num_edges", &Mesh::numEdges)
         .def("num_halfedges", &Mesh::numHalfedges)
-        .def("num_faces", &Mesh::numFaces);
+        .def("num_faces", &Mesh::numFaces)
+        .def("verify", &Mesh::verify);
 
     py::class_<Vertex, std::shared_ptr<Vertex>>(m, "Vertex")
         .def(py::init<>())
@@ -129,14 +130,17 @@ PYBIND11_MODULE(tinymesh, m) {
           py::arg("short_length") = 0.8,
           py::arg("long_length") = 1.333,
           py::arg("angle_keep_less_than") = 0.0,
-          py::arg("iterations") = 5);
+          py::arg("iterations") = 5,
+          py::arg("verbose") = false);
 
     /*** Simplification ***/
 
     m.def("simplify_qem", &simplifyQEM,
           "QEM-based simplification",
           py::arg("mesh"),
-          py::arg("n_triangles"));
+          py::arg("n_triangles"),
+          py::arg("n_trials") = 10,
+          py::arg("verbose") = false);
 
     /*** Hole filling ***/
 

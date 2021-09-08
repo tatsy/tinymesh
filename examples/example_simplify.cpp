@@ -16,10 +16,10 @@ int main(int argc, char **argv) {
     tinymesh::Mesh mesh(argv[1]);
 
     // Simplify
-    const int target = (int)(ratio * mesh.numVertices());
+    const int target = (int)(ratio * mesh.numFaces());
     tinymesh::holeFill(mesh);
-    tinymesh::simplifyQEM(mesh, target);
-    tinymesh::remeshTriangular(mesh);
+    tinymesh::simplifyQEM(mesh, target, 10, true);
+    tinymesh::remeshTriangular(mesh, 0.0, 1e6);  // remesh by keeping #faces
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));

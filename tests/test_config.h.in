@@ -5,6 +5,6 @@
 #ifndef TEST_CONFIG_H
 #define TEST_CONFIG_H
 
-static const char *DATA_DIRECTORY = "@CMAKE_SOURCE_DIR@/data/";
+static const char *MODEL_DIRECTORY = "@CMAKE_SOURCE_DIR@/data/models/";
 
 #endif  // TEST_CONFIG_H

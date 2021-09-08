@@ -6,6 +6,7 @@
 #include <atomic>
 
 #include "core/vec.h"
+#include "core/debug.h"
 #include "core/openmp.h"
 #include "core/mesh.h"
 #include "core/vertex.h"
@@ -15,7 +16,7 @@
 
 namespace tinymesh {
 
-void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double keepAngleLessThan, int iterations) {
+void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double keepAngleLessThan, int iterations, bool verbose) {
     Assertion(mesh.verify(), "Invalid mesh!");
 
     // Compute average edge length
@@ -70,9 +71,11 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
 
     // Remesh loop
     for (int k = 0; k < iterations; k++) {
-        printf("*** Original #%d ***\n", k + 1);
-        printf("#vert: %d\n", (int)mesh.numVertices());
-        printf("#face: %d\n", (int)mesh.numFaces());
+        if (verbose) {
+            Info("*** Original #%d ***\n", k + 1);
+            Info("#vert: %d\n", (int)mesh.numVertices());
+            Info("#face: %d\n", (int)mesh.numFaces());
+        }
 
         // Split long edges
         indices.clear();
@@ -95,9 +98,11 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
             }
         }
 
-        printf("*** After split ***\n");
-        printf("#vert: %d\n", (int)mesh.numVertices());
-        printf("#face: %d\n", (int)mesh.numFaces());
+        if (verbose) {
+            Info("*** After split ***\n");
+            Info("#vert: %d\n", (int)mesh.numVertices());
+            Info("#face: %d\n", (int)mesh.numFaces());
+        }
 
         mesh.verify();
 
@@ -146,9 +151,11 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
             }
         }
 
-        printf("*** After collapse ***\n");
-        printf("#vert: %d\n", (int)mesh.numVertices());
-        printf("#face: %d\n", (int)mesh.numFaces());
+        if (verbose) {
+            Info("*** After collapse ***\n");
+            Info("#vert: %d\n", (int)mesh.numVertices());
+            Info("#face: %d\n", (int)mesh.numFaces());
+        }
 
         // Flip edges
         for (int i = 0; i < (int)mesh.numHalfedges(); i++) {
