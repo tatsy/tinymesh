@@ -18,7 +18,7 @@ include_dirs = [
 ]
 
 extra_compile_args = []
-define_macros = []
+define_macros = [('TINYMESH_PYTHON_MODULE', 1)]
 if platform.system() == "Windows":
     define_macros.append(('_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING', 1))
 elif platform.system() == "Darwin":

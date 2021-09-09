@@ -61,7 +61,7 @@ void Mesh::load(const std::string &filename) {
     } else if (ext == ".ply") {
         loadPLY(filename);
     } else {
-        FatalError("Unsupported file extension: %s", ext.c_str());
+        Error("Unsupported file extension: %s", ext.c_str());
     }
 
     construct();
@@ -135,7 +135,7 @@ void Mesh::construct() {
     for (size_t i = 0; i < indices_.size(); i += 3) {
         if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
             indices_[i + 2] == indices_[i + 0]) {
-            FatalError("Each triangle must have three distinct vertices!");
+            Error("Each triangle must have three distinct vertices!");
         }
     }
 
@@ -177,7 +177,7 @@ void Mesh::construct() {
             const uint32_t b = indices_[i + (j + 1) % degree];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                FatalError("An edge with vertices #%d and #%d is duplicated\n", a, b);
+                Error("An edge with vertices #%d and #%d is duplicated\n", a, b);
             }
 
             auto he = new Halfedge();
@@ -286,7 +286,7 @@ void Mesh::construct() {
     // Check if the mesh is non-manifold
     for (auto v : vertices_) {
         if (v->halfedge_ == nullptr) {
-            FatalError("Some vertices are not referenced by any polygon!");
+            Error("Some vertices are not referenced by any polygon!");
         }
 
         uint32_t count = v->isBoundary() ? -1 : 0;
@@ -297,7 +297,7 @@ void Mesh::construct() {
         } while (he != v->halfedge_);
 
         if (count != vertexDegree[v->index()]) {
-            FatalError("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
+            Error("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
         }
     }
 }
@@ -315,7 +315,7 @@ void Mesh::loadOBJ(const std::string &filename) {
     }
 
     if (!success) {
-        FatalError("Failed to load *.obj file: %s", filename.c_str());
+        Error("Failed to load *.obj file: %s", filename.c_str());
     }
 
     // Traverse triangles
@@ -345,67 +345,63 @@ void Mesh::loadPLY(const std::string &filename) {
     using tinyply::PlyFile;
     using tinyply::PlyData;
 
+    // Open
+    std::ifstream reader(filename.c_str(), std::ios::binary);
+    if (reader.fail()) {
+        Error("Failed to open file: %s", filename.c_str());
+    }
+
+    // Read header
+    PlyFile file;
+    file.parse_header(reader);
+
+    // Request vertex data
+    std::shared_ptr<PlyData> vert_data, norm_data, uv_data, face_data;
     try {
-        // Open
-        std::ifstream reader(filename.c_str(), std::ios::binary);
-        if (reader.fail()) {
-            FatalError("Failed to open file: %s", filename.c_str());
-        }
+        vert_data = file.request_properties_from_element("vertex", { "x", "y", "z" });
+    } catch (std::exception &e) {
+        std::cerr << "tinyply exception: " << e.what() << std::endl;
+    }
 
-        // Read header
-        PlyFile file;
-        file.parse_header(reader);
+    try {
+        norm_data = file.request_properties_from_element("vertex", { "nx", "ny", "nz" });
+    } catch (std::exception &) {
+        // std::cerr << "tinyply exception: " << e.what() << std::endl;
+    }
 
-        // Request vertex data
-        std::shared_ptr<PlyData> vert_data, norm_data, uv_data, face_data;
-        try {
-            vert_data = file.request_properties_from_element("vertex", { "x", "y", "z" });
-        } catch (std::exception &e) {
-            std::cerr << "tinyply exception: " << e.what() << std::endl;
-        }
+    try {
+        uv_data = file.request_properties_from_element("vertex", { "u", "v" });
+    } catch (std::exception &) {
+        // std::cerr << "tinyply exception: " << e.what() << std::endl;
+    }
 
-        try {
-            norm_data = file.request_properties_from_element("vertex", { "nx", "ny", "nz" });
-        } catch (std::exception &) {
-            // std::cerr << "tinyply exception: " << e.what() << std::endl;
-        }
+    try {
+        face_data = file.request_properties_from_element("face", { "vertex_indices" }, 3);
+    } catch (std::exception &e) {
+        std::cerr << "tinyply exception: " << e.what() << std::endl;
+    }
 
-        try {
-            uv_data = file.request_properties_from_element("vertex", { "u", "v" });
-        } catch (std::exception &) {
-            // std::cerr << "tinyply exception: " << e.what() << std::endl;
-        }
+    // Read vertex data
+    file.read(reader);
 
-        try {
-            face_data = file.request_properties_from_element("face", { "vertex_indices" }, 3);
-        } catch (std::exception &e) {
-            std::cerr << "tinyply exception: " << e.what() << std::endl;
-        }
-
-        // Read vertex data
-        file.read(reader);
-
-        // Copy vertex data
-        const size_t numVerts = vert_data->count;
-        std::vector<float> raw_vertices(numVerts * 3);
-        std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
+    // Copy vertex data
+    const size_t numVerts = vert_data->count;
+    std::vector<float> raw_vertices(numVerts * 3);
+    std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
         
-        const size_t numFaces = face_data->count;
-        std::vector<uint32_t> raw_indices(numFaces * 3);
-        std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
+    const size_t numFaces = face_data->count;
+    std::vector<uint32_t> raw_indices(numFaces * 3);
+    std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
 
-        std::unordered_map<Vec3, uint32_t> uniqueVertices;
-        vertices_.clear();
-        for (uint32_t i : raw_indices) {
-            const Vec3 pos = Vec3(raw_vertices[i * 3 + 0], raw_vertices[i * 3 + 1], raw_vertices[i * 3 + 2]);
-            if (uniqueVertices.count(pos) == 0) {
-                uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
-                vertices_.push_back(std::make_shared<Vertex>(pos));
-            }
-            indices_.push_back(uniqueVertices[pos]);
+    std::unordered_map<Vec3, uint32_t> uniqueVertices;
+    vertices_.clear();
+    for (uint32_t i : raw_indices) {
+        const Vec3 pos = Vec3(raw_vertices[i * 3 + 0], raw_vertices[i * 3 + 1], raw_vertices[i * 3 + 2]);
+        if (uniqueVertices.count(pos) == 0) {
+            uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
+            vertices_.push_back(std::make_shared<Vertex>(pos));
         }
-    } catch (const std::exception &e) {
-        std::cerr << "Caught tinyply exception: " << e.what() << std::endl;
+        indices_.push_back(uniqueVertices[pos]);
     }
 }
 
@@ -417,14 +413,14 @@ void Mesh::save(const std::string &filename) const {
     } else if (ext == ".ply") {
         savePLY(filename);
     } else {
-        FatalError("Unsupported file extension: %s", ext.c_str());
+        Error("Unsupported file extension: %s", ext.c_str());
     }
 }
 
 void Mesh::saveOBJ(const std::string &filename) const {
     std::ofstream writer(filename.c_str(), std::ios::out);
     if (writer.fail()) {
-        FatalError("Failed to open file: %s", filename.c_str());
+        Error("Failed to open file: %s", filename.c_str());
     }
 
     for (const auto &v : vertices_) {
@@ -456,7 +452,7 @@ void Mesh::savePLY(const std::string &filename) const {
 
     std::ostream outstream(&buffer);
     if (outstream.fail()) {
-        FatalError("Failed to open file: %s", filename.c_str());
+        Error("Failed to open file: %s", filename.c_str());
     }
 
     std::vector<float> vertexData(vertices_.size() * 3);
@@ -822,7 +818,7 @@ bool Mesh::collapseHE(Halfedge *he) {
 bool Mesh::flipHE(Halfedge *he) {
     Halfedge *rev = he->rev_;
     if (!rev) {
-        FatalError("Flip is called boundary halfedge!");
+        Error("Flip is called boundary halfedge!");
     }
 
     Vertex *u0 = he->src();

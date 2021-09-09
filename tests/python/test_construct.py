@@ -37,6 +37,11 @@ class TestConstruct(unittest.TestCase):
         except Exception:
             self.fail('Failed to save mesh!')
 
+    @params("not_exist.ply", "invalid_ext.ojb")
+    def test_mesh_invalid_io(self, filename):
+        with self.assertRaises(RuntimeError):
+            Mesh(filename)
+
     def test_tetrahedron(self):
         # Construct a simple tetrahedron
         a = np.asarray([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype='double')

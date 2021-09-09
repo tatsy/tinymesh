@@ -10,6 +10,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    printf("Hello\n");
+
     const double ratio = argc <= 2 ? 0.1 : atof(argv[2]);
 
     // Load

@@ -266,7 +266,8 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
                 }
 
                 if (!isFound) {
-                    FatalError("Contractible vertex not found!");
+                    Warn("Contractible vertex not found!");
+                    break;
                 }
 
                 const Vec3 n1 = cross(ps[2] - ps[0], ps[1] - ps[0]);

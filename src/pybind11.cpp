@@ -1,10 +1,10 @@
-#include "tinymesh/tinymesh.h"
-using namespace tinymesh;
-
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 namespace py = pybind11;
+
+#include "tinymesh/tinymesh.h"
+using namespace tinymesh;
 
 // type caster: Matrix <-> NumPy-array
 namespace pybind11 {

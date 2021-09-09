@@ -44,34 +44,4 @@ class Mesh;
 #   define TINYMESH_IMPORTS
 #endif
 
-// -----------------------------------------------------------------------------
-// Assertion with message
-// -----------------------------------------------------------------------------
-
-#ifndef __FUNCTION_NAME__
-#if defined(_WIN32) || defined(__WIN32__)
-#define __FUNCTION_NAME__ __FUNCTION__
-#else
-#define __FUNCTION_NAME__ __func__
-#endif
-#endif
-
-#ifndef DISABLE_ASSERT
-#define Assertion(PREDICATE, ...) \
-do { \
-    if (!(PREDICATE)) { \
-        std::cerr << "Asssertion \"" \
-        << #PREDICATE << "\" failed in " << __FILE__ \
-        << " line " << __LINE__ \
-        << " in function \"" << (__FUNCTION_NAME__) << "\"" \
-        << " : "; \
-        fprintf(stderr, __VA_ARGS__); \
-        std::cerr << std::endl; \
-        std::abort(); \
-    } \
-} while (false)
-#else  // NDEBUG
-#define Assertion(PREDICATE, ...) do {} while (false)
-#endif // NDEBUG
-
 #endif // TINYMESH_API_H

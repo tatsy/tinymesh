@@ -12,6 +12,7 @@
 
 #include "core/api.h"
 #include "core/vec.h"
+#include "core/debug.h"
 
 namespace tinymesh {
 

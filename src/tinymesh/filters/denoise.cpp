@@ -59,7 +59,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
             }
 
             if (vs.size() != 3) {
-                FatalError("Mesh is not triangular! Call \"mesh.triangulate()\" first!");
+                Error("Mesh is not triangular! Call \"mesh.triangulate()\" first!");
             }
 
             const Vec3 outer = cross(vs[1] - vs[0], vs[2] - vs[0]);
@@ -129,7 +129,7 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
             }
 
             if (vs.size() != 3) {
-                FatalError("Mesh is not triangular! Call \"mesh.triangulate()\" first!");
+                Error("Mesh is not triangular! Call \"mesh.triangulate()\" first!");
             }
 
             const Vec3 outer = cross(vs[1] - vs[0], vs[2] - vs[0]);
