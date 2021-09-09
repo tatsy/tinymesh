@@ -17,7 +17,9 @@ if (UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fPIC -Wall")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O2")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
-    set(CXX_FS_LIBRARY "stdc++fs")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(CXX_FS_LIBRARY "stdc++fs")
+    endif()
 endif()
 
 # ----------

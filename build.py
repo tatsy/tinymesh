@@ -27,9 +27,9 @@ elif platform.system() == "Darwin":
         '-std=c++17',
         '-mmacosx-version-min=10.15',
     ])
-    extra_link_args.extend([
-        '-lstdc++fs',
-    ])
+    # extra_link_args.extend([
+    #     '-lstdc++fs',
+    # ])
 else:
     extra_compile_args.extend([
         '-std=c++17',

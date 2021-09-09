@@ -1,3 +1,7 @@
+v 0.2.1
+---
+*  Minor bug fix for GCC v8.
+
 v.0.2.0
 ---
 
