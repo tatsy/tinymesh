@@ -19,6 +19,7 @@ homepage = "https://github.com/tatsy/tinymesh"
 keywords = ['graphics', 'geometry']
 
 build = "build.py"
+exclude = ["src/*", "tests/*", "cmake/*", "data/*", "figures/*"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.11"
