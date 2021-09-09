@@ -101,7 +101,8 @@ double computeQEM(const Matrix4 &m1, const Matrix4 &m2, const Vertex &v1, const 
     } else {
         Vector4 bb;
         bb << 0.0, 0.0, 0.0, 1.0;
-        v_bar = Q.colPivHouseholderQr().solve(bb);
+        //v_bar = Q.colPivHouseholderQr().solve(bb);
+        v_bar = Q.partialPivLu().solve(bb);
     }
 
     const double qem = (v_bar.transpose() * ((m1 + m2) * v_bar))(0, 0);

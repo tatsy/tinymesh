@@ -265,7 +265,8 @@ Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec
         return 0.0;
     }
 
-    return std::acos(dot(n1, n4) / (l1 * l4));
+    const double cosTheta = dot(n1, n4) / (l1 * l4);
+    return std::acos(std::max(-1.0, std::min(cosTheta, 1.0)));
 }
 
 // Hash

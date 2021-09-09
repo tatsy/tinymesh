@@ -1,6 +1,7 @@
-v.0.1.1
+v.0.2.0
 ---
 
+*   Add unit test for each functions (just to check run or not).
 *   Add feature preservation in remeshing.
 *   Include Eigen to repo as a submodule.
 *   Update Python setup to use Poetry.

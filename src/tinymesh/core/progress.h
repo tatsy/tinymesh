@@ -46,8 +46,10 @@ public:
             pbar += std::string(m_width - tick - 1, ' ');
         }
 
-        printf("\r[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %sit/s]",
-               (int)percent, pbar.c_str(), m_step, m_total, n_min, n_sec, r_min, r_sec, it_text.c_str());
+        if (m_step == m_total || m_step % (m_total / 1000) == 0) {
+            printf("\r[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %sit/s]", (int)percent, pbar.c_str(), m_step, m_total,
+                   n_min, n_sec, r_min, r_sec, it_text.c_str());
+        }
 
         if (m_step == m_total) {
             printf("\n");
@@ -55,7 +57,9 @@ public:
     }
 
     void finish() {
-        printf("\n");
+        if (m_step != m_total) {
+            step(m_total - m_step);
+        }
     }
 
 private:

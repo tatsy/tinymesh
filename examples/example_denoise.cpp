@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
         // Random number generator
         std::random_device randev;
         std::mt19937 mt(randev());
-        std::uniform_real_distribution<double> dist(-0.01, 0.01);
+        std::uniform_real_distribution<double> dist(-0.5, 0.5);
 
         // Save noise mesh
         std::string noiseMeshFile;
@@ -32,11 +32,19 @@ int main(int argc, char **argv) {
             mesh::Mesh mesh(argv[1]);
             mesh::holeFill(mesh, Pi / 6.0);
 
+            double Lavg = 0.0;
+            for (int i = 0; i < (int)mesh.numEdges(); i++) {
+                mesh::Edge *e = mesh.edge(i);
+                const double l = e->length();
+                Lavg += l;
+            }
+            Lavg = Lavg / mesh.numEdges();
+
             // Add noise
             for (int i = 0; i < (int)mesh.numVertices(); i++) {
                 const Vec3 pos = mesh.vertex(i)->pos();
                 const Vec3 noise = Vec3(dist(mt), dist(mt), dist(mt));
-                mesh.vertex(i)->setPos(pos + noise);
+                mesh.vertex(i)->setPos(pos + Lavg * noise);
             }
             noiseMeshFile = (dirpath / fs::path((basename + "_noise" + extension).c_str())).string();
             mesh.save(noiseMeshFile);

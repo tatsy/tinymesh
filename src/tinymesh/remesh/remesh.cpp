@@ -38,7 +38,6 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
     Lvar = Lvar / count - Lavg * Lavg;
 
     // Check whether each vertex is on feature line
-    std::vector<double> minDiheds(mesh.numVertices(), Pi);
     for (int i = 0; i < (int)mesh.numVertices(); i++) {
         Vertex *v = mesh.vertex(i);
         std::vector<Vec3> neighbors;
@@ -47,6 +46,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         }
 
         const auto nn = static_cast<int>(neighbors.size());
+        double minDihed = Pi;
         for (int j = 0; j < nn; j++) {
             const int k = (j + 1) % nn;
             const int l = (j - 1 + nn) % nn;
@@ -56,10 +56,10 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
             const Vec3 p2 = neighbors[k];
             const Vec3 p3 = neighbors[l];
             const double dihed = dihedral(p2, p0, p1, p3);
-            minDiheds[i] = std::min(dihed, minDiheds[i]);
+            minDihed = std::min(dihed, minDihed);
         }
 
-        if (minDiheds[i] < keepAngleLessThan) {
+        if (minDihed < keepAngleLessThan) {
             v->setIsStatic(true);
         }
     }

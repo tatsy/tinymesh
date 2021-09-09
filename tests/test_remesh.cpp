@@ -33,12 +33,12 @@ TEST_P(MeshRemeshTest, RemeshTriangular) {
 
 TEST_P(MeshRemeshTest, SimplifyQEMOneHalf) {
     EXPECT_NO_FATAL_FAILURE(holeFill(mesh));
-    EXPECT_NO_FATAL_FAILURE(simplifyQEM(mesh, mesh.numFaces() / 2));
+    EXPECT_NO_FATAL_FAILURE(simplifyQEM(mesh, (int)mesh.numFaces() / 2));
 }
 
 TEST_P(MeshRemeshTest, SimplifyQEMOneTenth) {
     EXPECT_NO_FATAL_FAILURE(holeFill(mesh));
-    EXPECT_NO_FATAL_FAILURE(simplifyQEM(mesh, mesh.numFaces() / 10));
+    EXPECT_NO_FATAL_FAILURE(simplifyQEM(mesh, (int)mesh.numFaces() / 10));
 }
 
 static std::vector<std::string> filenames = {

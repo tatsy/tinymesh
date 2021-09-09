@@ -33,19 +33,13 @@ Here is the list of modules and reference papers for that.
 Install
 ---
 
-### Dependency
-
 The module is tested its compilation using the following compilers.
 
 *   **Windows** - Visual Studio 2019
 *   **MacOS** - Apple Clang 11.0 (MacOS 10.15)
-*   **Linux** - LLVM Clang 10.0, GNU C Compiler 9.3.0
+*   **Linux** - LLVM Clang 10.0, GNU C Compiler 9.4.0
 
-Also, the module depends on Eigen for the linear algebra.
-
-*   [Eigen 3.x](http://eigen.tuxfamily.org/index.php)
-
-### C++ Library and Examples
+### Library and examples (C++)
 
 You can build a shared library and all the examples by `CMake` with the following commands.
 
@@ -56,12 +50,6 @@ git submodule update --init --recursive
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON ..
 cmake --build . --config Release --parallel 2
-```
-
-#### Run examples (C++)
-
-```shell
-./build/bin/example_simplify data/models/bunny.ply
 ```
 
 ### Python module
@@ -80,18 +68,69 @@ cd tinymesh
 poetry install
 ```
 
-#### Run examples (Python)
+Run examples
+---
+
+#### C++
+
+```shell
+./build/bin/example_simplify data/models/bunny.ply
+```
+
+#### Python
 
 ```shell
 python examples/python/fill_and_fair.py data/models/bunny.ply
 ```
 
-Screen shots
+Gallery
 ---
 
-| Input | Before | Simplified |
-|:--------:|:--------:|:--------:|
-|![](figures/dragon.jpg)|![](figures/dragon_before_simplify.jpg)|![](figures/dragon_after_simplify.jpg)|
+#### Remeshing
+
+<table>
+  <tr>
+    <td width="30%">Input</td>
+    <td width="30%">Remesh</td>
+    <td width="30%">Remesh (bottom part)</td>
+  </tr>
+  <tr>
+    <td width="30%"><img src="figures/bunny_before.png" width="100%"/></td>
+    <td width="30%"><img src="figures/bunny_remesh_1.png" width="100%"/></td>
+    <td width="30%"><img src="figures/bunny_remesh_2.png" width="100%"/></td>
+  </tr>
+</table>
+
+
+#### Simplification
+
+<table>
+  <tr>
+    <td width="30%">Input</td>
+    <td width="30%">Simplify (50000 faces)</td>
+    <td width="30%">Simplify (10000 faces)</td>
+  </tr>
+  <tr>
+    <td width="30%"><img src="figures/dragon_before.png" width="100%"/></td>
+    <td width="30%"><img src="figures/dragon_simplify_50000.png" width="100%"/></td>
+    <td width="30%"><img src="figures/dragon_simplify_10000.png" width="100%"/></td>
+  </tr>
+</table>
+
+#### Denoising (L0)
+
+<table>
+  <tr>
+    <td width="30%">Original</td>
+    <td width="30%">Noisy</td>
+    <td width="30%">Denoise</td>
+  </tr>
+  <tr>
+    <td width="30%"><img src="figures/fandisk_before.png" width="100%"/></td>
+    <td width="30%"><img src="figures/fandisk_noise.png" width="100%"/></td>
+    <td width="30%"><img src="figures/fandisk_denoise_l0.png" width="100%"/></td>
+  </tr>
+</table>
 
 Notice
 ---
