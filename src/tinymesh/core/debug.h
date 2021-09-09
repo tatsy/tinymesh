@@ -5,6 +5,10 @@
 #ifndef TINYMESH_DEBUG_H
 #define TINYMESH_DEBUG_H
 
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+
 // -----------------------------------------------------------------------------
 // ANSI color
 // -----------------------------------------------------------------------------

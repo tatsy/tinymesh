@@ -18,18 +18,23 @@ include_dirs = [
 ]
 
 extra_compile_args = []
+extra_link_args = []
 define_macros = [('TINYMESH_PYTHON_MODULE', 1)]
 if platform.system() == "Windows":
     define_macros.append(('_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING', 1))
 elif platform.system() == "Darwin":
     extra_compile_args.extend([
         '-std=c++17',
-        '-lstdc++fs',
         '-mmacosx-version-min=10.15',
+    ])
+    extra_link_args.extend([
+        '-lstdc++fs',
     ])
 else:
     extra_compile_args.extend([
         '-std=c++17',
+    ])
+    extra_link_args.extend([
         '-lstdc++fs',
     ])
 
@@ -39,6 +44,7 @@ ext_modules = [
                       language='c++',
                       include_dirs=include_dirs,
                       extra_compile_args=extra_compile_args,
+                      extra_link_args=extra_link_args,
                       define_macros=define_macros)
 ]
 
