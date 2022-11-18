@@ -31,4 +31,12 @@ void holeFill(Mesh& mesh, double dihedralBound) {
     }
 }
 
+void holeFillAdvancingFront(Mesh &mesh) {
+
+}
+
+void holeFillingContextCoherent(Mesh &mesh) {
+    
+}
+
 }  // namespace tinymesh
