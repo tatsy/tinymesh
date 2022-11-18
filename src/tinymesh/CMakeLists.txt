@@ -14,14 +14,13 @@ set(SOURCE_FILES ${SOURCE_FILES} "tinymesh.h")
 add_folder(SOURCE_FILES "core")
 add_folder(SOURCE_FILES "filters")
 add_folder(SOURCE_FILES "remesh")
-add_folder(SOURCE_FILES "parameterize")
 
 add_library(${TINYMESH_LIBRARY} STATIC ${SOURCE_FILES})
 
 source_group("Source Files" FILES ${SOURCE_FILES})
 
-target_include_directories(${TINYMESH_LIBRARY} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(${TINYMESH_LIBRARY} PUBLIC ${CXX_FS_LIBRARY})
+target_include_directories(${TINYMESH_LIBRARY} PUBLIC ${CMAKE_CURRENT_LIST_DIR} ${OpenMP_INCLUDE_DIRS})
+target_link_libraries(${TINYMESH_LIBRARY} PUBLIC ${CXX_FS_LIBRARY} ${OpenMP_LIBRARIES})
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
