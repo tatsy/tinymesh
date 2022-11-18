@@ -19,5 +19,6 @@
 
 #include "remesh/remesh.h"
 #include "filters/filters.h"
+#include "restore/restore.h"
 
 #endif  // TINYMESH_H

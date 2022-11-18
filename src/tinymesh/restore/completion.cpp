@@ -1,5 +1,5 @@
 #define TINYMESH_API_EXPORT
-#include "remesh.h"
+#include "restore.h"
 
 #include "core/mesh.h"
 #include "core/vertex.h"

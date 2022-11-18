@@ -14,6 +14,7 @@ set(SOURCE_FILES ${SOURCE_FILES} "tinymesh.h")
 add_folder(SOURCE_FILES "core")
 add_folder(SOURCE_FILES "filters")
 add_folder(SOURCE_FILES "remesh")
+add_folder(SOURCE_FILES "restore")
 
 add_library(${TINYMESH_LIBRARY} STATIC ${SOURCE_FILES})
 
