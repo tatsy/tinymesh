@@ -15,52 +15,52 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
 
-    - name: Set up Python version
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.7
+      - name: Set up Python version
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
 
-    - name: Checkout submodules
-      run: git submodule update --init --recursive
+      - name: Checkout submodules
+        run: git submodule update --init --recursive
 
-    - name: Install Google Test
-      run: |
-        git clone https://github.com/google/googletest.git --depth 1
-        cd googletest
-        mkdir build
-        cd build
-        cmake .. `
-          -G "Visual Studio 16 2019" -A x64 `
-          -Dgtest_force_shared_crt=ON `
-          -DCMAKE_INSTALL_PREFIX="C:/Program Files/GoogleTest/"
-        cmake --build . --config "$env:BUILD_TYPE"
-        cmake --build . --config "$env:BUILD_TYPE" --target INSTALL
+      - name: Install Google Test
+        run: |
+          git clone https://github.com/google/googletest.git --depth 1
+          cd googletest
+          mkdir build
+          cd build
+          cmake .. `
+            -G "Visual Studio 16 2022" -A x64 `
+            -Dgtest_force_shared_crt=ON `
+            -DCMAKE_INSTALL_PREFIX="C:/Program Files/GoogleTest/"
+          cmake --build . --config "$env:BUILD_TYPE"
+          cmake --build . --config "$env:BUILD_TYPE" --target INSTALL
 
-    - name: CMake Build
-      run: |
-        cmake -E make_directory ${{ runner.workspace }}/build
-        cd ${{ runner.workspace }}/build
-        cmake "$env:GITHUB_WORKSPACE" `
-          -G "Visual Studio 16 2019" -A x64 `
-          -DGoogleTest_DIR="C:/Program Files/GoogleTest" `
-          -DBUILD_TESTS=ON `
-          -DBUILD_EXAMPLES=ON
-        cmake --build . --config "$env:BUILD_TYPE"
+      - name: CMake Build
+        run: |
+          cmake -E make_directory ${{ runner.workspace }}/build
+          cd ${{ runner.workspace }}/build
+          cmake "$env:GITHUB_WORKSPACE" `
+            -G "Visual Studio 16 2022" -A x64 `
+            -DGoogleTest_DIR="C:/Program Files/GoogleTest" `
+            -DBUILD_TESTS=ON `
+            -DBUILD_EXAMPLES=ON
+          cmake --build . --config "$env:BUILD_TYPE"
 
-    - name: Unit Test
-      working-directory: ${{ runner.workspace }}/build
-      shell: bash
-      run: ctest -C $BUILD_TYPE
+      - name: Unit Test
+        working-directory: ${{ runner.workspace }}/build
+        shell: bash
+        run: ctest -C $BUILD_TYPE
 
-    - name: Setup Python Env
-      run: |
-        pip install poetry
-        poetry install
+      - name: Setup Python Env
+        run: |
+          pip install poetry
+          poetry install
 
-    - name: Python Module Test
-      run: |
-        poetry run nose2 -s tests/python
+      - name: Python Module Test
+        run: |
+          poetry run nose2 -s tests/python

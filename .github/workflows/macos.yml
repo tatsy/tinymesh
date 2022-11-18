@@ -18,99 +18,98 @@ env:
 jobs:
   macos:
     runs-on: macos-latest
-    
+
     strategy:
       matrix:
         compiler: [gcc, clang]
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
-    
-    - name: Set up Python version
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.7
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
 
-    - name: Install GNU C/C++ Compiler
-      if: ${{ matrix.compiler == 'gcc' }}
-      run: |
-        brew install gcc@9
-        export GNU_CC=gcc-9
-        export GNU_CXX=g++-9
+      - name: Set up Python version
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
 
-    - name: Install LLVM Clang
-      if: ${{ matrix.compiler == 'clang' }}
-      run: |
-        brew install llvm
-        export LLVM_CC=clang-10
-        export LLVM_CXX=clang++-10
+      - name: Install GNU C/C++ Compiler
+        if: ${{ matrix.compiler == 'gcc' }}
+        run: |
+          brew install gcc@9
+          export GNU_CC=gcc-9
+          export GNU_CXX=g++-9
 
-    - name: Install Google Test
-      env:
-        C_COMPILER: ${{ matrix.compiler }}
-      run: |
-        git clone https://github.com/google/googletest.git --depth 1
-        cd googletest
-        mkdir build
-        cd build
+      - name: Install LLVM Clang
+        if: ${{ matrix.compiler == 'clang' }}
+        run: |
+          brew install llvm
+          export LLVM_CC=clang-10
+          export LLVM_CXX=clang++-10
 
-        if [ "$C_COMPILER" = "gcc" ]; then
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DCMAKE_C_COMPILER=$GNU_CC \
-            -DCMAKE_CXX_COMPILER=$GNU_CXX
-        fi
+      - name: Install Google Test
+        env:
+          C_COMPILER: ${{ matrix.compiler }}
+        run: |
+          git clone https://github.com/google/googletest.git --depth 1
+          cd googletest
+          mkdir build
+          cd build
 
-        if [ "$C_COMPILER" = "clang" ]; then
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DCMAKE_C_COMPILER=$LLVM_CC \
-            -DCMAKE_CXX_COMPILER=$LLVM_CXX
-        fi
+          if [ "$C_COMPILER" = "gcc" ]; then
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+              -DCMAKE_C_COMPILER=$GNU_CC \
+              -DCMAKE_CXX_COMPILER=$GNU_CXX
+          fi
 
-        cmake --build . --config $BUILD_TYPE --parallel 2
-        cmake --build . --target install
+          if [ "$C_COMPILER" = "clang" ]; then
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+              -DCMAKE_C_COMPILER=$LLVM_CC \
+              -DCMAKE_CXX_COMPILER=$LLVM_CXX
+          fi
 
-    - name: CMake Build
-      env:
-        C_COMPILER: ${{ matrix.compiler }}
-      run: |
-        cmake -E make_directory ${{runner.workspace}}/build
-        cd ${{runner.workspace}}/build
+          cmake --build . --config $BUILD_TYPE --parallel 2
+          cmake --build . --target install
 
-        if [ "$C_COMPILER" = "gcc" ]; then
-          cmake $GITHUB_WORKSPACE \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DCMAKE_C_COMPILER=$GNU_CC \
-            -DCMAKE_CXX_COMPILER=$GNU_CXX \
-            -DBUILD_EXAMPLES=ON \
-            -DBUILD_TESTS=ON 
-        fi
+      - name: CMake Build
+        env:
+          C_COMPILER: ${{ matrix.compiler }}
+        run: |
+          cmake -E make_directory ${{runner.workspace}}/build
+          cd ${{runner.workspace}}/build
 
-        if [ "$C_COMPILER" = "clang" ]; then
-          cmake $GITHUB_WORKSPACE \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DCMAKE_C_COMPILER=$LLVM_CC \
-            -DCMAKE_CXX_COMPILER=$LLVM_CXX \
-            -DBUILD_EXAMPLES=ON \
-            -DBUILD_TESTS=ON 
-        fi
+          if [ "$C_COMPILER" = "gcc" ]; then
+            cmake $GITHUB_WORKSPACE \
+              -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+              -DCMAKE_C_COMPILER=$GNU_CC \
+              -DCMAKE_CXX_COMPILER=$GNU_CXX \
+              -DBUILD_EXAMPLES=ON \
+              -DBUILD_TESTS=ON 
+          fi
 
-        cmake --build . --config $BUILD_TYPE --parallel 2
+          if [ "$C_COMPILER" = "clang" ]; then
+            cmake $GITHUB_WORKSPACE \
+              -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+              -DCMAKE_C_COMPILER=$LLVM_CC \
+              -DCMAKE_CXX_COMPILER=$LLVM_CXX \
+              -DBUILD_EXAMPLES=ON \
+              -DBUILD_TESTS=ON 
+          fi
 
-    - name: Unit Test
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: ctest -C $BUILD_TYPE
+          cmake --build . --config $BUILD_TYPE --parallel 2
 
-    - name: Setup Python Env
-      run: |
-        pip install poetry
-        poetry install
+      - name: Unit Test
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ctest -C $BUILD_TYPE
 
-    - name: Python Module Test
-      run: |
-        poetry run nose2 -s tests/python
+      - name: Setup Python Env
+        run: |
+          pip install poetry
+          poetry install
 
+      - name: Python Module Test
+        run: |
+          poetry run nose2 -s tests/python
