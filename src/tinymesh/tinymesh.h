@@ -17,6 +17,7 @@
 #include "core/halfedge.h"
 #include "core/face.h"
 
+#include "utils/utils.h"
 #include "remesh/remesh.h"
 #include "filters/filters.h"
 #include "restore/restore.h"
