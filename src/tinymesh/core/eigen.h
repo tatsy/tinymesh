@@ -15,6 +15,7 @@ using EigenMatrix = Eigen::Matrix<FloatType, Eigen::Dynamic, Eigen::Dynamic>;
 #ifdef EIGEN_ENABLE_SPARSE
 #include <Eigen/SparseCore>
 using EigenTriplet = Eigen::Triplet<FloatType, IndexType>;
+using EigenSparseVector = Eigen::SparseVector<FloatType>;
 using EigenSparseMatrix = Eigen::SparseMatrix<FloatType>;
 #endif  // EIGEN_ENABLE_SPARSE
 

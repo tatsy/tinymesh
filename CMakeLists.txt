@@ -21,6 +21,7 @@ if (UNIX)
         set(CXX_FS_LIBRARY "stdc++fs")
     endif()
 endif()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ----------
 # Common target names
