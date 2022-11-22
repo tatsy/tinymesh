@@ -80,11 +80,10 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("is_static", &Face::isStatic);
 
     /*** Utilities */
-    // m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"),
-    //       py::return_value_policy::move);
-    // m.attr("MESH_LAPLACE_ADJACENT") = (int)MeshLaplace::Adjacent;
-    // m.attr("MESH_LAPLACE_COTANGENT") = (int)MeshLaplace::Cotangent;
-    // m.attr("MESH_LAPLACE_BELKIN08") = (int)MeshLaplace::Belkin08;
+    m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
+    m.attr("MESH_LAPLACE_ADJACENT") = (int)MeshLaplace::Adjacent;
+    m.attr("MESH_LAPLACE_COTANGENT") = (int)MeshLaplace::Cotangent;
+    m.attr("MESH_LAPLACE_BELKIN08") = (int)MeshLaplace::Belkin08;
 
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,

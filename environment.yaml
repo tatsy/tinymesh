@@ -2,6 +2,7 @@ name: tinymesh
 channels:
   - defaults
 dependencies:
+  - python
   - numpy
   - matplotlib
   - poetry
@@ -11,4 +12,4 @@ dependencies:
   - yapf
   - pip
   - pip:
-    - plyfile
+      - plyfile
