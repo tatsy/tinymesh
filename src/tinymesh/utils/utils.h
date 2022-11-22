@@ -19,7 +19,7 @@ enum MeshLaplace : int {
     Belkin08,
 };
 
-TINYMESH_API void getMeshLaplacian(Mesh &mesh, MeshLaplace type, EigenSparseMatrix L);
+TINYMESH_API EigenSparseMatrix getMeshLaplacian(Mesh &mesh, MeshLaplace type);
 
 }  // namespace tinymesh
 

@@ -47,11 +47,11 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iter
                     const Vec3 &p1 = pts[i];
                     const Vec3 &p2 = pts[(i + 1) % pts.size()];
                     const Vec3 &p3 = pts[(i - 1 + pts.size()) % pts.size()];
-                    const double sin_a = length(cross(p2 - p0, p2 - p1));
-                    const double cos_a = dot(p2 - p0, p2 - p1);
-                    const double sin_b = length(cross(p3 - p1, p3 - p0));
-                    const double cos_b = dot(p3 - p1, p3 - p0);
+                    const double sin_a = length(cross(p0 - p2, p1 - p2));
+                    const double cos_a = dot(p0 - p2, p1 - p2);
                     const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
+                    const double sin_b = length(cross(p0 - p3, p1 - p3));
+                    const double cos_b = dot(p0 - p3, p1 - p3);
                     const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
                     weight = 0.5 * (cot_a + cot_b);
                 }
