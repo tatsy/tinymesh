@@ -102,18 +102,18 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
         }
         areas.emplace_back(i, i, area);
     }
-    L.resize(N, N);
-    L.setFromTriplets(triplets.begin(), triplets.end());
+    EigenSparseMatrix W(N, N);
+    W.setFromTriplets(triplets.begin(), triplets.end());
 
     EigenSparseVector diags(N);
     for (int i = 0; i < N; i++) {
         diags += L.col(i);
     }
-    L.diagonal() -= diags;
+    W.diagonal() -= diags;
 
     EigenSparseMatrix A(N, N);
     A.setFromTriplets(areas.begin(), areas.end());
-    L *= A;
+    L = A * W;
 }
 
 EigenSparseMatrix getMeshLaplacian(Mesh &mesh, MeshLaplace type) {

@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <pybind11/eigen.h>
 namespace py = pybind11;
 
 #include "tinymesh/tinymesh.h"
@@ -80,7 +81,12 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("is_static", &Face::isStatic);
 
     /*** Utilities */
+    Eigen::MatrixXf mat(5, 6);
+    mat << 0, 3, 0, 0, 0, 11, 22, 0, 0, 0, 17, 11, 7, 5, 0, 1, 0, 11, 0, 0, 0, 0, 0, 11, 0, 0, 14, 0, 8, 11;
+
     m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
+    // m.def("test_method",
+    //       [mat]() -> Eigen::SparseMatrix<float, Eigen::RowMajor> { return Eigen::SparseView<Eigen::MatrixXf>(mat); });
     m.attr("MESH_LAPLACE_ADJACENT") = (int)MeshLaplace::Adjacent;
     m.attr("MESH_LAPLACE_COTANGENT") = (int)MeshLaplace::Cotangent;
     m.attr("MESH_LAPLACE_BELKIN08") = (int)MeshLaplace::Belkin08;
