@@ -89,6 +89,10 @@ void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32
     construct();
 }
 
+Mesh Mesh::clone() {
+    return Mesh(this->getVertices(), this->getVertexIndices());
+}
+
 std::vector<Vec3> Mesh::getVertices() const {
     std::vector<Vec3> ret;
     for (const auto &v : vertices_) {

@@ -15,20 +15,16 @@ void getMeshLaplacianAdjacent(Mesh &mesh, EigenSparseMatrix &L) {
     std::vector<EigenTriplet> triplets;
     for (int i = 0; i < N; i++) {
         Vertex *v = mesh.vertex(i);
+        int valence = 0;
         for (auto it = v->v_begin(); it != v->v_end(); ++it) {
             const int j = it->index();
-            triplets.emplace_back(i, j, 1.0);
+            triplets.emplace_back(i, j, -1.0);
+            valence++;
         }
+        triplets.emplace_back(i, i, valence);
     }
     L.resize(N, N);
     L.setFromTriplets(triplets.begin(), triplets.end());
-
-    EigenSparseVector diags(N);
-    for (int i = 0; i < N; i++) {
-        diags += L.col(i);
-    }
-
-    L.diagonal() -= diags;
 }
 
 void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
@@ -36,6 +32,7 @@ void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
     std::vector<EigenTriplet> triplets;
     for (int i = 0; i < N; i++) {
         Vertex *v = mesh.vertex(i);
+        double sumWgt = 0.0;
         for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
             Halfedge &he = *it;
             Vertex *u = he.dst();
@@ -55,18 +52,13 @@ void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
             const double weight = 0.5 * (cot_a + cot_b);
 
             const int j = u->index();
-            triplets.emplace_back(i, j, weight);
+            triplets.emplace_back(i, j, -weight);
+            sumWgt += weight;
         }
+        triplets.emplace_back(i, i, sumWgt);
     }
     L.resize(N, N);
     L.setFromTriplets(triplets.begin(), triplets.end());
-
-    EigenSparseVector diags(N);
-    for (int i = 0; i < N; i++) {
-        diags += L.col(i);
-    }
-
-    L.diagonal() -= diags;
 }
 
 /**
@@ -87,6 +79,7 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
     std::vector<EigenTriplet> areas;
     for (int i = 0; i < N; i++) {
         Vertex *v = mesh.vertex(i);
+        double sumWgt = 0.0;
         double area = 0.0;
         for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
             // Gaussian weight
@@ -94,22 +87,18 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
             const double h = avgEdgeLength;
             const double norm = length(v->pos() - u->pos());
             const double weight = std::exp(-norm * norm / (4 * h)) / std::pow(4.0 * Pi * h, 1.5);
-            const int j = it->index();
-            triplets.emplace_back(i, j, weight);
+            const int j = u->index();
+            triplets.emplace_back(i, j, -weight);
+            sumWgt += weight;
             // Area
             Vertex *w = it->next()->dst();
             area += 0.5 * length(cross(u->pos() - v->pos(), w->pos() - v->pos())) / 3.0;
         }
+        triplets.emplace_back(i, i, sumWgt);
         areas.emplace_back(i, i, area);
     }
     EigenSparseMatrix W(N, N);
     W.setFromTriplets(triplets.begin(), triplets.end());
-
-    EigenSparseVector diags(N);
-    for (int i = 0; i < N; i++) {
-        diags += L.col(i);
-    }
-    W.diagonal() -= diags;
 
     EigenSparseMatrix A(N, N);
     A.setFromTriplets(areas.begin(), areas.end());

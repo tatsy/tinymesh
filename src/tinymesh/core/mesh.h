@@ -29,6 +29,7 @@ public:
     void load(const std::string &filename);
     void save(const std::string &filename) const;
     void construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices);
+    Mesh clone();
 
     std::vector<Vec3> getVertices() const;
     std::vector<uint32_t> getVertexIndices() const;

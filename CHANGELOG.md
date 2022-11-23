@@ -1,8 +1,14 @@
-v 0.2.1
+v0.2.2
+---
+* Change Python env manager to Pipenv.
+* Add methods computing approximated Laplacian-Beltrami operators.
+* Add IPython notebooks as Pythons examples rather than simple scripts.
+
+v0.2.1
 ---
 *  Minor bug fix for GCC v8.
 
-v.0.2.0
+v0.2.0
 ---
 
 *   Add unit test for each functions (just to check run or not).

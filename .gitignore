@@ -24,12 +24,14 @@ test_config.h
 
 # Python cache files
 setup.py
+Pipfile.lock
 poetry.lock
 *.pyc
 *.pyd
 dist/*
-__pycache__/*
+__pycache__/
 *.egg-info
+.ipynb_checkpoints/
 
 # Mesh file format
 *.ply

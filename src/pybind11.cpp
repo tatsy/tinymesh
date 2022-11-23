@@ -55,6 +55,7 @@ PYBIND11_MODULE(tinymesh, m) {
         .def(py::init<>())
         .def(py::init<const std::string &>())
         .def(py::init<const std::vector<Vec3> &, const std::vector<uint32_t> &>())
+        .def("clone", &Mesh::clone, py::return_value_policy::move)
         .def("load", &Mesh::load)
         .def("save", &Mesh::save)
         .def("vertex", &Mesh::vertex, py::return_value_policy::reference)
@@ -81,15 +82,12 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("is_static", &Face::isStatic);
 
     /*** Utilities */
-    Eigen::MatrixXf mat(5, 6);
-    mat << 0, 3, 0, 0, 0, 11, 22, 0, 0, 0, 17, 11, 7, 5, 0, 1, 0, 11, 0, 0, 0, 0, 0, 11, 0, 0, 14, 0, 8, 11;
-
     m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
-    // m.def("test_method",
-    //       [mat]() -> Eigen::SparseMatrix<float, Eigen::RowMajor> { return Eigen::SparseView<Eigen::MatrixXf>(mat); });
-    m.attr("MESH_LAPLACE_ADJACENT") = (int)MeshLaplace::Adjacent;
-    m.attr("MESH_LAPLACE_COTANGENT") = (int)MeshLaplace::Cotangent;
-    m.attr("MESH_LAPLACE_BELKIN08") = (int)MeshLaplace::Belkin08;
+
+    py::enum_<MeshLaplace>(m, "MeshLaplace")
+        .value("ADJACENT", MeshLaplace::Adjacent)
+        .value("COTANGENT", MeshLaplace::Cotangent)
+        .value("BELKIN08", MeshLaplace::Belkin08);
 
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,
