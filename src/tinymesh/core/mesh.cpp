@@ -28,7 +28,7 @@ namespace fs = std::filesystem;
 using IndexPair = std::pair<uint32_t, uint32_t>;
 
 struct IndexPairHash : public std::function<size_t(IndexPair)> {
-    std::size_t operator()(const IndexPair& k) const {
+    std::size_t operator()(const IndexPair &k) const {
         return std::get<0>(k) ^ std::get<1>(k);
     }
 };
@@ -39,9 +39,12 @@ namespace tinymesh {
 // Mesh
 // ----------
 
-Mesh::Mesh() {}
+Mesh::Mesh() {
+}
 
-Mesh::Mesh(const std::string &filename) { load(filename); }
+Mesh::Mesh(const std::string &filename) {
+    load(filename);
+}
 
 Mesh::Mesh(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
     construct(vertices, indices);
@@ -155,7 +158,10 @@ void Mesh::construct() {
             const uint32_t b = indices_[i + (j + 1) % degree];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                Warn("An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes this edge.", a, b);
+                Warn(
+                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes this "
+                    "edge.",
+                    a, b);
                 isDuplicated = true;
                 break;
             }
@@ -346,8 +352,8 @@ void Mesh::loadOBJ(const std::string &filename) {
 }
 
 void Mesh::loadPLY(const std::string &filename) {
-    using tinyply::PlyFile;
     using tinyply::PlyData;
+    using tinyply::PlyFile;
 
     // Open
     std::ifstream reader(filename.c_str(), std::ios::binary);
@@ -392,7 +398,7 @@ void Mesh::loadPLY(const std::string &filename) {
     const size_t numVerts = vert_data->count;
     std::vector<float> raw_vertices(numVerts * 3);
     std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
-        
+
     const size_t numFaces = face_data->count;
     std::vector<uint32_t> raw_indices(numFaces * 3);
     std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
@@ -979,7 +985,8 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
                 const double D = std::max(a01, a12);
                 const double WangleNew = std::max(D, std::max(Wangle(i, m), Wangle(m, k)));
 
-                if (WangleNew < Wangle(i, k) || (abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k))) {
+                if (WangleNew < Wangle(i, k) ||
+                    (abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k))) {
                     Warea(i, k) = WareaNew;
                     Wangle(i, k) = WangleNew;
                     O(i, k) = m;
@@ -1131,23 +1138,32 @@ double Mesh::H(Vertex *v) const {
     const int N = static_cast<int>(neighbors.size());
     Vec3 laplace = Vec3(0.0);
     double sumAreas = 0.0;
+    Vec3 normal = Vec3(0.0);
     for (int i = 0; i < N; i++) {
         const int prev = (i - 1 + N) % N;
         const int post = (i + 1) % N;
 
-        const Vec3 ea1 = v->pos() - neighbors[prev]->pos();
-        const Vec3 ea2 = neighbors[i]->pos() - neighbors[prev]->pos();
-        const double cota = length(ea1) * length(ea2) / length(cross(ea1, ea2));
-        const Vec3 eb1 = v->pos() - neighbors[post]->pos();
-        const Vec3 eb2 = v->pos() - neighbors[post]->pos();
-        const double cotb = length(eb1) * length(eb2) / length(cross(eb1, eb2));
-        laplace += (cota + cotb) * (neighbors[i]->pos() - v->pos());
+        const Vec3 &p0 = v->pos();
+        const Vec3 &p1 = neighbors[i]->pos();
+        const Vec3 &p2 = neighbors[post]->pos();
+        const Vec3 &p3 = neighbors[prev]->pos();
 
-        const Vec3 e1 = neighbors[i]->pos() - v->pos();
-        const Vec3 e2 = neighbors[post]->pos() - v->pos();
+        const double sin_a = length(cross(p0 - p2, p1 - p2));
+        const double cos_a = dot(p0 - p2, p1 - p2);
+        const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
+        const double sin_b = length(cross(p0 - p3, p1 - p3));
+        const double cos_b = dot(p0 - p3, p1 - p3);
+        const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
+        const double weight = 0.5 * (cot_a + cot_b);
+        laplace += weight * (neighbors[i]->pos() - v->pos());
+
+        const Vec3 e1 = p1 - p0;
+        const Vec3 e2 = p2 - p0;
         sumAreas += length(cross(e1, e2)) / 6.0;
+        normal += cross(e1, e2);
     }
-    return length(laplace) / (2.0 * sumAreas);
+    normal = normalize(normal);
+    return dot(laplace, normal) / (2.0 * sumAreas);
 }
 
 bool Mesh::verify() const {
