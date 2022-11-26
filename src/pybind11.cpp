@@ -81,6 +81,7 @@ PYBIND11_MODULE(tinymesh, m) {
 
     py::class_<Face, std::shared_ptr<Face>>(m, "Face")
         .def(py::init<>())
+        .def("area", &Face::area)
         .def("is_boundary", &Face::isBoundary)
         .def("is_static", &Face::isStatic);
 

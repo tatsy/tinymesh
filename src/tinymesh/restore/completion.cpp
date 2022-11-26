@@ -7,7 +7,7 @@
 
 namespace tinymesh {
 
-void holeFill(Mesh& mesh, double dihedralBound) {
+void holeFill(Mesh &mesh, double dihedralBound) {
     std::vector<int> holeFaces;
     for (int i = 0; i < (int)mesh.numFaces(); i++) {
         Face *f = mesh.face(i);
@@ -32,11 +32,9 @@ void holeFill(Mesh& mesh, double dihedralBound) {
 }
 
 void holeFillAdvancingFront(Mesh &mesh) {
-
 }
 
 void holeFillingContextCoherent(Mesh &mesh) {
-    
 }
 
 }  // namespace tinymesh

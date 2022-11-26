@@ -24,10 +24,17 @@ public:
     bool operator==(const Halfedge &other) const;
 
     double length() const;
+    double cotWeight() const;
 
-    Vertex *src() const { return src_; }
-    Vertex *dst() const { return next_->src_; }
-    Halfedge *next() const { return next_; }
+    Vertex *src() const {
+        return src_;
+    }
+    Vertex *dst() const {
+        return next_->src_;
+    }
+    Halfedge *next() const {
+        return next_;
+    }
     Halfedge *prev() const {
         Halfedge *iter = next_;
         while (iter->next_ != this) {
@@ -36,10 +43,18 @@ public:
         return iter;
     }
 
-    Halfedge *rev() const { return rev_; }
-    Edge *edge() const { return edge_; }
-    Face *face() const { return face_; }
-    int index() const { return index_; }
+    Halfedge *rev() const {
+        return rev_;
+    }
+    Edge *edge() const {
+        return edge_;
+    }
+    Face *face() const {
+        return face_;
+    }
+    int index() const {
+        return index_;
+    }
     bool isStatic() const;
     bool isBoundary() const;
 

@@ -80,8 +80,7 @@ int main(int argc, char **argv) {
             mesh::holeFill(mesh, Pi / 6.0);
             mesh::denoiseL0Smooth(mesh);
 
-            const std::string outfile =
-                (dirpath / fs::path((basename + "_denoise_l0" + extension).c_str())).string();
+            const std::string outfile = (dirpath / fs::path((basename + "_denoise_l0" + extension).c_str())).string();
             mesh.save(outfile);
             printf("Save: %s\n", outfile.c_str());
         }

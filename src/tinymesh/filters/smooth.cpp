@@ -20,7 +20,7 @@ using SparseMatrix = Eigen::SparseMatrix<ScalarType>;
 
 namespace tinymesh {
 
-void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iterations) {
+void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int iterations) {
     for (int it = 0; it < iterations; it++) {
         // Volonoi tessellation
         const int nv = (int)mesh.numVertices();
@@ -29,38 +29,18 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iter
         // Compute centroids and tangent planes
         omp_parallel_for(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
-
-            // Collect surrounding vertices
-            Vec3 org = v->pos();
             std::vector<Vec3> pts;
-            for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
-                pts.push_back(vit->pos());
-            }
-
-            // Compute centroids
             Vec3 cent(0.0);
-            double sum_weight = 0.0;
-            for (int i = 0; i < (int)pts.size(); i++) {
+            double sumWgt = 0.0;
+            for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
                 double weight = 1.0;
-                if (cotangent_weight) {
-                    const Vec3 &p0 = org;
-                    const Vec3 &p1 = pts[i];
-                    const Vec3 &p2 = pts[(i + 1) % pts.size()];
-                    const Vec3 &p3 = pts[(i - 1 + pts.size()) % pts.size()];
-                    const double sin_a = length(cross(p0 - p2, p1 - p2));
-                    const double cos_a = dot(p0 - p2, p1 - p2);
-                    const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
-                    const double sin_b = length(cross(p0 - p3, p1 - p3));
-                    const double cos_b = dot(p0 - p3, p1 - p3);
-                    const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
-                    weight = 0.5 * (cot_a + cot_b);
+                if (cotangentWeight) {
+                    weight = it->cotWeight();
                 }
-
-                cent += weight * pts[i];
-                sum_weight += weight;
+                cent += weight * it->dst()->pos();
+                sumWgt += weight;
             }
-
-            centroids[i] = cent / sum_weight;
+            centroids[i] = cent / sumWgt;
         }
 
         // Update vertex positions
@@ -185,7 +165,7 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
                 sumW += W;
             }
 
-            for (const auto& t : tripletsInColumn) {
+            for (const auto &t : tripletsInColumn) {
                 triplets.emplace_back(t.row(), t.col(), t.value() / sumW);
             }
             triplets.emplace_back(i, i, -1.0);

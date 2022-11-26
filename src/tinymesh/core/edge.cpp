@@ -1,6 +1,7 @@
 #define TINYMESH_API_EXPORT
 #include "edge.h"
 
+#include "core/vertex.h"
 #include "core/halfedge.h"
 
 namespace tinymesh {
@@ -18,6 +19,10 @@ bool Edge::operator==(const Edge &other) const {
 
 double Edge::length() const {
     return halfedge_->length();
+}
+
+double Edge::cotWeight() const {
+    return halfedge_->cotWeight();
 }
 
 }  // namespace tinymesh

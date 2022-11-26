@@ -16,7 +16,8 @@
 
 namespace tinymesh {
 
-void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double keepAngleLessThan, int iterations, bool verbose) {
+void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double keepAngleLessThan, int iterations,
+                      bool verbose) {
     Assertion(mesh.verify(), "Invalid mesh!");
 
     // Compute average edge length
@@ -187,7 +188,8 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
             const int t3 = v3->isBoundary() ? 4 : 6;
 
             const int score = std::abs(d0 - t0) + std::abs(d1 - t1) + std::abs(d2 - t2) + std::abs(d3 - t3);
-            const int after = std::abs(d0 - 1 - t0) + std::abs(d1 - 1 - t1) + std::abs(d2 + 1 - t2) + std::abs(d3 + 1 - t3);
+            const int after =
+                std::abs(d0 - 1 - t0) + std::abs(d1 - 1 - t1) + std::abs(d2 + 1 - t2) + std::abs(d3 + 1 - t3);
             if (score > after) {
                 mesh.flipHE(he);
             }

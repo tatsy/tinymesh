@@ -34,24 +34,8 @@ void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
         Vertex *v = mesh.vertex(i);
         double sumWgt = 0.0;
         for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
-            Halfedge &he = *it;
-            Vertex *u = he.dst();
-            Vertex *l = he.next()->dst();
-            Vertex *r = he.rev()->next()->dst();
-
-            const Vec3 &p0 = v->pos();
-            const Vec3 &p1 = u->pos();
-            const Vec3 &p2 = l->pos();
-            const Vec3 &p3 = r->pos();
-            const double sin_a = length(cross(p0 - p2, p1 - p2));
-            const double cos_a = dot(p0 - p2, p1 - p2);
-            const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
-            const double sin_b = length(cross(p0 - p3, p1 - p3));
-            const double cos_b = dot(p0 - p3, p1 - p3);
-            const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
-            const double weight = 0.5 * (cot_a + cot_b);
-
-            const int j = u->index();
+            const int j = it->dst()->index();
+            const double weight = it->cotWeight();
             triplets.emplace_back(i, j, -weight);
             sumWgt += weight;
         }
