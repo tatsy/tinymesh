@@ -15,11 +15,11 @@
 
 #include "core/debug.h"
 #include "core/vec.h"
-#include "core/filesystem.h"
 #include "core/vertex.h"
 #include "core/edge.h"
-#include "core/halfedge.h"
 #include "core/face.h"
+#include "core/halfedge.h"
+#include "core/filesystem.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
 
@@ -1108,62 +1108,6 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
     removeFace(face);
 
     return true;
-}
-
-double Mesh::K(Vertex *v) const {
-    std::vector<Vertex *> neighbors;
-    for (auto it = v->v_begin(); it != v->v_end(); ++it) {
-        neighbors.push_back(it.ptr());
-    }
-
-    const int N = static_cast<int>(neighbors.size());
-    double sumAngles = 0.0;
-    double sumAreas = 0.0;
-    for (int i = 0; i < N; i++) {
-        const int j = (i + 1) % N;
-        const Vec3 e1 = neighbors[i]->pos() - v->pos();
-        const Vec3 e2 = neighbors[j]->pos() - v->pos();
-        sumAngles += std::atan2(length(cross(e1, e2)), dot(e1, e2));
-        sumAreas += length(cross(e1, e2)) / 6.0;
-    }
-    return (2.0 * Pi - sumAngles) / sumAreas;
-}
-
-double Mesh::H(Vertex *v) const {
-    std::vector<Vertex *> neighbors;
-    for (auto it = v->v_begin(); it != v->v_end(); ++it) {
-        neighbors.push_back(it.ptr());
-    }
-
-    const int N = static_cast<int>(neighbors.size());
-    Vec3 laplace = Vec3(0.0);
-    double sumAreas = 0.0;
-    Vec3 normal = Vec3(0.0);
-    for (int i = 0; i < N; i++) {
-        const int prev = (i - 1 + N) % N;
-        const int post = (i + 1) % N;
-
-        const Vec3 &p0 = v->pos();
-        const Vec3 &p1 = neighbors[i]->pos();
-        const Vec3 &p2 = neighbors[post]->pos();
-        const Vec3 &p3 = neighbors[prev]->pos();
-
-        const double sin_a = length(cross(p0 - p2, p1 - p2));
-        const double cos_a = dot(p0 - p2, p1 - p2);
-        const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
-        const double sin_b = length(cross(p0 - p3, p1 - p3));
-        const double cos_b = dot(p0 - p3, p1 - p3);
-        const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
-        const double weight = 0.5 * (cot_a + cot_b);
-        laplace += weight * (neighbors[i]->pos() - v->pos());
-
-        const Vec3 e1 = p1 - p0;
-        const Vec3 e2 = p2 - p0;
-        sumAreas += length(cross(e1, e2)) / 6.0;
-        normal += cross(e1, e2);
-    }
-    normal = normalize(normal);
-    return dot(laplace, normal) / (2.0 * sumAreas);
 }
 
 bool Mesh::verify() const {

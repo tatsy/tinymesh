@@ -34,6 +34,8 @@ public:
 
     int degree();
     Vec3 normal();
+    double K();
+    double H();
 
     VertexIterator v_begin();
     VertexIterator v_end();
@@ -44,10 +46,16 @@ public:
     FaceIterator f_begin();
     FaceIterator f_end();
 
-    Vec3 pos() const { return pos_; }
-    void setPos(const Vec3 &pos) { pos_ = pos; }
+    Vec3 pos() const {
+        return pos_;
+    }
+    void setPos(const Vec3 &pos) {
+        pos_ = pos;
+    }
 
-    int index() const { return index_; }
+    int index() const {
+        return index_;
+    }
 
     bool isBoundary() const {
         return isBoundary_;
@@ -71,10 +79,10 @@ private:
     friend class Mesh;
 };
 
-// ----------
-// VertexIterator
-// ----------
-
+/**
+ * VertexIterator
+ * @detail Traverse neighboring vertices in the counter-clockwise order.
+ */
 class Vertex::VertexIterator {
 public:
     explicit VertexIterator(Halfedge *he);
@@ -89,10 +97,10 @@ private:
     Halfedge *halfedge_, *iter_;
 };
 
-// ----------
-// InHalfedgeIterator
-// ----------
-
+/**
+ * InHalfedgeIterator
+ * @detail Traverse inward halfedges in the counter-clockwise order.
+ */
 class Vertex::InHalfedgeIterator {
 public:
     explicit InHalfedgeIterator(Halfedge *he);
@@ -107,9 +115,10 @@ private:
     Halfedge *halfedge_, *iter_;
 };
 
-// ----------
-// OutHalfedgeIterator
-// ----------
+/**
+ * OutHalfedgeIterator
+ * @detail Traverse outward halfedges in counter-clockwise order.
+ */
 
 class Vertex::OutHalfedgeIterator {
 public:
@@ -125,10 +134,10 @@ private:
     Halfedge *halfedge_, *iter_;
 };
 
-// ----------
-// FaceIterator
-// ----------
-
+/**
+ * FaceIterator
+ * @detail Traverse neighboring faces in counter-clockwise order.
+ */
 class Vertex::FaceIterator {
 public:
     FaceIterator(Halfedge *he);

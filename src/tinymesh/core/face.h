@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "core/api.h"
+#include "core/vec.h"
 
 namespace tinymesh {
 
@@ -36,6 +37,9 @@ public:
     int index() const {
         return index_;
     }
+
+    Vec3 normal();
+    double area();
 
     bool isBoundary();
     bool isStatic();

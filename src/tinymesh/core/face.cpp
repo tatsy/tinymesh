@@ -1,6 +1,8 @@
 #define TINYMESH_API_EXPORT
 #include "face.h"
 
+#include <vector>
+
 #include "vertex.h"
 #include "halfedge.h"
 
@@ -14,6 +16,42 @@ bool Face::operator==(const Face &other) const {
     ret &= (halfedge_ == other.halfedge_);
     ret &= (index_ == other.index_);
     return ret;
+}
+
+Vec3 Face::normal() {
+    std::vector<Vec3> vs;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        vs.push_back(it->pos());
+    }
+
+    const int N = static_cast<int>(vs.size());
+    Vec3 norm(0.0);
+    for (int i = 0; i < N; i++) {
+        const int prev = (i - 1 + N) % N;
+        const int post = (i + 1) % N;
+        const Vec3 &p0 = vs[i];
+        const Vec3 &p1 = vs[post];
+        const Vec3 &p2 = vs[prev];
+        norm += cross(p1 - p0, p2 - p0);
+    }
+    return normalize(norm);
+}
+
+double Face::area() {
+    std::vector<Vec3> vs;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        vs.push_back(it->pos());
+    }
+
+    const int N = static_cast<int>(vs.size());
+    double area = 0.0;
+    for (int i = 1; i < N - 1; i++) {
+        const Vec3 &p0 = vs[i];
+        const Vec3 &p1 = vs[i - 1];
+        const Vec3 &p2 = vs[i + 1];
+        area += 0.5 * length(cross(p1 - p0, p2 - p0));
+    }
+    return area;
 }
 
 bool Face::isBoundary() {
@@ -126,7 +164,7 @@ Face::FaceIterator &Face::FaceIterator::operator++() {
 }
 
 Face::FaceIterator Face::FaceIterator::operator++(int) {
-    Halfedge* tmp = iter_;
+    Halfedge *tmp = iter_;
     iter_ = iter_->next();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
