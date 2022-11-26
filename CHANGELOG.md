@@ -3,6 +3,7 @@ v0.2.2
 * Change Python env manager to Pipenv.
 * Add methods computing approximated Laplacian-Beltrami operators.
 * Add IPython notebooks as Pythons examples rather than simple scripts.
+* Change traversal order of elements around a vertex to counter-clockwise order.
 
 v0.2.1
 ---
