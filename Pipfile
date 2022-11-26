@@ -8,6 +8,7 @@ numpy = "*"
 open3d = "*"
 matplotlib = "*"
 poetry = "*"
+scipy = "*"
 
 [dev-packages]
 yapf = "*"
