@@ -2,6 +2,7 @@
 # Common target names
 # ----------
 set(EIGEN_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/eigen)
+set(SPECTRA_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/spectra/include)
 set(TINYOBJ_LOADER_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader)
 set(SOURCE_FILES ${SOURCE_FILES};${TINYOBJ_LOADER_INCLUDE_DIR}/tiny_obj_loader.h)
 set(TINYPLY_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source)
@@ -25,7 +26,9 @@ target_include_directories(
     ${TINYMESH_LIBRARY} PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}
     ${OpenMP_INCLUDE_DIRS}
-    ${EIGEN_INCLUDE_DIR} ${TINYOBJ_LOADER_INCLUDE_DIR}
+    ${EIGEN_INCLUDE_DIR}
+    ${SPECTRA_INCLUDE_DIR}
+    ${TINYOBJ_LOADER_INCLUDE_DIR}
     ${TINYPLY_INCLUDE_DIR})
 
 target_link_libraries(

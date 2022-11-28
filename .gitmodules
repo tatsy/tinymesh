@@ -7,3 +7,9 @@
 [submodule "src/tinymesh/ext/eigen"]
 	path = src/tinymesh/ext/eigen
 	url = https://gitlab.com/libeigen/eigen.git
+[submodule ".\\src\\tinymesh\\ext\\redsvd"]
+	path = .\\src\\tinymesh\\ext\\redsvd
+	url = https://github.com/andrewssobral/redsvd
+[submodule ".\\src\\tinymesh\\ext\\spectra"]
+	path = .\\src\\tinymesh\\ext\\spectra
+	url = https://github.com/yixuan/spectra

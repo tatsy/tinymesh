@@ -21,6 +21,8 @@ enum MeshLaplace : int {
 
 TINYMESH_API EigenSparseMatrix getMeshLaplacian(Mesh &mesh, MeshLaplace type);
 
+TINYMESH_API EigenMatrix getHeatKernelSignatures(Mesh &mesh, int K = 300, int nTimes = 100);
+
 }  // namespace tinymesh
 
 #endif  // TINYMESH_UTILS_H

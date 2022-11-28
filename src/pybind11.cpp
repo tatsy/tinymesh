@@ -93,6 +93,9 @@ PYBIND11_MODULE(tinymesh, m) {
         .value("COTANGENT", MeshLaplace::Cotangent)
         .value("BELKIN08", MeshLaplace::Belkin08);
 
+    m.def("get_heat_kernel_signatures", &getHeatKernelSignatures, "Heat kernel signatures", py::arg("mesh"),
+          py::arg("K") = 300, py::arg("n_times") = 100);
+
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,
           py::arg("cotangent_weight") = false, py::arg("iterations") = 3);
