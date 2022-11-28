@@ -1,9 +1,10 @@
 v0.2.2
 ---
 * Change Python env manager to Pipenv.
-* Add methods computing approximated Laplacian-Beltrami operators.
+* Add methods computing approximated Laplacian-Beltrami operators (adjacent, cotangent, Belkin+2008).
 * Add IPython notebooks as Pythons examples rather than simple scripts.
 * Change traversal order of elements around a vertex to counter-clockwise order.
+* Add heat kernel signature [Sun et al. 2009].
 
 v0.2.1
 ---

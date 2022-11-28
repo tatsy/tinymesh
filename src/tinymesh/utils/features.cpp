@@ -5,14 +5,12 @@
 
 namespace tinymesh {
 
-EigenMatrix getHeatKernelSignatures(Mesh &mesh, int K, int nTimes) {
-    EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Belkin08);
-
+EigenMatrix getHeatKernelSignatures(EigenSparseMatrix &L, int K, int nTimes) {
     Spectra::SparseGenMatProd<FloatType> op(L);
     Spectra::SymEigsSolver<Spectra::SparseGenMatProd<FloatType>> eigs(op, K, K * 2);
     eigs.init();
 
-    int nconv = eigs.compute(Spectra::SortRule::LargestAlge);
+    int nconv = eigs.compute(Spectra::SortRule::SmallestMagn, 1000, 1.0e-10, Spectra::SortRule::SmallestMagn);
     if (eigs.info() != Spectra::CompInfo::Successful) {
         Error("Eigen decomposition failed!");
     }
@@ -20,8 +18,8 @@ EigenMatrix getHeatKernelSignatures(Mesh &mesh, int K, int nTimes) {
     EigenMatrix U = eigs.eigenvectors();
     EigenVector lambda = eigs.eigenvalues();
 
-    const double t_min = 4.0 * std::log(10) / lambda(K - 1);
-    const double t_max = 4.0 * std::log(10) / lambda(1);
+    const double t_min = 4.0 * std::log(10) / std::max(1.0e-12, lambda(K - 1));
+    const double t_max = 4.0 * std::log(10) / std::max(1.0e-12, lambda(1));
 
     const double log_t_min = std::log(t_min);
     const double log_t_max = std::log(t_max);
@@ -31,12 +29,13 @@ EigenMatrix getHeatKernelSignatures(Mesh &mesh, int K, int nTimes) {
         times(i) = std::exp(log_t_min + i * inc);
     }
 
-
     const int N = L.rows();
     EigenMatrix HKS(N, nTimes);
+    HKS.setZero();
     for (int i = 0; i < K; i++) {
-        EigenVector exp = (times * lambda(i)).array().exp().matrix();
-        HKS += exp * U.col(i).transpose();
+        const EigenVector exp = (-times * lambda(i)).array().exp().matrix();
+        const EigenVector U2 = U.col(i).array().square().matrix();
+        HKS += U2 * exp.transpose();
     }
 
     return HKS;

@@ -70,23 +70,24 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
             Vertex *u = it->dst();
             const double h = avgEdgeLength;
             const double norm = length(v->pos() - u->pos());
-            const double weight = std::exp(-norm * norm / (4 * h)) / std::pow(4.0 * Pi * h, 1.5);
+            const double weight = std::exp(-norm * norm / (4 * h)) / (4.0 * Pi * h);
             const int j = u->index();
             triplets.emplace_back(i, j, -weight);
             sumWgt += weight;
             // Area
             Vertex *w = it->next()->dst();
-            area += 0.5 * length(cross(u->pos() - v->pos(), w->pos() - v->pos())) / 3.0;
+            area += length(cross(u->pos() - v->pos(), w->pos() - v->pos())) / 6.0;
         }
         triplets.emplace_back(i, i, sumWgt);
         areas.emplace_back(i, i, area);
     }
     EigenSparseMatrix W(N, N);
     W.setFromTriplets(triplets.begin(), triplets.end());
+    L = W;
 
-    EigenSparseMatrix A(N, N);
-    A.setFromTriplets(areas.begin(), areas.end());
-    L = A * W;
+    // EigenSparseMatrix A(N, N);
+    // A.setFromTriplets(areas.begin(), areas.end());
+    // L = A * W;
 }
 
 EigenSparseMatrix getMeshLaplacian(Mesh &mesh, MeshLaplace type) {

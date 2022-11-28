@@ -86,12 +86,12 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("is_static", &Face::isStatic);
 
     /*** Utilities */
-    m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
-
     py::enum_<MeshLaplace>(m, "MeshLaplace")
         .value("ADJACENT", MeshLaplace::Adjacent)
         .value("COTANGENT", MeshLaplace::Cotangent)
         .value("BELKIN08", MeshLaplace::Belkin08);
+
+    m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
 
     m.def("get_heat_kernel_signatures", &getHeatKernelSignatures, "Heat kernel signatures", py::arg("mesh"),
           py::arg("K") = 300, py::arg("n_times") = 100);
