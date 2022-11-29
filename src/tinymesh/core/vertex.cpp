@@ -49,6 +49,15 @@ Vec3 Vertex::normal() {
     return normalize(norm);
 }
 
+bool Vertex::isBoundary() {
+    for (auto it = ohe_begin(); it != ohe_end(); ++it) {
+        if (it->isBoundary()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 double Vertex::K() {
     std::vector<Vertex *> neighbors;
     for (auto it = v_begin(); it != v_end(); ++it) {

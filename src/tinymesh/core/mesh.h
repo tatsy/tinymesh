@@ -9,15 +9,17 @@
 #include <vector>
 #include <set>
 #include <memory>
+#include <unordered_map>
 
 #include "core/api.h"
 #include "core/vec.h"
+#include "core/types.h"
 #include "core/debug.h"
 
 namespace tinymesh {
 
 /**
- * Halfedge data structure for polygonal mesh.
+ * "Mesh" is a class for halfedge data structure for polygonal mesh.
  */
 class TINYMESH_API Mesh {
 public:
@@ -95,7 +97,12 @@ private:
     void triangulate(Face *f);
     bool verifyVertex(Vertex *v) const;
 
-    // Mesh completion methods (in completion.cpp)
+    // ----- Mesh completion methods (in completion.cpp) -----
+
+    //! This method adds a new triangle using vertices specified with "boundary" and indices in the list.
+    Face *addNewTriangle(const std::vector<Vertex *> &boundary, const std::tuple<uint32_t, uint32_t, uint32_t> &tri,
+                         std::unordered_map<IndexPair, Halfedge *> &pair2he,
+                         std::unordered_map<Halfedge *, IndexPair> &he2pair);
     void holeFillMinDihedral(Face *face, double dihedralBound = Pi);
     void holeFillAdvancingFront(Face *face);
 

@@ -21,6 +21,9 @@ public:
 
     bool operator==(const Edge &other) const;
 
+    Vertex *src() const;
+    Vertex *dst() const;
+
     Halfedge *halfedge() const {
         return halfedge_;
     }
@@ -28,6 +31,7 @@ public:
     int index() const {
         return index_;
     }
+
     bool isBoundary() const;
     bool isLocked() const;
     double length() const;

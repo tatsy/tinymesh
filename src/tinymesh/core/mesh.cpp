@@ -276,7 +276,8 @@ void Mesh::construct() {
             const auto degree = static_cast<int>(boundaryHalfedges.size());
             for (int j = 0; j < degree; j++) {
                 const int k = (j - 1 + degree) % degree;
-                boundaryHalfedges[j]->src_->isBoundary_ = true;
+                it->isBoundary_ = true;
+                boundaryHalfedges[j]->isBoundary_ = true;
                 boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
             }
         }
@@ -433,7 +434,7 @@ void Mesh::saveOBJ(const std::string &filename) const {
 
     const int nv = (int)vertices_.size();
     for (const auto &f : faces_) {
-        if (f->isBoundary()) {
+        if (f->isHole()) {
             continue;
         }
 
@@ -470,7 +471,7 @@ void Mesh::savePLY(const std::string &filename) const {
     std::vector<uint32_t> indexData;
     indexData.reserve(faces_.size() * 3);
     for (const auto &f : faces_) {
-        if (f->isBoundary()) {
+        if (f->isHole()) {
             continue;
         }
 
