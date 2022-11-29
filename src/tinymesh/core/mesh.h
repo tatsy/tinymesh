@@ -37,8 +37,7 @@ public:
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
-    void fillHoles(double dihedralBound = Pi);
-    void triangulate(Face *f, double dihedralBound = Pi);
+    void fillHoles();
 
     bool verify() const;
 
@@ -93,7 +92,12 @@ private:
     void removeHalfedge(Halfedge *he);
     void removeFace(Face *f);
 
+    void triangulate(Face *f);
     bool verifyVertex(Vertex *v) const;
+
+    // Mesh completion methods (in completion.cpp)
+    void holeFillMinDihedral(Face *face, double dihedralBound = Pi);
+    void holeFillAdvancingFront(Face *face);
 
     // Private parameters
     std::vector<std::shared_ptr<Vertex>> vertices_;
@@ -101,6 +105,10 @@ private:
     std::vector<std::shared_ptr<Halfedge>> halfedges_;
     std::vector<std::shared_ptr<Face>> faces_;
     std::vector<uint32_t> indices_;
+
+    // Friend methods
+    friend void holeFillMinDihedral(Mesh &mesh, Face *face, double dihedralBound);
+    friend void holeFillAdvancingFront(Mesh &mesh, Face *face);
 };
 
 }  // namespace tinymesh

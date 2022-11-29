@@ -66,7 +66,7 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("num_edges", &Mesh::numEdges)
         .def("num_halfedges", &Mesh::numHalfedges)
         .def("num_faces", &Mesh::numFaces)
-        .def("fill_holes", &Mesh::fillHoles, "Fill all holes", py::arg("dihedral") = Pi)
+        .def("fill_holes", &Mesh::fillHoles, "Fill all holes")
         .def("verify", &Mesh::verify);
 
     py::class_<Vertex, std::shared_ptr<Vertex>>(m, "Vertex")
