@@ -3,6 +3,7 @@
 #include "tinymesh/tinymesh.h"
 
 namespace fs = std::filesystem;
+namespace tms = tinymesh;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
@@ -11,7 +12,7 @@ int main(int argc, char **argv) {
     }
 
     // Load
-    tinymesh::Mesh mesh(argv[1]);
+    tms::Mesh mesh(argv[1]);
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));

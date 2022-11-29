@@ -24,13 +24,19 @@
 
 template <typename... Args>
 std::string STR_FMT(const char *format, Args... args) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat"
     int size_s = std::snprintf(nullptr, 0, format, args...) + 1;
+#pragma clang diagnostic pop
     if (size_s <= 0) {
         throw std::runtime_error("Error during formatting.");
     }
     auto size = static_cast<size_t>(size_s);
     auto buf = std::make_unique<char[]>(size);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat"
     std::snprintf(buf.get(), size, format, args...);
+#pragma clang diagnostic pop
     return std::string(buf.get(), buf.get() + size - 1);
 }
 

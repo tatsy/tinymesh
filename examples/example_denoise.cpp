@@ -4,7 +4,7 @@
 #include "tinymesh/tinymesh.h"
 
 namespace fs = std::filesystem;
-namespace mesh = tinymesh;
+namespace tms = tinymesh;
 
 int main(int argc, char **argv) {
     try {
@@ -29,12 +29,12 @@ int main(int argc, char **argv) {
         // Save noise mesh
         std::string noiseMeshFile;
         {
-            mesh::Mesh mesh(argv[1]);
-            mesh::holeFill(mesh, Pi / 6.0);
+            tms::Mesh mesh(argv[1]);
+            mesh.fillHoles(Pi / 6.0);
 
             double Lavg = 0.0;
             for (int i = 0; i < (int)mesh.numEdges(); i++) {
-                mesh::Edge *e = mesh.edge(i);
+                tms::Edge *e = mesh.edge(i);
                 const double l = e->length();
                 Lavg += l;
             }
@@ -52,9 +52,9 @@ int main(int argc, char **argv) {
 
         // Denoise (Normal Gaussian filter)
         {
-            mesh::Mesh mesh(noiseMeshFile);
-            mesh::holeFill(mesh, Pi / 6.0);
-            mesh::denoiseNormalGaussian(mesh, sigma, 10);
+            tms::Mesh mesh(noiseMeshFile);
+            mesh.fillHoles(Pi / 6.0);
+            tms::denoiseNormalGaussian(mesh, sigma, 10);
 
             const std::string outfile =
                 (dirpath / fs::path((basename + "_denoise_Gaussian" + extension).c_str())).string();
@@ -64,9 +64,9 @@ int main(int argc, char **argv) {
 
         // Denoise (Normal bilateral filter)
         {
-            mesh::Mesh mesh(noiseMeshFile);
-            mesh::holeFill(mesh, Pi / 6.0);
-            mesh::denoiseNormalBilateral(mesh, sigma, 0.1, 10);
+            tms::Mesh mesh(noiseMeshFile);
+            mesh.fillHoles(Pi / 6.0);
+            tms::denoiseNormalBilateral(mesh, sigma, 0.1, 10);
 
             const std::string outfile =
                 (dirpath / fs::path((basename + "_denoise_bilateral" + extension).c_str())).string();
@@ -76,9 +76,9 @@ int main(int argc, char **argv) {
 
         // Denoise (L0 smoothing)
         {
-            mesh::Mesh mesh(noiseMeshFile);
-            mesh::holeFill(mesh, Pi / 6.0);
-            mesh::denoiseL0Smooth(mesh);
+            tms::Mesh mesh(noiseMeshFile);
+            mesh.fillHoles(Pi / 6.0);
+            tms::denoiseL0Smooth(mesh);
 
             const std::string outfile = (dirpath / fs::path((basename + "_denoise_l0" + extension).c_str())).string();
             mesh.save(outfile);

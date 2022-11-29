@@ -3,7 +3,7 @@
 #include "tinymesh/tinymesh.h"
 
 namespace fs = std::filesystem;
-namespace mesh = tinymesh;
+namespace tms = tinymesh;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
@@ -12,12 +12,12 @@ int main(int argc, char **argv) {
     }
 
     // Load
-    mesh::Mesh mesh(argv[1]);
+    tms::Mesh mesh(argv[1]);
 
     // Fill holes & remesh
     const double keepAngle = argc > 2 ? std::atof(argv[2]) * Pi / 180.0 : 0.0;
-    mesh::holeFill(mesh, Pi / 6.0);
-    mesh::remeshTriangular(mesh, 0.8, 1.333, keepAngle);
+    mesh.fillHoles(Pi / 6.0);
+    tms::remeshTriangular(mesh, 0.8, 1.333, keepAngle);
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));

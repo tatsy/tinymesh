@@ -17,13 +17,14 @@ filenames = [
 
 
 class TestRemesh(unittest.TestCase):
+
     @params(*filenames)
     def test_hole_fill(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
 
         try:
-            tm.hole_fill(mesh)
+            mesh.fill_holes()
         except Exception:
             self.fail('Failed!')
 
@@ -33,7 +34,7 @@ class TestRemesh(unittest.TestCase):
     def test_remesh_triangular(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.remesh_triangular(mesh)
@@ -44,7 +45,7 @@ class TestRemesh(unittest.TestCase):
     def test_simplify_qem(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.simplify_qem(mesh, mesh.num_faces() // 10)

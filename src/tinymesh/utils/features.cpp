@@ -10,7 +10,7 @@ EigenMatrix getHeatKernelSignatures(EigenSparseMatrix &L, int K, int nTimes) {
     Spectra::SymEigsSolver<Spectra::SparseGenMatProd<FloatType>> eigs(op, K, K * 2);
     eigs.init();
 
-    int nconv = eigs.compute(Spectra::SortRule::SmallestMagn, 1000, 1.0e-10, Spectra::SortRule::SmallestMagn);
+    eigs.compute(Spectra::SortRule::SmallestMagn, 1000, 1.0e-10, Spectra::SortRule::SmallestMagn);
     if (eigs.info() != Spectra::CompInfo::Successful) {
         Error("Eigen decomposition failed!");
     }

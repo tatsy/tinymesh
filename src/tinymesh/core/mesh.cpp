@@ -20,6 +20,7 @@
 #include "core/face.h"
 #include "core/halfedge.h"
 #include "core/filesystem.h"
+#include "restore/restore.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
 
@@ -891,7 +892,22 @@ bool Mesh::flipHE(Halfedge *he) {
     return true;
 }
 
-bool Mesh::triangulate(Face *face, double dihedralBound) {
+void Mesh::fillHoles(double dihedralBound) {
+    std::vector<int> holeFaces;
+    for (int i = 0; i < (int)this->numFaces(); i++) {
+        Face *f = this->face(i);
+        if (f->isHole()) {
+            holeFaces.push_back(i);
+        }
+    }
+
+    for (auto i : holeFaces) {
+        Face *f = this->face(i);
+        this->triangulate(f, dihedralBound);
+    }
+}
+
+void Mesh::triangulate(Face *face, double dihedralBound) {
     /*
      * The triangulation algorithm is based on the following papers.
      * Barequet and Sharir, "Filling Gaps in the Boundary of a Polyhedron", 1995.
@@ -908,22 +924,18 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
     std::unordered_map<Halfedge *, E> he2pair;
 
     // List all boundary vertices
-    Halfedge *it = face->halfedge_;
-    do {
-        vs.push_back(it->src());
-        it = it->next_;
-    } while (it != face->halfedge_);
+    for (auto it = face->v_begin(); it != face->v_end(); ++it) {
+        vs.push_back(it.ptr());
+    }
     const int n_verts = (int)vs.size();
 
     int count = 0;
-    it = face->halfedge_;
-    do {
+    for (auto it = face->he_begin(); it != face->he_end(); ++it) {
         const int next = (count + 1) % n_verts;
-        pair2he.insert(std::make_pair(E(count, next), it));
-        he2pair.insert(std::make_pair(it, E(count, next)));
-        it = it->next_;
+        pair2he.insert(std::make_pair(E(count, next), it.ptr()));
+        he2pair.insert(std::make_pair(it.ptr(), E(count, next)));
         count += 1;
-    } while (it != face->halfedge_);
+    }
 
     Eigen::MatrixXd Warea(n_verts, n_verts);
     Eigen::MatrixXd Wangle(n_verts, n_verts);
@@ -1106,8 +1118,6 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
     }
 
     removeFace(face);
-
-    return true;
 }
 
 bool Mesh::verify() const {

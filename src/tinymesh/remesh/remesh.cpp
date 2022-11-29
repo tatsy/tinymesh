@@ -122,8 +122,6 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
                     continue;
                 }
 
-                const int i1 = he->src()->index();
-                const int i2 = he->dst()->index();
                 if (he->src()->isStatic() || he->dst()->isStatic()) {
                     continue;
                 }

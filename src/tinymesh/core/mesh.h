@@ -37,7 +37,8 @@ public:
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
-    bool triangulate(Face *f, double dihedralBound = Pi);
+    void fillHoles(double dihedralBound = Pi);
+    void triangulate(Face *f, double dihedralBound = Pi);
 
     bool verify() const;
 

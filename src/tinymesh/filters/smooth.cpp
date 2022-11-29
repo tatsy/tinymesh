@@ -119,46 +119,12 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
         for (int i = 0; i < n_verts; i++) {
             Vertex *v = mesh.vertex(i);
 
-            // Compute Volonoi area
-            double A = 0.0;
-            for (auto f_it = v->f_begin(); f_it != v->f_end(); ++f_it) {
-                std::vector<Vec3> vs;
-                for (auto v_it = f_it->v_begin(); v_it != f_it->v_end(); ++v_it) {
-                    vs.push_back(v_it->pos());
-                }
-
-                Assertion(vs.size() == 3, "Non-triangle face is detected!");
-
-                A += 0.5 * length(cross(vs[1] - vs[0], vs[2] - vs[0])) / 6.0;
-            }
-
             // Compute weights
             double sumW = 0.0;
             std::vector<Triplet> tripletsInColumn;
             for (auto he_it = v->ohe_begin(); he_it != v->ohe_end(); ++he_it) {
-                Halfedge *ohe = he_it.ptr();
-                Halfedge *ihe = ohe->rev();
-
-                Vertex *xa = ohe->next()->dst();
-                Vertex *xb = ohe->dst();
-                Vertex *xc = ihe->dst();
-                Vertex *xd = ihe->next()->dst();
-
-                const Vec3 va = xa->pos();
-                const Vec3 vb = xb->pos();
-                const Vec3 vc = xc->pos();
-                const Vec3 vd = xd->pos();
-
-                const Vec3 e_ab = vb - va;
-                const Vec3 e_ac = vc - va;
-                const double cot_a = dot(e_ab, e_ac) / (length(cross(e_ab, e_ac)) + 1.0e-8);
-
-                const Vec3 e_db = vb - vd;
-                const Vec3 e_dc = vc - vd;
-                const double cot_d = dot(e_db, e_dc) / (length(cross(e_db, e_dc)) + 1.0e-8);
-
-                const double W = (cot_a + cot_d);
-                tripletsInColumn.emplace_back(i, xb->index(), W);
+                const double W = he_it->cotWeight();
+                tripletsInColumn.emplace_back(i, he_it->dst()->index(), W);
                 if (std::isnan(W) || std::isinf(W)) {
                     Warn("NaN of inf matrix entry is detedted!");
                 }

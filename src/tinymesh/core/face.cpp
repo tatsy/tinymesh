@@ -54,6 +54,18 @@ double Face::area() {
     return area;
 }
 
+bool Face::isHole() {
+    // Face is hole if all the vertices are at the boundary.
+    bool ret = true;
+    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
+        if (!vit->isBoundary()) {
+            ret = false;
+            break;
+        }
+    }
+    return ret;
+}
+
 bool Face::isBoundary() {
     for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
         if (vit->isBoundary()) {
@@ -78,6 +90,14 @@ Face::VertexIterator Face::v_begin() {
 
 Face::VertexIterator Face::v_end() {
     return Face::VertexIterator(nullptr);
+}
+
+Face::HalfedgeIterator Face::he_begin() {
+    return Face::HalfedgeIterator(halfedge_);
+}
+
+Face::HalfedgeIterator Face::he_end() {
+    return Face::HalfedgeIterator(nullptr);
 }
 
 Face::FaceIterator Face::f_begin() {
@@ -128,6 +148,48 @@ Face::VertexIterator Face::VertexIterator::operator++(int) {
         iter_ = nullptr;
     }
     return Face::VertexIterator(tmp);
+}
+
+// ----------
+// HalfedgeIterator
+// ----------
+
+Face::HalfedgeIterator::HalfedgeIterator(Halfedge *he)
+    : halfedge_{ he }
+    , iter_{ he } {
+}
+
+bool Face::HalfedgeIterator::operator!=(const Face::HalfedgeIterator &it) const {
+    return iter_ != it.iter_;
+}
+
+Halfedge &Face::HalfedgeIterator::operator*() {
+    return *iter_;
+}
+
+Halfedge *Face::HalfedgeIterator::ptr() const {
+    return iter_;
+}
+
+Halfedge *Face::HalfedgeIterator::operator->() const {
+    return iter_;
+}
+
+Face::HalfedgeIterator &Face::HalfedgeIterator::operator++() {
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return *this;
+}
+
+Face::HalfedgeIterator Face::HalfedgeIterator::operator++(int) {
+    Halfedge *tmp = iter_;
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return Face::HalfedgeIterator(tmp);
 }
 
 // ----------

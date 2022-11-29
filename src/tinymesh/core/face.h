@@ -16,6 +16,7 @@ class TINYMESH_API Face {
 public:
     // Forward declaration
     class VertexIterator;
+    class HalfedgeIterator;
     class FaceIterator;
 
 public:
@@ -31,6 +32,8 @@ public:
 
     VertexIterator v_begin();
     VertexIterator v_end();
+    HalfedgeIterator he_begin();
+    HalfedgeIterator he_end();
     FaceIterator f_begin();
     FaceIterator f_end();
 
@@ -41,6 +44,7 @@ public:
     Vec3 normal();
     double area();
 
+    bool isHole();
     bool isBoundary();
     bool isStatic();
 
@@ -60,6 +64,20 @@ public:
     Vertex *ptr() const;
     VertexIterator &operator++();
     VertexIterator operator++(int);
+
+private:
+    Halfedge *halfedge_, *iter_;
+};
+
+class TINYMESH_API Face::HalfedgeIterator {
+public:
+    explicit HalfedgeIterator(Halfedge *he);
+    bool operator!=(const HalfedgeIterator &it) const;
+    Halfedge &operator*();
+    Halfedge *operator->() const;
+    Halfedge *ptr() const;
+    HalfedgeIterator &operator++();
+    HalfedgeIterator operator++(int);
 
 private:
     Halfedge *halfedge_, *iter_;

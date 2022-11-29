@@ -36,6 +36,20 @@ target_link_libraries(
     ${CXX_FS_LIBRARY}
     ${OpenMP_LIBRARIES})
 
+# Disable warning for external files
+set(WARNING_DISABLED_CXX_FLAGS)
+if (MSVC) 
+    set(WARNING_DISABLED_CXX_FLAGS "${CMAKE_CXX_FLAGS} /w")
+else()
+    set(WARNING_DISABLED_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+endif()
+
+set_source_files_properties(
+    ${CMAKE_CURRENT_LIST_DIR}/core/external.cpp
+    PROPERTIES
+    COMPILE_FLAGS ${WARNING_DISABLED_CXX_FLAGS})
+    
+# Enable profiler options for MSVC
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
     set_property(TARGET ${TINYMESH_LIBRARY} APPEND PROPERTY LINK_FLAGS "/DEBUG /PROFILE")
