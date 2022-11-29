@@ -1,3 +1,7 @@
+v0.2.3
+---
+* Update some method names (e.g., `isStatic` -> `isLocked`)
+
 v0.2.2
 ---
 * Change Python env manager to Pipenv.

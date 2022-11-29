@@ -55,7 +55,7 @@ public:
     int index() const {
         return index_;
     }
-    bool isStatic() const;
+    bool isLocked() const;
     bool isBoundary() const;
 
 private:

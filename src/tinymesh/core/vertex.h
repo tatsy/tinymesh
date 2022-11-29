@@ -61,19 +61,23 @@ public:
         return isBoundary_;
     }
 
-    bool isStatic() const {
-        return isStatic_;
+    bool isLocked() const {
+        return isLocked_;
     }
 
-    void setIsStatic(bool flag) {
-        isStatic_ = flag;
+    void lock() {
+        isLocked_ = true;
+    }
+
+    void unlock() {
+        isLocked_ = false;
     }
 
 private:
     Vec3 pos_;
     Halfedge *halfedge_ = nullptr;
     int index_ = -1;
-    bool isStatic_ = false;
+    bool isLocked_ = false;
     bool isBoundary_ = false;
 
     friend class Mesh;

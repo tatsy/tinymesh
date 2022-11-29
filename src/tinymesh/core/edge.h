@@ -29,6 +29,7 @@ public:
         return index_;
     }
     bool isBoundary() const;
+    bool isLocked() const;
     double length() const;
     double cotWeight() const;
 

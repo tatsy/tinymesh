@@ -42,8 +42,8 @@ double Halfedge::cotWeight() const {
     return 0.5 * (cot_a + cot_b);
 }
 
-bool Halfedge::isStatic() const {
-    return this->src()->isStatic() && this->dst()->isStatic();
+bool Halfedge::isLocked() const {
+    return this->src()->isLocked() && this->dst()->isLocked();
 }
 
 bool Halfedge::isBoundary() const {

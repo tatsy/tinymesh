@@ -10,6 +10,10 @@ bool Edge::isBoundary() const {
     return halfedge_->isBoundary() || halfedge_->rev()->isBoundary();
 }
 
+bool Edge::isLocked() const {
+    return halfedge_->isLocked();
+}
+
 bool Edge::operator==(const Edge &other) const {
     bool ret = true;
     ret &= (halfedge_ == other.halfedge_);
