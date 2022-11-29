@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
     // Fill holes & remesh
     const double keepAngle = argc > 2 ? std::atof(argv[2]) * Pi / 180.0 : 0.0;
-    mesh.fillHoles(Pi / 6.0);
+    mesh.fillHoles();
     tms::remeshTriangular(mesh, 0.8, 1.333, keepAngle);
 
     // Save
