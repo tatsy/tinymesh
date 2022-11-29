@@ -77,14 +77,15 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("K", &Vertex::K)
         .def("H", &Vertex::H)
         .def("is_boundary", &Vertex::isBoundary)
-        .def("is_static", &Vertex::isStatic)
-        .def("set_is_static", &Vertex::setIsStatic);
+        .def("is_locked", &Vertex::isLocked)
+        .def("lock", &Vertex::lock)
+        .def("unlock", &Vertex::unlock);
 
     py::class_<Face, std::shared_ptr<Face>>(m, "Face")
         .def(py::init<>())
         .def("area", &Face::area)
         .def("is_boundary", &Face::isBoundary)
-        .def("is_static", &Face::isStatic);
+        .def("is_locked", &Face::isLocked);
 
     /*** Utilities */
     py::enum_<MeshLaplace>(m, "MeshLaplace")

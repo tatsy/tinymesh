@@ -75,9 +75,9 @@ bool Face::isBoundary() {
     return false;
 }
 
-bool Face::isStatic() {
+bool Face::isLocked() {
     for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
-        if (vit->isStatic()) {
+        if (vit->isLocked()) {
             return true;
         }
     }

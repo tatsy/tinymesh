@@ -46,7 +46,7 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int itera
         // Update vertex positions
         omp_parallel_for(int i = 0; i < (int)mesh.numVertices(); i++) {
             Vertex *v = mesh.vertex(i);
-            if (v->isBoundary() || v->isStatic()) {
+            if (v->isBoundary() || v->isLocked()) {
                 continue;
             }
 
@@ -86,7 +86,7 @@ void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
         const double epsilon = it % 2 == 0 ? shrink : -inflate;
         omp_parallel_for(int i = 0; i < (int)mesh.numVertices(); i++) {
             Vertex *v = mesh.vertex(i);
-            if (v->isBoundary() || v->isStatic()) {
+            if (v->isBoundary() || v->isLocked()) {
                 continue;
             }
 

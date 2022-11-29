@@ -46,7 +46,7 @@ public:
 
     bool isHole();
     bool isBoundary();
-    bool isStatic();
+    bool isLocked();
 
 private:
     Halfedge *halfedge_ = nullptr;

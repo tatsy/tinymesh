@@ -1,3 +1,7 @@
+v0.2.3
+---
+* Update some method names (e.g., `isStatic` -> `isLocked`)
+
 v0.2.2
 ---
 * Change Python env manager to Pipenv.
@@ -12,7 +16,6 @@ v0.2.1
 
 v0.2.0
 ---
-
 *   Add unit test for each functions (just to check run or not).
 *   Add feature preservation in remeshing.
 *   Include Eigen to repo as a submodule.
@@ -26,5 +29,4 @@ v0.2.0
 
 v0.1.0
 ---
-
 * First release

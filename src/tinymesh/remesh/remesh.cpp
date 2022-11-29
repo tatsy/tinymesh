@@ -61,7 +61,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         }
 
         if (minDihed < keepAngleLessThan) {
-            v->setIsStatic(true);
+            v->lock();
         }
     }
 
@@ -118,11 +118,11 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         for (int i : indices) {
             if (i >= 0 && i < (int)mesh.numHalfedges()) {
                 Halfedge *he = mesh.halfedge(i);
-                if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
+                if (he->face()->isLocked() || he->rev()->face()->isLocked()) {
                     continue;
                 }
 
-                if (he->src()->isStatic() || he->dst()->isStatic()) {
+                if (he->src()->isLocked() || he->dst()->isLocked()) {
                     continue;
                 }
 
@@ -163,7 +163,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
                 continue;
             }
 
-            if (he->face()->isStatic() || he->rev()->face()->isStatic()) {
+            if (he->face()->isLocked() || he->rev()->face()->isLocked()) {
                 continue;
             }
 
@@ -172,7 +172,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
             Vertex *v2 = he->next()->dst();
             Vertex *v3 = he->rev()->next()->dst();
 
-            if (v0->isStatic() || v1->isStatic()) {
+            if (v0->isLocked() || v1->isLocked()) {
                 continue;
             }
 
