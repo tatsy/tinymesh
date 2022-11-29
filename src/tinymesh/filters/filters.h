@@ -13,7 +13,7 @@ namespace tinymesh {
 /**
  * Laplacian smoothing
  */
-TINYMESH_API void smoothLaplacian(Mesh &mesh, double strength = 1.0, bool cotangent_weight = false, int iterations = 3);
+TINYMESH_API void smoothLaplacian(Mesh &mesh, double strength = 1.0, bool cotangentWeight = false, int iterations = 3);
 
 /**
  * Taubin smoothing [Taubin et al. 1995]
@@ -33,7 +33,8 @@ TINYMESH_API void denoiseNormalGaussian(Mesh &mesh, double sigma = 0.2, int iter
 /**
  * Denoising by normal bilateral filter [Zhen et al. 2011]
  */
-TINYMESH_API void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter = 0.2, double sigmaNormal = 0.1, int iterations = 5);
+TINYMESH_API void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter = 0.2, double sigmaNormal = 0.1,
+                                         int iterations = 5);
 
 /**
  * Denoising by L0 smoothing [He and Schaefer 2013]

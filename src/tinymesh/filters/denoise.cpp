@@ -24,7 +24,7 @@ inline double K(double x, double sigma) {
 
     if (x < 4.0 * sigma) {
         const double a = (4.0 - std::abs(x) / sigma);
-        return coef * (1.0 / (16.0 * std::exp(2.0))) * (a * a * a * a); 
+        return coef * (1.0 / (16.0 * std::exp(2.0))) * (a * a * a * a);
     }
 
     return 0.0;
@@ -195,7 +195,7 @@ void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
         Vertex *vh2 = he->next()->dst();
         Vertex *vh3 = rev->src();
         Vertex *vh4 = rev->next()->dst();
-        
+
         const int i1 = vh1->index();
         const int i2 = vh2->index();
         const int i3 = vh3->index();

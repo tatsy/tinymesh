@@ -12,8 +12,10 @@ using VecPair = std::tuple<Vec3, Vec3>;
 
 class VecTest : public ::testing::Test {
 protected:
-    VecTest() {}
-    virtual ~VecTest() {}
+    VecTest() {
+    }
+    virtual ~VecTest() {
+    }
 };
 
 class VecUnaryTest : public VecTest, public ::testing::WithParamInterface<Vec3> {
@@ -21,8 +23,10 @@ protected:
     Vec3 v1;
 
 protected:
-    VecUnaryTest() {}
-    virtual ~VecUnaryTest() {}
+    VecUnaryTest() {
+    }
+    virtual ~VecUnaryTest() {
+    }
 
     void SetUp() {
         v1 = GetParam();
@@ -34,8 +38,10 @@ protected:
     Vec3 v1, v2;
 
 protected:
-    VecPairwiseTest() {}
-    virtual ~VecPairwiseTest() {}
+    VecPairwiseTest() {
+    }
+    virtual ~VecPairwiseTest() {
+    }
 
     void SetUp() {
         v1 = std::get<0>(GetParam());
@@ -132,9 +138,7 @@ TEST_P(VecPairwiseTest, Division) {
 }
 
 TEST_P(VecUnaryTest, NormAndNormalize) {
-    const double sqnrm = v1.x() * v1.x() + 
-                         v1.y() * v1.y() +
-                         v1.z() * v1.z();
+    const double sqnrm = v1.x() * v1.x() + v1.y() * v1.y() + v1.z() * v1.z();
     const double nrm = sqrt(sqnrm);
     EXPECT_EQ(sqrt(sqnrm), length(v1));
 
@@ -171,17 +175,10 @@ TEST_P(VecPairwiseTest, DotAndCross) {
     EXPECT_EQ(v1.x() * v2.y() - v1.y() * v2.x(), w.z());
 }
 
-std::vector<Vec3> vectors = {
-    Vec3(0.0, 1.0, 2.0),
-    Vec3(-2.0, -1.0, 0.0),
-    Vec3(3.14, 1.59, 2.65),
-    Vec3(1.0e8, 1.0e8, 1.0e8),
-    Vec3(1.0e-8, 1.0e-8, 1.0e-8)
-};
+std::vector<Vec3> vectors = { Vec3(0.0, 1.0, 2.0), Vec3(-2.0, -1.0, 0.0), Vec3(3.14, 1.59, 2.65),
+                              Vec3(1.0e8, 1.0e8, 1.0e8), Vec3(1.0e-8, 1.0e-8, 1.0e-8) };
 
-INSTANTIATE_TEST_SUITE_P(, VecUnaryTest,
-    ::testing::ValuesIn(vectors));
+INSTANTIATE_TEST_SUITE_P(, VecUnaryTest, ::testing::ValuesIn(vectors));
 
 INSTANTIATE_TEST_SUITE_P(, VecPairwiseTest,
-    ::testing::Combine(::testing::ValuesIn(vectors),
-::testing::ValuesIn(vectors)));
+                         ::testing::Combine(::testing::ValuesIn(vectors), ::testing::ValuesIn(vectors)));

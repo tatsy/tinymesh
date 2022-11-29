@@ -3,6 +3,7 @@
 #include "tinymesh/tinymesh.h"
 
 namespace fs = std::filesystem;
+namespace tms = tinymesh;
 
 int main(int argc, char **argv) {
     if (argc <= 1) {
@@ -15,13 +16,13 @@ int main(int argc, char **argv) {
     const double ratio = argc <= 2 ? 0.1 : atof(argv[2]);
 
     // Load
-    tinymesh::Mesh mesh(argv[1]);
+    tms::Mesh mesh(argv[1]);
 
     // Simplify
     const int target = (int)(ratio * mesh.numFaces());
-    tinymesh::holeFill(mesh);
-    tinymesh::simplifyQEM(mesh, target, 10, true);
-    tinymesh::remeshTriangular(mesh, 0.0, 1e6);  // remesh by keeping #faces
+    mesh.fillHoles();
+    tms::simplifyQEM(mesh, target, 10, true);
+    tms::remeshTriangular(mesh, 0.0, 1e6);  // remesh by keeping #faces
 
     // Save
     const fs::path filepath = fs::canonical(fs::path(argv[1]));

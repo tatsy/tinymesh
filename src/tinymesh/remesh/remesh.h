@@ -10,11 +10,6 @@
 namespace tinymesh {
 
 /**
- * Minimum direhdral hole filling [Leipa 2003]
- */
-TINYMESH_API void holeFill(Mesh &mesh, double dihedralBound = Pi);
-
-/**
  * Triangular remeshing [Hoppe 1996]
  */
 TINYMESH_API void remeshTriangular(Mesh &mesh, double shortLength = 0.8, double longLength = 1.333,

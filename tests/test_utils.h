@@ -12,8 +12,10 @@ namespace fs = std::filesystem;
 
 class TinyMeshBaseTest : public ::testing::Test {
 protected:
-    TinyMeshBaseTest() {}
-    virtual ~TinyMeshBaseTest() {}
+    TinyMeshBaseTest() {
+    }
+    virtual ~TinyMeshBaseTest() {
+    }
 };
 
 class TinyMeshBaseTestWithParam : public TinyMeshBaseTest, public ::testing::WithParamInterface<std::string> {
@@ -23,8 +25,9 @@ public:
         fs::path filePath(GetParam().c_str());
         filename = (modelDir / filePath).string();
     }
-    
-    virtual ~TinyMeshBaseTestWithParam() {}
+
+    virtual ~TinyMeshBaseTestWithParam() {
+    }
 
 protected:
     std::string filename;

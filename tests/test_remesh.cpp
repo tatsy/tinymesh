@@ -22,22 +22,22 @@ public:
 };
 
 TEST_P(MeshRemeshTest, HoleFill) {
-    EXPECT_NO_FATAL_FAILURE(holeFill(mesh));
+    EXPECT_NO_FATAL_FAILURE(mesh.fillHoles());
     EXPECT_TRUE(mesh.verify());
 }
 
 TEST_P(MeshRemeshTest, RemeshTriangular) {
-    EXPECT_NO_FATAL_FAILURE(holeFill(mesh));
+    EXPECT_NO_FATAL_FAILURE(mesh.fillHoles());
     EXPECT_NO_FATAL_FAILURE(remeshTriangular(mesh));
 }
 
 TEST_P(MeshRemeshTest, SimplifyQEMOneHalf) {
-    EXPECT_NO_FATAL_FAILURE(holeFill(mesh));
+    EXPECT_NO_FATAL_FAILURE(mesh.fillHoles());
     EXPECT_NO_FATAL_FAILURE(simplifyQEM(mesh, (int)mesh.numFaces() / 2));
 }
 
 TEST_P(MeshRemeshTest, SimplifyQEMOneTenth) {
-    EXPECT_NO_FATAL_FAILURE(holeFill(mesh));
+    EXPECT_NO_FATAL_FAILURE(mesh.fillHoles());
     EXPECT_NO_FATAL_FAILURE(simplifyQEM(mesh, (int)mesh.numFaces() / 10));
 }
 

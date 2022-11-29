@@ -21,11 +21,16 @@ public:
 
     bool operator==(const Edge &other) const;
 
-    Halfedge *halfedge() const { return halfedge_; }
+    Halfedge *halfedge() const {
+        return halfedge_;
+    }
 
-    int index() const { return index_; }
+    int index() const {
+        return index_;
+    }
     bool isBoundary() const;
     double length() const;
+    double cotWeight() const;
 
 private:
     Halfedge *halfedge_ = nullptr;

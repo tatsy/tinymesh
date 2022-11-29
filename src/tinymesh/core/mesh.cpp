@@ -15,11 +15,12 @@
 
 #include "core/debug.h"
 #include "core/vec.h"
-#include "core/filesystem.h"
 #include "core/vertex.h"
 #include "core/edge.h"
-#include "core/halfedge.h"
 #include "core/face.h"
+#include "core/halfedge.h"
+#include "core/filesystem.h"
+#include "restore/restore.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
 
@@ -28,7 +29,7 @@ namespace fs = std::filesystem;
 using IndexPair = std::pair<uint32_t, uint32_t>;
 
 struct IndexPairHash : public std::function<size_t(IndexPair)> {
-    std::size_t operator()(const IndexPair& k) const {
+    std::size_t operator()(const IndexPair &k) const {
         return std::get<0>(k) ^ std::get<1>(k);
     }
 };
@@ -39,9 +40,12 @@ namespace tinymesh {
 // Mesh
 // ----------
 
-Mesh::Mesh() {}
+Mesh::Mesh() {
+}
 
-Mesh::Mesh(const std::string &filename) { load(filename); }
+Mesh::Mesh(const std::string &filename) {
+    load(filename);
+}
 
 Mesh::Mesh(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
     construct(vertices, indices);
@@ -87,6 +91,10 @@ void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32
     }
 
     construct();
+}
+
+Mesh Mesh::clone() {
+    return Mesh(this->getVertices(), this->getVertexIndices());
 }
 
 std::vector<Vec3> Mesh::getVertices() const {
@@ -151,7 +159,10 @@ void Mesh::construct() {
             const uint32_t b = indices_[i + (j + 1) % degree];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                Warn("An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes this edge.", a, b);
+                Warn(
+                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes this "
+                    "edge.",
+                    a, b);
                 isDuplicated = true;
                 break;
             }
@@ -342,8 +353,8 @@ void Mesh::loadOBJ(const std::string &filename) {
 }
 
 void Mesh::loadPLY(const std::string &filename) {
-    using tinyply::PlyFile;
     using tinyply::PlyData;
+    using tinyply::PlyFile;
 
     // Open
     std::ifstream reader(filename.c_str(), std::ios::binary);
@@ -388,7 +399,7 @@ void Mesh::loadPLY(const std::string &filename) {
     const size_t numVerts = vert_data->count;
     std::vector<float> raw_vertices(numVerts * 3);
     std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
-        
+
     const size_t numFaces = face_data->count;
     std::vector<uint32_t> raw_indices(numFaces * 3);
     std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
@@ -881,7 +892,22 @@ bool Mesh::flipHE(Halfedge *he) {
     return true;
 }
 
-bool Mesh::triangulate(Face *face, double dihedralBound) {
+void Mesh::fillHoles(double dihedralBound) {
+    std::vector<int> holeFaces;
+    for (int i = 0; i < (int)this->numFaces(); i++) {
+        Face *f = this->face(i);
+        if (f->isHole()) {
+            holeFaces.push_back(i);
+        }
+    }
+
+    for (auto i : holeFaces) {
+        Face *f = this->face(i);
+        this->triangulate(f, dihedralBound);
+    }
+}
+
+void Mesh::triangulate(Face *face, double dihedralBound) {
     /*
      * The triangulation algorithm is based on the following papers.
      * Barequet and Sharir, "Filling Gaps in the Boundary of a Polyhedron", 1995.
@@ -898,22 +924,18 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
     std::unordered_map<Halfedge *, E> he2pair;
 
     // List all boundary vertices
-    Halfedge *it = face->halfedge_;
-    do {
-        vs.push_back(it->src());
-        it = it->next_;
-    } while (it != face->halfedge_);
+    for (auto it = face->v_begin(); it != face->v_end(); ++it) {
+        vs.push_back(it.ptr());
+    }
     const int n_verts = (int)vs.size();
 
     int count = 0;
-    it = face->halfedge_;
-    do {
+    for (auto it = face->he_begin(); it != face->he_end(); ++it) {
         const int next = (count + 1) % n_verts;
-        pair2he.insert(std::make_pair(E(count, next), it));
-        he2pair.insert(std::make_pair(it, E(count, next)));
-        it = it->next_;
+        pair2he.insert(std::make_pair(E(count, next), it.ptr()));
+        he2pair.insert(std::make_pair(it.ptr(), E(count, next)));
         count += 1;
-    } while (it != face->halfedge_);
+    }
 
     Eigen::MatrixXd Warea(n_verts, n_verts);
     Eigen::MatrixXd Wangle(n_verts, n_verts);
@@ -975,7 +997,8 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
                 const double D = std::max(a01, a12);
                 const double WangleNew = std::max(D, std::max(Wangle(i, m), Wangle(m, k)));
 
-                if (WangleNew < Wangle(i, k) || (abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k))) {
+                if (WangleNew < Wangle(i, k) ||
+                    (abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k))) {
                     Warea(i, k) = WareaNew;
                     Wangle(i, k) = WangleNew;
                     O(i, k) = m;
@@ -1095,55 +1118,6 @@ bool Mesh::triangulate(Face *face, double dihedralBound) {
     }
 
     removeFace(face);
-
-    return true;
-}
-
-double Mesh::K(Vertex *v) const {
-    std::vector<Vertex *> neighbors;
-    for (auto it = v->v_begin(); it != v->v_end(); ++it) {
-        neighbors.push_back(it.ptr());
-    }
-
-    const int N = static_cast<int>(neighbors.size());
-    double sumAngles = 0.0;
-    double sumAreas = 0.0;
-    for (int i = 0; i < N; i++) {
-        const int j = (i + 1) % N;
-        const Vec3 e1 = neighbors[i]->pos() - v->pos();
-        const Vec3 e2 = neighbors[j]->pos() - v->pos();
-        sumAngles += std::atan2(length(cross(e1, e2)), dot(e1, e2));
-        sumAreas += length(cross(e1, e2)) / 6.0;
-    }
-    return (2.0 * Pi - sumAngles) / sumAreas;
-}
-
-double Mesh::H(Vertex *v) const {
-    std::vector<Vertex *> neighbors;
-    for (auto it = v->v_begin(); it != v->v_end(); ++it) {
-        neighbors.push_back(it.ptr());
-    }
-
-    const int N = static_cast<int>(neighbors.size());
-    Vec3 laplace = Vec3(0.0);
-    double sumAreas = 0.0;
-    for (int i = 0; i < N; i++) {
-        const int prev = (i - 1 + N) % N;
-        const int post = (i + 1) % N;
-
-        const Vec3 ea1 = v->pos() - neighbors[prev]->pos();
-        const Vec3 ea2 = neighbors[i]->pos() - neighbors[prev]->pos();
-        const double cota = length(ea1) * length(ea2) / length(cross(ea1, ea2));
-        const Vec3 eb1 = v->pos() - neighbors[post]->pos();
-        const Vec3 eb2 = v->pos() - neighbors[post]->pos();
-        const double cotb = length(eb1) * length(eb2) / length(cross(eb1, eb2));
-        laplace += (cota + cotb) * (neighbors[i]->pos() - v->pos());
-
-        const Vec3 e1 = neighbors[i]->pos() - v->pos();
-        const Vec3 e2 = neighbors[post]->pos() - v->pos();
-        sumAreas += length(cross(e1, e2)) / 6.0;
-    }
-    return length(laplace) / (2.0 * sumAreas);
 }
 
 bool Mesh::verify() const {

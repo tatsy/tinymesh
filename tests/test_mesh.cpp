@@ -38,12 +38,7 @@ TEST_P(MeshIOTest, MeshLoad) {
 }
 
 static std::vector<std::string> filenames = {
-    "box.obj",
-    "sphere.obj",
-    "torus.obj",
-    "plane.obj",
-    "fandisk.ply",
-    "bunny.ply",
+    "box.obj", "sphere.obj", "torus.obj", "plane.obj", "fandisk.ply", "bunny.ply",
 };
 
 INSTANTIATE_TEST_SUITE_P(, MeshIOTest, ::testing::ValuesIn(filenames));

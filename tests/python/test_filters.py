@@ -21,7 +21,7 @@ class TestFilters(unittest.TestCase):
     def test_smooth_laplacian(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.smooth_laplacian(mesh)
@@ -32,7 +32,7 @@ class TestFilters(unittest.TestCase):
     def test_smooth_taubin(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.smooth_taubin(mesh)
@@ -43,7 +43,7 @@ class TestFilters(unittest.TestCase):
     def test_implicit_fairing(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.implicit_fairing(mesh)
@@ -54,7 +54,7 @@ class TestFilters(unittest.TestCase):
     def test_denoise_normal_gaussian(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.denoise_normal_gaussian(mesh)
@@ -65,7 +65,7 @@ class TestFilters(unittest.TestCase):
     def test_denoise_normal_bilateral(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.denoise_normal_bilateral(mesh)
@@ -76,7 +76,7 @@ class TestFilters(unittest.TestCase):
     def test_denoise_l0_smooth(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
         mesh = tm.Mesh(filename)
-        tm.hole_fill(mesh)
+        mesh.fill_holes()
 
         try:
             tm.denoise_l0_smooth(mesh)

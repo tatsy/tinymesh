@@ -29,19 +29,19 @@ class Mesh;
 // -----------------------------------------------------------------------------
 
 #if (defined(WIN32) || defined(_WIN32) || defined(WINCE) || defined(__CYGWIN__))
-#   if defined(TINYMESH_API_EXPORT)
-#       define TINYMESH_API __declspec(dllexport)
-#       define TINYMESH_IMPORTS
-#   else
-#       define TINYMESH_API
-#       define TINYMESH_IMPORTS __declspec(dllimport)
-#   endif
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#   define TINYMESH_API __attribute__((visibility ("default")))
-#   define TINYMESH_IMPORTS
+#if defined(TINYMESH_API_EXPORT)
+#define TINYMESH_API __declspec(dllexport)
+#define TINYMESH_IMPORTS
 #else
-#   define TINYMESH_API
-#   define TINYMESH_IMPORTS
+#define TINYMESH_API
+#define TINYMESH_IMPORTS __declspec(dllimport)
+#endif
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#define TINYMESH_API __attribute__((visibility("default")))
+#define TINYMESH_IMPORTS
+#else
+#define TINYMESH_API
+#define TINYMESH_IMPORTS
 #endif
 
-#endif // TINYMESH_API_H
+#endif  // TINYMESH_API_H

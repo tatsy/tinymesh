@@ -1,6 +1,6 @@
 #ifdef _MSC_VER
 #pragma once
-#endif 
+#endif
 
 #ifndef PROGRESS_H
 #define PROGRESS_H
@@ -12,13 +12,15 @@
 
 class ProgressBar {
 public:
-    ProgressBar() {}
+    ProgressBar() {
+    }
     ProgressBar(int total) {
         m_step = 0;
         m_total = total;
         start = std::chrono::system_clock::now();
     }
-    virtual ~ProgressBar() {}
+    virtual ~ProgressBar() {
+    }
 
     void step(int n = 1) {
         m_step += n;

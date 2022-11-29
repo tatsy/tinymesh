@@ -15,6 +15,7 @@ include_dirs = [
     'src/tinymesh/ext/tinyobjloader',
     'src/tinymesh/ext/tinyply/source',
     'src/tinymesh/ext/eigen',
+    'src/tinymesh/ext/spectra/include',
 ]
 
 extra_compile_args = []

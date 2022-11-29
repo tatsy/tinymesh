@@ -18,7 +18,7 @@ public:
 
     void SetUp() override {
         mesh.load(filename);
-        holeFill(mesh);
+        mesh.fillHoles();
     }
 };
 

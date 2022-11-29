@@ -20,7 +20,7 @@ using SparseMatrix = Eigen::SparseMatrix<ScalarType>;
 
 namespace tinymesh {
 
-void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iterations) {
+void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int iterations) {
     for (int it = 0; it < iterations; it++) {
         // Volonoi tessellation
         const int nv = (int)mesh.numVertices();
@@ -29,38 +29,18 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangent_weight, int iter
         // Compute centroids and tangent planes
         omp_parallel_for(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
-
-            // Collect surrounding vertices
-            Vec3 org = v->pos();
             std::vector<Vec3> pts;
-            for (auto vit = v->v_begin(); vit != v->v_end(); ++vit) {
-                pts.push_back(vit->pos());
-            }
-
-            // Compute centroids
             Vec3 cent(0.0);
-            double sum_weight = 0.0;
-            for (int i = 0; i < (int)pts.size(); i++) {
+            double sumWgt = 0.0;
+            for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
                 double weight = 1.0;
-                if (cotangent_weight) {
-                    const Vec3 &p0 = org;
-                    const Vec3 &p1 = pts[i];
-                    const Vec3 &p2 = pts[(i + 1) % pts.size()];
-                    const Vec3 &p3 = pts[(i - 1 + pts.size()) % pts.size()];
-                    const double sin_a = length(cross(p2 - p0, p2 - p1));
-                    const double cos_a = dot(p2 - p0, p2 - p1);
-                    const double sin_b = length(cross(p3 - p1, p3 - p0));
-                    const double cos_b = dot(p3 - p1, p3 - p0);
-                    const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
-                    const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
-                    weight = 0.5 * (cot_a + cot_b);
+                if (cotangentWeight) {
+                    weight = it->cotWeight();
                 }
-
-                cent += weight * pts[i];
-                sum_weight += weight;
+                cent += weight * it->dst()->pos();
+                sumWgt += weight;
             }
-
-            centroids[i] = cent / sum_weight;
+            centroids[i] = cent / sumWgt;
         }
 
         // Update vertex positions
@@ -139,53 +119,19 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
         for (int i = 0; i < n_verts; i++) {
             Vertex *v = mesh.vertex(i);
 
-            // Compute Volonoi area
-            double A = 0.0;
-            for (auto f_it = v->f_begin(); f_it != v->f_end(); ++f_it) {
-                std::vector<Vec3> vs;
-                for (auto v_it = f_it->v_begin(); v_it != f_it->v_end(); ++v_it) {
-                    vs.push_back(v_it->pos());
-                }
-
-                Assertion(vs.size() == 3, "Non-triangle face is detected!");
-
-                A += 0.5 * length(cross(vs[1] - vs[0], vs[2] - vs[0])) / 6.0;
-            }
-
             // Compute weights
             double sumW = 0.0;
             std::vector<Triplet> tripletsInColumn;
             for (auto he_it = v->ohe_begin(); he_it != v->ohe_end(); ++he_it) {
-                Halfedge *ohe = he_it.ptr();
-                Halfedge *ihe = ohe->rev();
-
-                Vertex *xa = ohe->next()->dst();
-                Vertex *xb = ohe->dst();
-                Vertex *xc = ihe->dst();
-                Vertex *xd = ihe->next()->dst();
-
-                const Vec3 va = xa->pos();
-                const Vec3 vb = xb->pos();
-                const Vec3 vc = xc->pos();
-                const Vec3 vd = xd->pos();
-
-                const Vec3 e_ab = vb - va;
-                const Vec3 e_ac = vc - va;
-                const double cot_a = dot(e_ab, e_ac) / (length(cross(e_ab, e_ac)) + 1.0e-8);
-
-                const Vec3 e_db = vb - vd;
-                const Vec3 e_dc = vc - vd;
-                const double cot_d = dot(e_db, e_dc) / (length(cross(e_db, e_dc)) + 1.0e-8);
-
-                const double W = (cot_a + cot_d);
-                tripletsInColumn.emplace_back(i, xb->index(), W);
+                const double W = he_it->cotWeight();
+                tripletsInColumn.emplace_back(i, he_it->dst()->index(), W);
                 if (std::isnan(W) || std::isinf(W)) {
                     Warn("NaN of inf matrix entry is detedted!");
                 }
                 sumW += W;
             }
 
-            for (const auto& t : tripletsInColumn) {
+            for (const auto &t : tripletsInColumn) {
                 triplets.emplace_back(t.row(), t.col(), t.value() / sumW);
             }
             triplets.emplace_back(i, i, -1.0);

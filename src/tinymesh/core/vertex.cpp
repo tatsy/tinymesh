@@ -2,6 +2,7 @@
 #include "vertex.h"
 
 #include <set>
+#include <vector>
 
 #include "face.h"
 #include "halfedge.h"
@@ -41,21 +42,64 @@ int Vertex::degree() {
 }
 
 Vec3 Vertex::normal() {
-    Vec3 norm(0.0);
-    Vertex *prev = nullptr;
-    for (auto it = v_begin(); it != v_end(); ++it) {
-        if (prev) {
-            const Vec3 e1 = prev->pos() - pos();
-            const Vec3 e2 = it->pos() - pos();
-            norm += cross(e1, e2);
-        }
-        prev = it.ptr();
+    Vec3 norm = Vec3(0.0);
+    for (auto it = f_begin(); it != f_end(); ++it) {
+        norm += it->normal() * it->area();
     }
-    const Vec3 e1 = prev->pos() - pos();
-    const Vec3 e2 = v_begin()->pos() - pos();
-    norm += cross(e1, e2);
-
     return normalize(norm);
+}
+
+double Vertex::K() {
+    std::vector<Vertex *> neighbors;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        neighbors.push_back(it.ptr());
+    }
+
+    const int N = static_cast<int>(neighbors.size());
+    double sumAngles = 0.0;
+    double sumAreas = 0.0;
+    for (int i = 0; i < N; i++) {
+        const int j = (i + 1) % N;
+        const Vec3 e1 = neighbors[i]->pos() - pos();
+        const Vec3 e2 = neighbors[j]->pos() - pos();
+        sumAngles += std::atan2(length(cross(e1, e2)), dot(e1, e2));
+        sumAreas += length(cross(e1, e2)) / 6.0;
+    }
+    return (2.0 * Pi - sumAngles) / sumAreas;
+}
+
+double Vertex::H() {
+    std::vector<Vertex *> neighbors;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        neighbors.push_back(it.ptr());
+    }
+
+    const int N = static_cast<int>(neighbors.size());
+    Vec3 laplace = Vec3(0.0);
+    double sumAreas = 0.0;
+    for (int i = 0; i < N; i++) {
+        const int prev = (i - 1 + N) % N;
+        const int post = (i + 1) % N;
+
+        const Vec3 &p0 = pos();
+        const Vec3 &p1 = neighbors[i]->pos();
+        const Vec3 &p2 = neighbors[post]->pos();
+        const Vec3 &p3 = neighbors[prev]->pos();
+
+        const double sin_a = length(cross(p0 - p2, p1 - p2));
+        const double cos_a = dot(p0 - p2, p1 - p2);
+        const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
+        const double sin_b = length(cross(p0 - p3, p1 - p3));
+        const double cos_b = dot(p0 - p3, p1 - p3);
+        const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
+        const double weight = 0.5 * (cot_a + cot_b);
+        laplace += weight * (neighbors[i]->pos() - pos());
+
+        const Vec3 e1 = p1 - p0;
+        const Vec3 e2 = p2 - p0;
+        sumAreas += length(cross(e1, e2)) / 6.0;
+    }
+    return -1.0 * dot(laplace, this->normal()) / (2.0 * sumAreas);
 }
 
 Vertex::VertexIterator Vertex::v_begin() {
@@ -107,7 +151,7 @@ Vertex &Vertex::VertexIterator::operator*() {
     return *iter_->dst();
 }
 
-Vertex* Vertex::VertexIterator::ptr() const {
+Vertex *Vertex::VertexIterator::ptr() const {
     return iter_->dst();
 }
 
@@ -116,7 +160,7 @@ Vertex *Vertex::VertexIterator::operator->() const {
 }
 
 Vertex::VertexIterator &Vertex::VertexIterator::operator++() {
-    iter_ = iter_->rev()->next();
+    iter_ = iter_->prev()->rev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -125,6 +169,7 @@ Vertex::VertexIterator &Vertex::VertexIterator::operator++() {
 
 Vertex::VertexIterator Vertex::VertexIterator::operator++(int) {
     Halfedge *tmp = iter_;
+    iter_ = iter_->prev()->rev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -157,7 +202,7 @@ Halfedge *Vertex::InHalfedgeIterator::operator->() const {
 }
 
 Vertex::InHalfedgeIterator &Vertex::InHalfedgeIterator::operator++() {
-    iter_ = iter_->next()->rev();
+    iter_ = iter_->rev()->prev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -166,7 +211,7 @@ Vertex::InHalfedgeIterator &Vertex::InHalfedgeIterator::operator++() {
 
 Vertex::InHalfedgeIterator Vertex::InHalfedgeIterator::operator++(int) {
     Halfedge *tmp = iter_;
-    iter_ = iter_->next()->rev();
+    iter_ = iter_->rev()->prev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -199,7 +244,7 @@ Halfedge *Vertex::OutHalfedgeIterator::operator->() const {
 }
 
 Vertex::OutHalfedgeIterator &Vertex::OutHalfedgeIterator::operator++() {
-    iter_ = iter_->rev()->next();
+    iter_ = iter_->prev()->rev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -208,7 +253,7 @@ Vertex::OutHalfedgeIterator &Vertex::OutHalfedgeIterator::operator++() {
 
 Vertex::OutHalfedgeIterator Vertex::OutHalfedgeIterator::operator++(int) {
     Halfedge *tmp = iter_;
-    iter_ = iter_->rev()->next();
+    iter_ = iter_->prev()->rev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -241,7 +286,7 @@ Face *Vertex::FaceIterator::operator->() const {
 }
 
 Vertex::FaceIterator &Vertex::FaceIterator::operator++() {
-    iter_ = iter_->rev()->next();
+    iter_ = iter_->prev()->rev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
@@ -250,11 +295,11 @@ Vertex::FaceIterator &Vertex::FaceIterator::operator++() {
 
 Vertex::FaceIterator Vertex::FaceIterator::operator++(int) {
     Halfedge *tmp = iter_;
-    iter_ = iter_->rev()->next();
+    iter_ = iter_->prev()->rev();
     if (iter_ == halfedge_) {
         iter_ = nullptr;
     }
     return Vertex::FaceIterator(tmp);
 }
 
-}  // naemspace tinymesh
+}  // namespace tinymesh
