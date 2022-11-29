@@ -28,11 +28,11 @@ Vec3 Face::normal() {
     Vec3 norm(0.0);
     for (int i = 0; i < N; i++) {
         const int prev = (i - 1 + N) % N;
-        const int post = (i + 1) % N;
-        const Vec3 &p0 = vs[i];
-        const Vec3 &p1 = vs[post];
-        const Vec3 &p2 = vs[prev];
-        norm += cross(p1 - p0, p2 - p0);
+        const int next = (i + 1) % N;
+        const Vec3 &p0 = vs[prev];
+        const Vec3 &p1 = vs[i];
+        const Vec3 &p2 = vs[next];
+        norm += cross(p2 - p1, p0 - p1);
     }
     return normalize(norm);
 }
@@ -56,19 +56,17 @@ double Face::area() {
 
 bool Face::isHole() {
     // Face is hole if all the vertices are at the boundary.
-    bool ret = true;
-    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
-        if (!vit->isBoundary()) {
-            ret = false;
-            break;
+    for (auto it = this->he_begin(); it != this->he_end(); ++it) {
+        if (!it->isBoundary()) {
+            return false;
         }
     }
-    return ret;
+    return true;
 }
 
 bool Face::isBoundary() {
-    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
-        if (vit->isBoundary()) {
+    for (auto it = this->he_begin(); it != this->he_end(); ++it) {
+        if (it->isBoundary()) {
             return true;
         }
     }
@@ -76,8 +74,8 @@ bool Face::isBoundary() {
 }
 
 bool Face::isLocked() {
-    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
-        if (vit->isLocked()) {
+    for (auto it = this->v_begin(); it != this->v_end(); ++it) {
+        if (it->isLocked()) {
             return true;
         }
     }

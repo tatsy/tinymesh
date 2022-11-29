@@ -56,7 +56,9 @@ public:
         return index_;
     }
     bool isLocked() const;
-    bool isBoundary() const;
+    bool isBoundary() const {
+        return isBoundary_;
+    }
 
 private:
     Vertex *src_ = nullptr;
@@ -65,6 +67,7 @@ private:
     Edge *edge_ = nullptr;
     Face *face_ = nullptr;
     int index_ = -1;
+    bool isBoundary_;
 
     friend class Mesh;
 };

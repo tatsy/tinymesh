@@ -46,8 +46,4 @@ bool Halfedge::isLocked() const {
     return this->src()->isLocked() && this->dst()->isLocked();
 }
 
-bool Halfedge::isBoundary() const {
-    return this->src()->isBoundary() && this->dst()->isBoundary();
-}
-
 }  // namespace tinymesh

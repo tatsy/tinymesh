@@ -6,6 +6,14 @@
 
 namespace tinymesh {
 
+Vertex *Edge::src() const {
+    return halfedge_->src();
+}
+
+Vertex *Edge::dst() const {
+    return halfedge_->dst();
+}
+
 bool Edge::isBoundary() const {
     return halfedge_->isBoundary() || halfedge_->rev()->isBoundary();
 }

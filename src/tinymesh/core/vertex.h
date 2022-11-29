@@ -57,9 +57,7 @@ public:
         return index_;
     }
 
-    bool isBoundary() const {
-        return isBoundary_;
-    }
+    bool isBoundary();
 
     bool isLocked() const {
         return isLocked_;
@@ -78,7 +76,6 @@ private:
     Halfedge *halfedge_ = nullptr;
     int index_ = -1;
     bool isLocked_ = false;
-    bool isBoundary_ = false;
 
     friend class Mesh;
 };
