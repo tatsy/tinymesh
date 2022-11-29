@@ -17,7 +17,6 @@ filenames = [
 
 
 class TestFilters(unittest.TestCase):
-
     @params(*filenames)
     def test_smooth_laplacian(self, filename):
         filename = os.path.join(CWD, model_dir, filename)

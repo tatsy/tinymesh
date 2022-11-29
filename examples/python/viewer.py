@@ -6,6 +6,7 @@ from matplotlib.collections import PolyCollection
 def normalize(x):
     return x / np.linalg.norm(x)
 
+
 def frustum(left, right, bottom, top, znear, zfar):
     M = np.zeros((4, 4))
     M[0, 0] = +2.0 * znear / (right - left)
@@ -17,6 +18,7 @@ def frustum(left, right, bottom, top, znear, zfar):
     M[3, 2] = -1.0
     return M
 
+
 class Viewer(object):
     def __init__(self, width=500, height=500, dpi=100):
         self.width = width
@@ -26,7 +28,7 @@ class Viewer(object):
         self.M = np.eye(4)
         self.V = np.eye(4)
         self.P = np.eye(4)
-        
+
     def perspective(self, fovy, aspect, znear, zfar):
         h = np.tan(0.5 * np.radians(fovy)) * znear
         w = h * aspect
@@ -46,9 +48,9 @@ class Viewer(object):
         rot[2, :3] = z
         tran = np.eye(4)
         tran[:3, 3] = -e
-        V = rot @ tran     
-        self.V = self.V @ V        
-    
+        V = rot @ tran
+        self.V = self.V @ V
+
     def translate(self, x, y, z):
         M = np.array([
             [1.0, 0.0, 0.0, x],
@@ -62,16 +64,12 @@ class Viewer(object):
         rad = np.radians(theta)
         st = np.sin(rad)
         ct = np.cos(rad)
-        K = np.array([
-            [0.0, -wz, wy],
-            [wz, 0.0, -wx],
-            [-wy, wx, 0.0]
-        ])
+        K = np.array([[0.0, -wz, wy], [wz, 0.0, -wx], [-wy, wx, 0.0]])
         R = np.eye(3) + st * K + (1.0 - ct) * (K @ K)
         M = np.eye(4)
         M[:3, :3] = R
         self.M = self.M @ M
-        
+
     def scale(self, sx, sy, sz):
         M = np.eye(4)
         M[0, 0] = sx
@@ -102,7 +100,7 @@ class Viewer(object):
         l = np.argsort(Z)
 
         C = C.mean(axis=1)
-        T, C = T[l,:], C[l,:]
+        T, C = T[l, :], C[l, :]
 
         xsiz = int(self.width / self.dpi)
         ysiz = int(self.height / self.dpi)
@@ -119,7 +117,7 @@ class Viewer(object):
             plt.savefig(filename, bbox_inches="tight")
 
         plt.show()
-        
+
     def mesh_visualization(self, mesh, *args, **kwargs):
         verts = mesh.get_vertices()
         faces = mesh.get_vertex_indices()

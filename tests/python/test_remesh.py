@@ -17,7 +17,6 @@ filenames = [
 
 
 class TestRemesh(unittest.TestCase):
-
     @params(*filenames)
     def test_hole_fill(self, filename):
         filename = os.path.join(CWD, model_dir, filename)
