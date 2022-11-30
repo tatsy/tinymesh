@@ -30,13 +30,13 @@ jobs:
           python -m pip install pipenv
 
       - name: Cache Pipenv
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: pipenv-cache
         with:
           path: ~/.local/share/virtualenvs
-          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+            ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile') }}
 
       - name: Install Google Test
         run: |
