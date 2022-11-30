@@ -31,9 +31,9 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.9
 
-      - name: Install GNU C/C++ Compiler
+      - name: Install GNU C/C++ compiler
         if: ${{ matrix.compiler == 'gcc' }}
         run: |
           sudo apt-get install -y gcc-9 g++-9
@@ -73,7 +73,7 @@ jobs:
           cmake --build . --config $BUILD_TYPE --parallel 2
           sudo cmake --build . --target install
 
-      - name: CMake Build
+      - name: CMake build
         env:
           C_COMPILER: ${{ matrix.compiler }}
         run: |
@@ -100,16 +100,21 @@ jobs:
 
           cmake --build . --config $BUILD_TYPE --parallel 2
 
-      - name: Unit Test
+      - name: Unit test
         working-directory: ${{ runner.workspace }}/build
         shell: bash
         run: ctest -C $BUILD_TYPE
 
-      - name: Setup Python Env
+      - name: Setup Python env with Pipenv
         run: |
-          pip install poetry
-          poetry install
+          python -m pip install --upgrade pip
+          python -m pip install pipenv
+          pipenv install
 
-      - name: Python Module Test
+      - name: Install module with Poetry
+        run: |
+          pipenv run poetry install
+
+      - name: Python module test
         run: |
           poetry run pytest

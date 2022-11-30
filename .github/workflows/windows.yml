@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.9
 
       - name: Checkout submodules
         run: git submodule update --init --recursive
@@ -40,7 +40,7 @@ jobs:
           cmake --build . --config "$env:BUILD_TYPE"
           cmake --build . --config "$env:BUILD_TYPE" --target INSTALL
 
-      - name: CMake Build
+      - name: CMake build
         run: |
           cmake -E make_directory ${{ runner.workspace }}/build
           cd ${{ runner.workspace }}/build
@@ -51,16 +51,21 @@ jobs:
             -DBUILD_EXAMPLES=ON
           cmake --build . --config "$env:BUILD_TYPE"
 
-      - name: Unit Test
+      - name: Unit test
         working-directory: ${{ runner.workspace }}/build
         shell: bash
         run: ctest -C $BUILD_TYPE
 
-      - name: Setup Python Env
+      - name: Setup Python env with Pipenv
         run: |
-          pip install poetry
-          poetry install
+          python -m pip install --upgrade pip
+          python -m pip install pipenv
+          pipenv install
 
-      - name: Python Module Test
+      - name: Install module with Poetry
+        run: |
+          pipenv run poetry install
+
+      - name: Python module test
         run: |
           poetry run pytest
