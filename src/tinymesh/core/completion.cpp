@@ -77,7 +77,7 @@ Face *Mesh::addNewTriangle(const std::vector<Vertex *> &boundary, const std::tup
     return new_face;
 }
 
-void Mesh::holeFillMinDihedral(Face *face, double dihedralBound) {
+void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
     // Collect boundary vertices
     std::vector<Vertex *> boundary;
     for (auto it = face->v_begin(); it != face->v_end(); ++it) {
@@ -230,7 +230,7 @@ void Mesh::holeFillMinDihedral(Face *face, double dihedralBound) {
     removeFace(face);
 }
 
-void Mesh::holeFillAdvancingFront(Face *face) {
+void Mesh::holeFillAdvancingFront_(Face *face) {
     for (int hoge = 0; hoge < 50; hoge++) {
         // Collect boundary vertices
         std::vector<Vertex *> boundary;

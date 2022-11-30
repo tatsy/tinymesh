@@ -22,11 +22,11 @@ struct IndexPairHash : public std::function<size_t(IndexPair)> {
 namespace tinymesh {
 
 void holeFillMinDihedral(Mesh &mesh, Face *face, double dihedralBound) {
-    mesh.holeFillMinDihedral(face, dihedralBound);
+    mesh.holeFillMinDihedral_(face, dihedralBound);
 }
 
 void holeFillAdvancingFront(Mesh &mesh, Face *face) {
-    mesh.holeFillAdvancingFront(face);
+    mesh.holeFillAdvancingFront_(face);
 }
 
 void holeFillingContextCoherent(Mesh &mesh) {

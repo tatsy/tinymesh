@@ -103,8 +103,8 @@ private:
     Face *addNewTriangle(const std::vector<Vertex *> &boundary, const std::tuple<uint32_t, uint32_t, uint32_t> &tri,
                          std::unordered_map<IndexPair, Halfedge *> &pair2he,
                          std::unordered_map<Halfedge *, IndexPair> &he2pair);
-    void holeFillMinDihedral(Face *face, double dihedralBound = Pi);
-    void holeFillAdvancingFront(Face *face);
+    void holeFillMinDihedral_(Face *face, double dihedralBound = Pi);
+    void holeFillAdvancingFront_(Face *face);
 
     // Private parameters
     std::vector<std::shared_ptr<Vertex>> vertices_;
@@ -114,8 +114,8 @@ private:
     std::vector<uint32_t> indices_;
 
     // Friend methods
-    friend void holeFillMinDihedral(Mesh &mesh, Face *face, double dihedralBound);
-    friend void holeFillAdvancingFront(Mesh &mesh, Face *face);
+    friend TINYMESH_API void holeFillMinDihedral(Mesh &mesh, Face *face, double dihedralBound);
+    friend TINYMESH_API void holeFillAdvancingFront(Mesh &mesh, Face *face);
 };
 
 }  // namespace tinymesh

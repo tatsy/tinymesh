@@ -67,7 +67,7 @@ private:
     Edge *edge_ = nullptr;
     Face *face_ = nullptr;
     int index_ = -1;
-    bool isBoundary_;
+    bool isBoundary_ = false;
 
     friend class Mesh;
 };

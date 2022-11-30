@@ -23,6 +23,7 @@ TEST(MeshBaseTest, MeshInvaidLoad) {
 }
 
 TEST_P(MeshIOTest, MeshLoad) {
+    std::set_terminate([] { ADD_FAILURE(); });
     ASSERT_NO_FATAL_FAILURE(mesh.load(filename));
     ASSERT_TRUE(mesh.verify());
 
