@@ -24,19 +24,27 @@
 
 template <typename... Args>
 std::string STR_FMT(const char *format, Args... args) {
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat"
+#endif  // __clang__
     int size_s = std::snprintf(nullptr, 0, format, args...) + 1;
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif  // __clang__
     if (size_s <= 0) {
         throw std::runtime_error("Error during formatting.");
     }
     auto size = static_cast<size_t>(size_s);
     auto buf = std::make_unique<char[]>(size);
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat"
+#endif  // __clang__
     std::snprintf(buf.get(), size, format, args...);
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif  // __clang__
     return std::string(buf.get(), buf.get() + size - 1);
 }
 
@@ -58,7 +66,9 @@ void Warn(const char *format, Args... args) {
 #if !defined(TINYMESH_PYTHON_MODULE)
 template <typename... Args>
 void Error(const char *format, Args... args) {
-    std::cout << FG_RED << "[ERRIR] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    std::cout << FG_RED << "[ERROR] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    std::terminate();
+    // throw std::runtime_error(STR_FMT(format, args...));
 }
 #else   // TINYMESH_PYTHON_MODULE
 template <typename... Args>

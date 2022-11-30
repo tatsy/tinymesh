@@ -141,15 +141,15 @@ void Mesh::construct() {
     }
 
     // Setup halfedge structure
-    static const int degree = 3;
+    static const int ngon = 3;
     std::map<IndexPair, Halfedge *> pairToHalfedge;
     std::map<uint32_t, uint32_t> vertexDegree;
-    for (int i = 0; i < (int)indices_.size(); i += degree) {
+    for (int i = 0; i < (int)indices_.size(); i += ngon) {
         // Check polygon duplication
         bool isDuplicated = false;
-        for (int j = 0; j < degree; j++) {
+        for (int j = 0; j < ngon; j++) {
             const uint32_t a = indices_[i + j];
-            const uint32_t b = indices_[i + (j + 1) % degree];
+            const uint32_t b = indices_[i + (j + 1) % ngon];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
                 Warn(
@@ -168,8 +168,8 @@ void Mesh::construct() {
         // Traverse face vertices
         auto face = new Face();
         std::vector<Halfedge *> faceHalfedges;
-        for (int j = 0; j < degree; j++) {
-            // Count up vertex degree
+        for (int j = 0; j < ngon; j++) {
+            // Count up #faces around each vertex
             const uint32_t a = indices_[i + j];
             if (vertexDegree.find(a) == vertexDegree.end()) {
                 vertexDegree[a] = 1;
@@ -178,7 +178,7 @@ void Mesh::construct() {
             }
 
             // Check duplicated halfedges
-            const uint32_t b = indices_[i + (j + 1) % degree];
+            const uint32_t b = indices_[i + (j + 1) % ngon];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
                 Error("An edge with vertices #%d and #%d is duplicated\n", a, b);
@@ -216,8 +216,8 @@ void Mesh::construct() {
         addFace(face);
 
         // Set next halfedges
-        for (int j = 0; j < degree; j++) {
-            const int k = (j + 1) % degree;
+        for (int j = 0; j < ngon; j++) {
+            const int k = (j + 1) % ngon;
             faceHalfedges[j]->next_ = faceHalfedges[k];
         }
     }
@@ -263,6 +263,9 @@ void Mesh::construct() {
                 rev->face_ = face;
                 rev->src_ = it->next_->src_;
 
+                it->isBoundary_ = true;
+                rev->isBoundary_ = true;
+
                 // Advance it to the next halfedge along the current boundary loop
                 it = it->next_;
                 while (it != he.get() && it->rev_ != nullptr) {
@@ -276,8 +279,6 @@ void Mesh::construct() {
             const auto degree = static_cast<int>(boundaryHalfedges.size());
             for (int j = 0; j < degree; j++) {
                 const int k = (j - 1 + degree) % degree;
-                it->isBoundary_ = true;
-                boundaryHalfedges[j]->isBoundary_ = true;
                 boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
             }
         }
@@ -902,7 +903,7 @@ void Mesh::fillHoles() {
 }
 
 void Mesh::triangulate(Face *face) {
-    this->holeFillMinDihedral(face);
+    this->holeFillMinDihedral_(face);
 }
 
 bool Mesh::verify() const {
