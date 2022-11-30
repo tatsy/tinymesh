@@ -68,4 +68,4 @@ jobs:
 
       - name: Python module test
         run: |
-          poetry run pytest
+          pipenv run pytest
