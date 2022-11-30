@@ -117,4 +117,4 @@ jobs:
 
       - name: Python module test
         run: |
-          pipenv run pytest
+          pipenv run pytest -s tests

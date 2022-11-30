@@ -29,7 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pipenv
 
-      - name: Cache pipenv
+      - name: Cache Pipenv
         uses: actions/cache@v2
         id: pipenv-cache
         with:
@@ -79,4 +79,4 @@ jobs:
 
       - name: Python module test
         run: |
-          pipenv run pytest
+          pipenv run pytest -s tests
