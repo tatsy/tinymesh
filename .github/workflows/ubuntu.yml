@@ -113,8 +113,7 @@ jobs:
 
       - name: Install module with Poetry
         run: |
-          pipenv shell
-          poetry install
+          pipenv run poetry install
 
       - name: Python module test
         run: |
