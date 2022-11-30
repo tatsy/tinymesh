@@ -33,6 +33,20 @@ jobs:
         with:
           python-version: 3.9
 
+      - name: Install Pipenv
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pipenv
+
+      - name: Cache Pipenv
+        uses: actions/cache@v3
+        id: pipenv-cache
+        with:
+          path: ~/.local/share/virtualenvs
+          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+
       - name: Install GNU C/C++ compiler
         if: ${{ matrix.compiler == 'gcc' }}
         run: |
@@ -105,11 +119,11 @@ jobs:
         shell: bash
         run: ctest -C $BUILD_TYPE
 
-      - name: Setup Python env with Pipenv
+      - name: Install Python dependencies
+        if: steps.pipenv-cache.outputs.cache-hit != 'true'
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pipenv
-          pipenv install --dev
+          pipenv lock
+          pipenv sync --dev
 
       - name: Install module with Poetry
         run: |
