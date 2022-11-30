@@ -24,8 +24,3 @@ python = ">=3.7,<3.11"
 toml = "^0.9"
 setuptools = "^57.4.0"
 pybind11 = "^2.10.1"
-
-[tool.poetry.dev-dependencies]
-numpy = "^1.21.2"
-plyfile = "^0.7.4"
-nose2 = "^0.10.0"
