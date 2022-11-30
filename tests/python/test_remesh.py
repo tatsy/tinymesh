@@ -1,7 +1,6 @@
 import os
-import unittest
 
-from nose2.tools import params
+import pytest
 
 import tinymesh as tm
 
@@ -16,37 +15,42 @@ filenames = [
 ]
 
 
-class TestRemesh(unittest.TestCase):
-    @params(*filenames)
-    def test_hole_fill(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
+@pytest.mark.parametrize("filename", filenames)
+def test_hole_fill(filename):
+    filename = os.path.join(CWD, model_dir, filename)
+    mesh = tm.Mesh(filename)
 
-        try:
-            mesh.fill_holes()
-        except Exception:
-            self.fail('Failed!')
-
-        self.assertTrue(mesh.verify())
-
-    @params(*filenames)
-    def test_remesh_triangular(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
+    try:
         mesh.fill_holes()
+    except Exception:
+        pytest.fail('Failed!')
 
-        try:
-            tm.remesh_triangular(mesh)
-        except Exception:
-            self.fail('Failed!')
+    assert mesh.verify(), "Mesh verification failed!"
 
-    @params(*filenames)
-    def test_simplify_qem(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
-        mesh.fill_holes()
 
-        try:
-            tm.simplify_qem(mesh, mesh.num_faces() // 10)
-        except Exception:
-            self.fail('Failed!')
+@pytest.mark.parametrize("filename", filenames)
+def test_remesh_triangular(filename):
+    filename = os.path.join(CWD, model_dir, filename)
+    mesh = tm.Mesh(filename)
+    mesh.fill_holes()
+
+    try:
+        tm.remesh_triangular(mesh)
+    except Exception:
+        pytest.fail('Failed!')
+
+    assert mesh.verify(), "Mesh verification failed!"
+
+
+@pytest.mark.parametrize("filename", filenames)
+def test_simplify_qem(filename):
+    filename = os.path.join(CWD, model_dir, filename)
+    mesh = tm.Mesh(filename)
+    mesh.fill_holes()
+
+    try:
+        tm.simplify_qem(mesh, mesh.num_faces() // 10)
+    except Exception:
+        pytest.fail('Failed!')
+
+    assert mesh.verify(), "Mesh verification failed!"
