@@ -700,7 +700,7 @@ bool Mesh::collapseHE(Halfedge *he) {
 
     // Collect neighboring vertices of the one to be removed
     std::vector<Vertex *> neighbors;
-    for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
+    for (auto it = v2->he_begin(); it != v2->he_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
         neighbors.push_back(it->dst());
     }
@@ -710,7 +710,7 @@ bool Mesh::collapseHE(Halfedge *he) {
     // Check unsafe collapse (# of shared vertices)
     int numUnion = 0;
     std::set<Vertex *> neighborSet(neighbors.begin(), neighbors.end());
-    for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
+    for (auto it = v0->he_begin(); it != v0->he_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
         if (neighborSet.find(it->dst()) != neighborSet.end()) {
             numUnion += 1;
@@ -754,12 +754,12 @@ bool Mesh::collapseHE(Halfedge *he) {
     Assertion(v_remain->index() < (int)vertices_.size(), "Something is wrong1!");
     Assertion(v_remove->index() < (int)vertices_.size(), "Something is wrong2!");
     Assertion(v_remove != v_remain, "Something is wrong3!");
-    for (auto it = v_remove->ohe_begin(); it != v_remove->ohe_end(); ++it) {
+    for (auto it = v_remove->he_begin(); it != v_remove->he_end(); ++it) {
         Assertion(it->src() == v_remove, "Invalid halfedge origin detected!");
         it->src_ = v_remain;
     }
 
-    for (auto it = v_remain->ohe_begin(); it != v_remain->ohe_end(); ++it) {
+    for (auto it = v_remain->he_begin(); it != v_remain->he_end(); ++it) {
         Assertion(it->src() == v_remain, "Invalid halfedge origin detected!");
     }
 
@@ -973,7 +973,7 @@ bool Mesh::verifyVertex(Vertex *v) const {
         success = false;
     }
 
-    for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+    for (auto it = v->he_begin(); it != v->he_end(); ++it) {
         if (it->src() != v) {
             fprintf(stderr, "Origin of an outward halfedge is invalid at v[%d]!\n", v->index());
             success = false;

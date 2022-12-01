@@ -32,7 +32,7 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int itera
             std::vector<Vec3> pts;
             Vec3 cent(0.0);
             double sumWgt = 0.0;
-            for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+            for (auto it = v->he_begin(); it != v->he_end(); ++it) {
                 double weight = 1.0;
                 if (cotangentWeight) {
                     weight = it->cotWeight();
@@ -122,7 +122,7 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
             // Compute weights
             double sumW = 0.0;
             std::vector<Triplet> tripletsInColumn;
-            for (auto he_it = v->ohe_begin(); he_it != v->ohe_end(); ++he_it) {
+            for (auto he_it = v->he_begin(); he_it != v->he_end(); ++he_it) {
                 const double W = he_it->cotWeight();
                 tripletsInColumn.emplace_back(i, he_it->dst()->index(), W);
                 if (std::isnan(W) || std::isinf(W)) {

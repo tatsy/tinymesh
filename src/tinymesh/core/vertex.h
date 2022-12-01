@@ -16,9 +16,11 @@ class TINYMESH_API Vertex {
 public:
     // Forward declaration
     class VertexIterator;
-    class InHalfedgeIterator;
-    class OutHalfedgeIterator;
+    class ConstVertexIterator;
+    class HalfedgeIterator;
+    class ConstHalfedgeIterator;
     class FaceIterator;
+    class ConstFaceIterator;
 
 public:
     Vertex();
@@ -32,19 +34,25 @@ public:
 
     bool operator==(const Vertex &other) const;
 
-    int degree();
-    Vec3 normal();
-    double K();
-    double H();
+    int degree() const;
+    Vec3 normal() const;
+    double K() const;
+    double H() const;
 
     VertexIterator v_begin();
     VertexIterator v_end();
-    InHalfedgeIterator ihe_begin();
-    InHalfedgeIterator ihe_end();
-    OutHalfedgeIterator ohe_begin();
-    OutHalfedgeIterator ohe_end();
+    ConstVertexIterator v_begin() const;
+    ConstVertexIterator v_end() const;
+
+    HalfedgeIterator he_begin();
+    HalfedgeIterator he_end();
+    ConstHalfedgeIterator he_begin() const;
+    ConstHalfedgeIterator he_end() const;
+
     FaceIterator f_begin();
     FaceIterator f_end();
+    ConstFaceIterator f_begin() const;
+    ConstFaceIterator f_end() const;
 
     Vec3 pos() const {
         return pos_;
@@ -57,7 +65,7 @@ public:
         return index_;
     }
 
-    bool isBoundary();
+    bool isBoundary() const;
 
     bool isLocked() const {
         return isLocked_;
@@ -82,9 +90,9 @@ private:
 
 /**
  * VertexIterator
- * @detail Traverse neighboring vertices in the counter-clockwise order.
+ * @detail Traverse neighboring vertices in the clockwise order.
  */
-class Vertex::VertexIterator {
+class TINYMESH_API Vertex::VertexIterator {
 public:
     explicit VertexIterator(Halfedge *he);
     bool operator!=(const VertexIterator &it) const;
@@ -99,37 +107,56 @@ private:
 };
 
 /**
- * InHalfedgeIterator
- * @detail Traverse inward halfedges in the counter-clockwise order.
+ * ConstVertexIterator
+ * @detail Traverse neighboring vertices in the clockwise order. 
  */
-class Vertex::InHalfedgeIterator {
+class TINYMESH_API Vertex::ConstVertexIterator {
 public:
-    explicit InHalfedgeIterator(Halfedge *he);
-    bool operator!=(const InHalfedgeIterator &it) const;
-    Halfedge &operator*();
-    Halfedge *ptr() const;
-    Halfedge *operator->() const;
-    InHalfedgeIterator &operator++();
-    InHalfedgeIterator operator++(int);
+    explicit ConstVertexIterator(Halfedge *he);
+    bool operator!=(const ConstVertexIterator &it) const;
+    const Vertex &operator*() const;
+    const Vertex *ptr() const;
+    const Vertex *operator->() const;
+    ConstVertexIterator &operator++();
+    ConstVertexIterator operator++(int);
 
 private:
     Halfedge *halfedge_, *iter_;
 };
 
 /**
- * OutHalfedgeIterator
- * @detail Traverse outward halfedges in counter-clockwise order.
+ * HalfedgeIterator
+ * @detail Traverse outward halfedges in the clockwise order.
  */
 
-class Vertex::OutHalfedgeIterator {
+class TINYMESH_API Vertex::HalfedgeIterator {
 public:
-    OutHalfedgeIterator(Halfedge *he);
-    bool operator!=(const OutHalfedgeIterator &it) const;
+    HalfedgeIterator(Halfedge *he);
+    bool operator!=(const HalfedgeIterator &it) const;
     Halfedge &operator*();
     Halfedge *ptr() const;
     Halfedge *operator->() const;
-    OutHalfedgeIterator &operator++();
-    OutHalfedgeIterator operator++(int);
+    HalfedgeIterator &operator++();
+    HalfedgeIterator operator++(int);
+
+private:
+    Halfedge *halfedge_, *iter_;
+};
+
+/**
+ * ConstHalfedgeIterator
+ * @detail Traverse outward halfedges in the clockwise order.
+ */
+
+class TINYMESH_API Vertex::ConstHalfedgeIterator {
+public:
+    ConstHalfedgeIterator(Halfedge *he);
+    bool operator!=(const ConstHalfedgeIterator &it) const;
+    const Halfedge &operator*() const;
+    const Halfedge *ptr() const;
+    const Halfedge *operator->() const;
+    ConstHalfedgeIterator &operator++();
+    ConstHalfedgeIterator operator++(int);
 
 private:
     Halfedge *halfedge_, *iter_;
@@ -137,9 +164,9 @@ private:
 
 /**
  * FaceIterator
- * @detail Traverse neighboring faces in counter-clockwise order.
+ * @detail Traverse neighboring faces in clockwise order.
  */
-class Vertex::FaceIterator {
+class TINYMESH_API Vertex::FaceIterator {
 public:
     FaceIterator(Halfedge *he);
     bool operator!=(const FaceIterator &it) const;
@@ -148,6 +175,24 @@ public:
     Face *operator->() const;
     FaceIterator &operator++();
     FaceIterator operator++(int);
+
+private:
+    Halfedge *halfedge_, *iter_;
+};
+
+/**
+ * ConstFaceIterator
+ * @detail Traverse neighboring faces in clockwise order.
+ */
+class TINYMESH_API Vertex::ConstFaceIterator {
+public:
+    ConstFaceIterator(Halfedge *he);
+    bool operator!=(const ConstFaceIterator &it) const;
+    const Face &operator*() const;
+    const Face *ptr() const;
+    const Face *operator->() const;
+    ConstFaceIterator &operator++();
+    ConstFaceIterator operator++(int);
 
 private:
     Halfedge *halfedge_, *iter_;

@@ -109,7 +109,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install pipenv
-          pipenv install
+          pipenv install --dev
 
       - name: Install module with Poetry
         run: |
@@ -117,4 +117,4 @@ jobs:
 
       - name: Python module test
         run: |
-          poetry run pytest
+          pipenv run pytest
