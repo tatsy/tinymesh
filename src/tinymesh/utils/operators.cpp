@@ -33,7 +33,7 @@ void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
     for (int i = 0; i < N; i++) {
         Vertex *v = mesh.vertex(i);
         double sumWgt = 0.0;
-        for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+        for (auto it = v->he_begin(); it != v->he_end(); ++it) {
             const int j = it->dst()->index();
             const double weight = it->cotWeight();
             triplets.emplace_back(i, j, -weight);
@@ -65,7 +65,7 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
         Vertex *v = mesh.vertex(i);
         double sumWgt = 0.0;
         double area = 0.0;
-        for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+        for (auto it = v->he_begin(); it != v->he_end(); ++it) {
             // Gaussian weight
             Vertex *u = it->dst();
             const double h = avgEdgeLength;

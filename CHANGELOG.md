@@ -1,3 +1,8 @@
+v0.2.4
+---
+* Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
+* Add const version of iterators.
+
 v0.2.3
 ---
 * Update some method names (e.g., `isStatic` -> `isLocked`)
