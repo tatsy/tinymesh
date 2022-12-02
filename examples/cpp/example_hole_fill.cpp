@@ -34,12 +34,16 @@ int main(int argc, char **argv) {
     // Hole filling with advancing front algorithm [Zhao et al. 2007]
     {
         tms::Mesh mesh(argv[1]);
+        std::vector<tms::Face *> holeFaces;
         for (int i = 0; i < mesh.numFaces(); i++) {
             tms::Face *f = mesh.face(i);
             if (f->isHole()) {
-                holeFillAdvancingFront(mesh, f);
-                break;
+                holeFaces.push_back(f);
             }
+        }
+
+        for (auto *f : holeFaces) {
+            holeFillAdvancingFront(mesh, f);
         }
         const std::string outfile = (dirpath / fs::path((basename + "_fill_adv_front" + extension).c_str())).string();
         mesh.save(outfile);

@@ -1,6 +1,8 @@
 #define TINYMESH_API_EXPORT
 #include "mesh.h"
 
+#include <iostream>
+#include <fstream>
 #include <utility>
 #include <queue>
 #include <unordered_set>
@@ -231,14 +233,92 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
 }
 
 void Mesh::holeFillAdvancingFront_(Face *face) {
-    for (int hoge = 0; hoge < 50; hoge++) {
+    // Compute average edge length
+    const double avgEdgeLen = getAvgEdgeLength();
+
+    // Original boundary vertices
+    std::vector<Vertex *> boundary;
+    for (auto it = face->v_begin(); it != face->v_end(); ++it) {
+        boundary.push_back(it.ptr());
+        it->lock();
+    }
+
+    // Initial Hole filling by advancing front
+    while (true) {
         // Collect boundary vertices
-        std::vector<Vertex *> boundary;
-        for (auto it = face->v_begin(); it != face->v_end(); ++it) {
-            boundary.push_back(it.ptr());
+        std::vector<Vertex *> face_vs;
+        std::vector<Halfedge *> face_hes;
+        for (auto it = face->he_begin(); it != face->he_end(); ++it) {
+            face_vs.push_back(it->src());
+            face_hes.push_back(it.ptr());
         }
-        const int N = static_cast<int>(boundary.size());
-        printf("N = %d\n", N);
+        const int N = static_cast<int>(face_vs.size());
+        if (N == 3) {
+            for (auto it = face->he_begin(); it != face->he_end(); ++it) {
+                it->isBoundary_ = false;
+                it->rev_->isBoundary_ = false;
+            }
+            break;
+        }
+
+        // Merge adjacent vertices if they are too close
+        bool isMerged = false;
+        for (int i = 0; i < N; i++) {
+            const int prev = (i - 1 + N) % N;
+            const int next = (i + 1) % N;
+            if (!face_vs[i]->isLocked() && !face_vs[i]->isLocked() &&
+                length(face_vs[i]->pos() - face_vs[next]->pos()) < 0.5 * avgEdgeLen) {
+                Halfedge *he = face_hes[i];
+                std::vector<Halfedge *> v_hes;
+                for (auto it = face_vs[i]->he_begin(); it != face_vs[i]->he_end(); ++it) {
+                    v_hes.push_back(it.ptr());
+                }
+
+                Halfedge *he_prev = face_hes[prev];
+                Halfedge *he_next = face_hes[next];
+                Assertion(he_prev->next_ == he, "Error!!");
+                Assertion(he->next_ == he_next, "Error!!");
+                he_prev->next_ = he_next;
+
+                Halfedge *he0 = he->rev_;
+                Halfedge *he1 = he0->next_;
+                Halfedge *he2 = he1->next_;
+                Assertion(he2->next_ == he0, "Target face is not a triangle!");
+
+                Vertex *v1 = he0->src_;  // == face_vs[next]
+                Vertex *v0 = he1->src_;  // == face_vs[i]
+                Vertex *v2 = he2->src_;  // opposite vertex of the edge to be removed.
+
+                Halfedge *he1_rev = he1->rev_;
+                Halfedge *he2_rev = he2->rev_;
+                he1_rev->rev_ = he2_rev;
+                he2_rev->rev_ = he1_rev;
+
+                for (auto *v_he : v_hes) {
+                    v_he->src_ = face_vs[next];
+                }
+                v1->halfedge_ = he2_rev;
+                v2->halfedge_ = he1_rev;
+                face->halfedge_ = he_next;
+
+                v1->setPos(0.5 * (v0->pos() + v1->pos()));
+
+                removeFace(he0->face_);
+                removeHalfedge(he);
+                removeHalfedge(he0);
+                removeHalfedge(he1);
+                removeHalfedge(he2);
+                removeVertex(v0);
+
+                isMerged = true;
+                break;
+            }
+        }
+
+        if (isMerged) {
+            verify();
+            continue;
+        }
 
         // Collect boundary halfedges
         std::unordered_map<E, Halfedge *> pair2he;
@@ -261,8 +341,8 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             const Vec3 norm2 = pair2he[E(i, next)]->rev()->face()->normal();
             const Vec3 norm = normalize(norm1 + norm2);
 
-            const Vec3 e1 = boundary[prev]->pos() - boundary[i]->pos();
-            const Vec3 e2 = boundary[next]->pos() - boundary[i]->pos();
+            const Vec3 e1 = face_vs[prev]->pos() - face_vs[i]->pos();
+            const Vec3 e2 = face_vs[next]->pos() - face_vs[i]->pos();
             const Vec3 outer = cross(e2, e1);
             const double sign = dot(outer, norm) >= 0.0 ? 1.0 : -1.0;
             const double inner = dot(e1, e2);
@@ -280,14 +360,13 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
         // Put new triangles
         std::vector<Face *> newFaces;
         if (minAngle <= Pi * (75.0 / 180.0)) {
-            printf("minAngle = %f\n", minAngle / Pi * 180.0);
             const int prev = (minIndex - 1 + N) % N;
             const int next = (minIndex + 1) % N;
 
             Halfedge *new_he = new Halfedge;
             addHalfedge(new_he);
 
-            new_he->src_ = boundary[prev];
+            new_he->src_ = face_vs[prev];
             new_he->isBoundary_ = true;
             pair2he[E((prev - 1 + N) % N, prev)]->next_ = new_he;
             new_he->next_ = pair2he[E(next, (next + 1) % N)];
@@ -296,19 +375,19 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             he2pair[new_he] = E(prev, next);
 
             const T tri = std::make_tuple(prev, minIndex, next);
-            Face *newFace = addNewTriangle(boundary, tri, pair2he, he2pair);
+            Face *newFace = addNewTriangle(face_vs, tri, pair2he, he2pair);
             newFaces.push_back(newFace);
 
             face->halfedge_ = new_he;
+            new_he->face_ = face;
 
         } else if (minAngle <= Pi * (135.0 / 180.0)) {
-            printf("minAngle = %f\n", minAngle / Pi * 180.0);
             const int prev = (minIndex - 1 + N) % N;
             const int next = (minIndex + 1) % N;
 
-            const Vec3 p0 = boundary[prev]->pos();
-            const Vec3 p1 = boundary[minIndex]->pos();
-            const Vec3 p2 = boundary[next]->pos();
+            const Vec3 p0 = face_vs[prev]->pos();
+            const Vec3 p1 = face_vs[minIndex]->pos();
+            const Vec3 p2 = face_vs[next]->pos();
             const Vec3 e1 = p0 - p1;
             const Vec3 e2 = p2 - p1;
             const double len = (length(e1) + length(e2)) * 0.5;
@@ -324,7 +403,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
 
             new_vert->halfedge_ = new_he2;
 
-            new_he1->src_ = boundary[prev];
+            new_he1->src_ = face_vs[prev];
             new_he2->src_ = new_vert;
             new_he1->isBoundary_ = true;
             new_he2->isBoundary_ = true;
@@ -333,8 +412,8 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             new_he1->next_ = new_he2;
             new_he2->next_ = pair2he[E(next, (next + 1) % N)];
 
-            const int newIndex = (int)boundary.size();
-            boundary.push_back(new_vert);
+            const int newIndex = (int)face_vs.size();
+            face_vs.push_back(new_vert);
 
             pair2he[E(prev, newIndex)] = new_he1;
             pair2he[E(newIndex, next)] = new_he2;
@@ -342,33 +421,87 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             he2pair[new_he2] = E(newIndex, next);
 
             const T t1 = std::make_tuple(prev, minIndex, newIndex);
-            Face *new_face1 = addNewTriangle(boundary, t1, pair2he, he2pair);
+            Face *new_face1 = addNewTriangle(face_vs, t1, pair2he, he2pair);
             newFaces.push_back(new_face1);
 
             const T t2 = std::make_tuple(newIndex, minIndex, next);
-            Face *new_face2 = addNewTriangle(boundary, t2, pair2he, he2pair);
+            Face *new_face2 = addNewTriangle(face_vs, t2, pair2he, he2pair);
             newFaces.push_back(new_face2);
 
             face->halfedge_ = new_he1;
+            new_he1->face_ = face;
+            new_he2->face_ = face;
+
         } else {
-            printf("minAngle = %f\n", minAngle / Pi * 180.0);
             const int prev = (minIndex - 1 + N) % N;
             const int next = (minIndex + 1) % N;
 
-            const Vec3 p0 = boundary[prev]->pos();
-            const Vec3 p1 = boundary[minIndex]->pos();
-            const Vec3 p2 = boundary[next]->pos();
+            const Vec3 p0 = face_vs[prev]->pos();
+            const Vec3 p1 = face_vs[minIndex]->pos();
+            const Vec3 p2 = face_vs[next]->pos();
             const Vec3 e1 = p0 - p1;
             const Vec3 e2 = p2 - p1;
-            const double len = (length(e1) + length(e2)) * 0.5;
+            const double len1 = (length(e1) * 2.0 + length(e2)) / 3.0;
+            const double len2 = (length(e1) + length(e2) * 2.0) / 3.0;
 
-            const Vec3 pnew1 = p1 + normalize(e1 * 2.0 + e1) * len;
-            const Vec3 pnew2 = p1 + normalize(e1 + e2 * 2.0) * len;
+            const Vec3 pnew1 = p1 + normalize(e1 * 2.0 + e2) * len1;
+            const Vec3 pnew2 = p1 + normalize(e1 + e2 * 2.0) * len2;
 
             Vertex *new_vert1 = new Vertex(pnew1);
             Vertex *new_vert2 = new Vertex(pnew2);
             addVertex(new_vert1);
             addVertex(new_vert2);
+
+            Halfedge *new_he1 = new Halfedge;
+            Halfedge *new_he2 = new Halfedge;
+            Halfedge *new_he3 = new Halfedge;
+            addHalfedge(new_he1);
+            addHalfedge(new_he2);
+            addHalfedge(new_he3);
+
+            new_vert1->halfedge_ = new_he2;
+            new_vert2->halfedge_ = new_he3;
+
+            new_he1->src_ = face_vs[prev];
+            new_he2->src_ = new_vert1;
+            new_he3->src_ = new_vert2;
+            new_he1->isBoundary_ = true;
+            new_he2->isBoundary_ = true;
+            new_he3->isBoundary_ = true;
+
+            pair2he[E((prev - 1 + N) % N, prev)]->next_ = new_he1;
+            new_he1->next_ = new_he2;
+            new_he2->next_ = new_he3;
+            new_he3->next_ = pair2he[E(next, (next + 1) % N)];
+
+            const int newIndex1 = (int)face_vs.size();
+            face_vs.push_back(new_vert1);
+            const int newIndex2 = (int)face_vs.size();
+            face_vs.push_back(new_vert2);
+
+            pair2he[E(prev, newIndex1)] = new_he1;
+            pair2he[E(newIndex1, newIndex2)] = new_he2;
+            pair2he[E(newIndex2, next)] = new_he3;
+            he2pair[new_he1] = E(prev, newIndex1);
+            he2pair[new_he2] = E(newIndex1, newIndex2);
+            he2pair[new_he3] = E(newIndex2, next);
+
+            const T t1 = std::make_tuple(prev, minIndex, newIndex1);
+            Face *new_face1 = addNewTriangle(face_vs, t1, pair2he, he2pair);
+            newFaces.push_back(new_face1);
+
+            const T t2 = std::make_tuple(newIndex1, minIndex, newIndex2);
+            Face *new_face2 = addNewTriangle(face_vs, t2, pair2he, he2pair);
+            newFaces.push_back(new_face2);
+
+            const T t3 = std::make_tuple(newIndex2, minIndex, next);
+            Face *new_face3 = addNewTriangle(face_vs, t3, pair2he, he2pair);
+            newFaces.push_back(new_face3);
+
+            face->halfedge_ = new_he1;
+            new_he1->face_ = face;
+            new_he2->face_ = face;
+            new_he3->face_ = face;
         }
 
         for (auto f : newFaces) {
@@ -397,6 +530,68 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             }
         }
     }
+
+    // Correct internal vertices
+    std::unordered_set<Vertex *> visited;
+    std::queue<Vertex *> que;
+    for (auto it = face->v_begin(); it != face->v_end(); ++it) {
+        if (!it->isLocked()) {
+            que.push(it.ptr());
+            break;
+        }
+    }
+    while (!que.empty()) {
+        Vertex *v = que.front();
+        que.pop();
+
+        if (visited.count(v) != 0) {
+            continue;
+        }
+        visited.insert(v);
+
+        for (auto it = v->v_begin(); it != v->v_end(); ++it) {
+            if (!it->isLocked() && visited.count(it.ptr()) == 0) {
+                que.push(it.ptr());
+            }
+        }
+    }
+
+    // Smooth vertex normals
+    std::vector<Vertex *> internal(visited.begin(), visited.end());
+    std::vector<Vec3> newNormals(internal.size());
+    for (int i = 0; i < internal.size(); i++) {
+        newNormals[i] = internal[i]->normal();
+    }
+
+    for (int kIter = 0; kIter < 100; kIter++) {
+        for (int i = 0; i < internal.size(); i++) {
+            Vertex *v = internal[i];
+            Vec3 nn = Vec3(0.0);
+            double sumWgt = 0.0;
+            for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                const Vec3 &n = newNormals[i];
+                const double weight = it->cotWeight();
+                nn -= weight * n;
+                sumWgt += weight;
+            }
+            newNormals[i] -= nn / sumWgt;
+            newNormals[i] = normalize(newNormals[i]);
+        }
+    }
+
+    // Solve Poisson equation
+
+    // Check patch
+    std::ofstream writer("hoge.off");
+    writer << "NOFF\n";
+    writer << internal.size() << " 0 0\n";
+    for (int i = 0; i < internal.size(); i++) {
+        const Vec3 &p = internal[i]->pos();
+        const Vec3 &n = newNormals[i];
+        writer << p.x() << " " << p.y() << " " << p.z();
+        writer << " " << n.x() << " " << n.y() << " " << n.z() << std::endl;
+    }
+    writer.close();
 }
 
 }  // namespace tinymesh
