@@ -10,6 +10,7 @@
 #include <tuple>
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <Eigen/Core>
 
@@ -115,6 +116,21 @@ std::vector<uint32_t> Mesh::getVertexIndices() const {
     return ret;
 }
 
+double Mesh::getAvgEdgeLength() const {
+    std::unordered_set<Halfedge *> visited;
+    double avgLength = 0.0;
+    int count = 0;
+    for (int i = 0; i < halfedges_.size(); i++) {
+        Halfedge *he = halfedges_[i].get();
+        if (visited.count(he->rev_) != 0) continue;
+
+        avgLength += halfedges_[i]->length();
+        visited.insert(he);
+        count++;
+    }
+    return avgLength / count;
+}
+
 void Mesh::construct() {
     for (size_t i = 0; i < indices_.size(); i += 3) {
         if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
@@ -153,7 +169,8 @@ void Mesh::construct() {
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
                 Warn(
-                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes this "
+                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes "
+                    "this "
                     "edge.",
                     a, b);
                 isDuplicated = true;

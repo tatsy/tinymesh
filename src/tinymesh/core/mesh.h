@@ -41,6 +41,8 @@ public:
     bool collapseHE(Halfedge *he);
     void fillHoles();
 
+    double getAvgEdgeLength() const;
+
     bool verify() const;
 
     Vertex *vertex(int index) const {

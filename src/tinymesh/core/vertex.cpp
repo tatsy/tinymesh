@@ -59,10 +59,12 @@ bool Vertex::isBoundary() const {
 }
 
 double Vertex::K() const {
+    // NOTE: VertexIterator traverses neighboring vertices in the clockwise order.
     std::vector<const Vertex *> neighbors;
     for (auto it = v_begin(); it != v_end(); ++it) {
         neighbors.push_back(it.ptr());
     }
+    std::reverse(neighbors.begin(), neighbors.end());
 
     const int N = static_cast<int>(neighbors.size());
     double sumAngles = 0.0;
@@ -78,10 +80,12 @@ double Vertex::K() const {
 }
 
 double Vertex::H() const {
+    // NOTE: VertexIterator traverses neighboring vertices in the clockwise order.
     std::vector<const Vertex *> neighbors;
     for (auto it = v_begin(); it != v_end(); ++it) {
         neighbors.push_back(it.ptr());
     }
+    std::reverse(neighbors.begin(), neighbors.end());
 
     const int N = static_cast<int>(neighbors.size());
     Vec3 laplace = Vec3(0.0);
