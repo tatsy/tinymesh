@@ -13,8 +13,8 @@ set(SOURCE_FILES ${SOURCE_FILES};${TINYPLY_INCLUDE_DIR}/tinyply.h)
 # ----------
 set(SOURCE_FILES ${SOURCE_FILES} "tinymesh.h")
 add_folder(SOURCE_FILES "core")
-add_folder(SOURCE_FILES "utils")
 add_folder(SOURCE_FILES "filters")
+add_folder(SOURCE_FILES "ops")
 add_folder(SOURCE_FILES "remesh")
 add_folder(SOURCE_FILES "restore")
 

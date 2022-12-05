@@ -7,7 +7,7 @@
 #include <queue>
 #include <unordered_set>
 
-#include "types.h"
+#include "utils.h"
 #include "eigen.h"
 #include "vertex.h"
 #include "face.h"
@@ -532,7 +532,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
     }
 
     // Correct internal vertices
-    std::unordered_set<Vertex *> visited;
+    std::unordered_set<Vertex *> insideVerts;
     std::queue<Vertex *> que;
     for (auto it = face->v_begin(); it != face->v_end(); ++it) {
         if (!it->isLocked()) {
@@ -544,52 +544,145 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
         Vertex *v = que.front();
         que.pop();
 
-        if (visited.count(v) != 0) {
+        if (insideVerts.count(v) != 0) {
             continue;
         }
-        visited.insert(v);
+        insideVerts.insert(v);
 
         for (auto it = v->v_begin(); it != v->v_end(); ++it) {
-            if (!it->isLocked() && visited.count(it.ptr()) == 0) {
+            if (!it->isLocked() && insideVerts.count(it.ptr()) == 0) {
                 que.push(it.ptr());
             }
         }
     }
 
     // Smooth vertex normals
-    std::vector<Vertex *> internal(visited.begin(), visited.end());
-    std::vector<Vec3> newNormals(internal.size());
-    for (int i = 0; i < internal.size(); i++) {
-        newNormals[i] = internal[i]->normal();
+    std::unordered_map<Vertex *, Vec3> newNormals;
+    for (Vertex *v : insideVerts) {
+        newNormals[v] = v->normal();
     }
 
-    for (int kIter = 0; kIter < 100; kIter++) {
-        for (int i = 0; i < internal.size(); i++) {
-            Vertex *v = internal[i];
+    for (int kIter = 0; kIter < 1000; kIter++) {
+        for (Vertex *v : insideVerts) {
             Vec3 nn = Vec3(0.0);
             double sumWgt = 0.0;
             for (auto it = v->he_begin(); it != v->he_end(); ++it) {
-                const Vec3 &n = newNormals[i];
+                const Vec3 &n = newNormals[it->dst()];
                 const double weight = it->cotWeight();
-                nn -= weight * n;
+                nn += weight * n;
                 sumWgt += weight;
             }
-            newNormals[i] -= nn / sumWgt;
-            newNormals[i] = normalize(newNormals[i]);
+            nn = 0.5 * newNormals[v] + 0.5 * nn / sumWgt;
+            newNormals[v] = normalize(nn);
         }
     }
 
+    // Compute face normals
+    std::unordered_set<Face *> insideFaces;
+    for (Vertex *v : insideVerts) {
+        for (auto it = v->f_begin(); it != v->f_end(); ++it) {
+            Face *f = it.ptr();
+            bool inside = true;
+            for (auto vit = f->v_begin(); vit != f->v_end(); ++vit) {
+                if (insideVerts.count(vit.ptr()) == 0 && !it->isLocked()) {
+                    inside = false;
+                    break;
+                }
+            }
+
+            if (inside) {
+                insideFaces.insert(f);
+            }
+        }
+    }
+
+    std::unordered_map<Face *, EigenMatrix3> rotations;
+    for (Face *f : insideFaces) {
+        const Vec3 n0 = f->normal();
+        Vec3 n1(0.0);
+        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+            n1 += newNormals[it.ptr()];
+        }
+        n1 = normalize(n1);
+
+        const Vec3 axis = cross(n0, n1);
+        const double theta = std::atan2(length(axis), dot(n0, n1));
+        rotations[f] = rotationAxisAngle(theta, axis);
+    }
+
+    // Compute rotated gradients
+    std::unordered_map<Vertex *, std::vector<Vec3>> rotGrads;
+    for (Vertex *v : insideVerts) {
+        std::vector<Vec3> grads;
+        for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+            Assertion(it->next()->next()->next() == it.ptr(), "Non-triangle face is detected!");
+            Vertex *v0 = it->src();
+            Vertex *v1 = it->next()->src();
+            Vertex *v2 = it->next()->next()->src();
+            const Vec3 p0 = v0->pos();
+            const Vec3 p1 = v1->pos();
+            const Vec3 p2 = v2->pos();
+
+            const Vec3 l12 = p2 - p1;
+            const Vec3 e10 = normalize(p0 - p1);
+            const Vec3 e12 = normalize(p2 - p1);
+            const Vec3 perp = cross(e12, e10);
+            const Vec3 e12_rot90 = normalize(cross(e12, perp)) * length(l12);
+
+            const double A = 0.5 * length(cross(p1 - p0, p2 - p0));
+            const Vec3 grad = (Vec3)(rotations[it->face()] * (EigenVector3)e12_rot90) / 2.0;
+            grads.push_back(grad);
+        }
+        rotGrads[v] = grads;
+    }
+
     // Solve Poisson equation
+    for (int kIter = 0; kIter < 1000; kIter++) {
+        for (Vertex *v : insideVerts) {
+            Vec3 lap(0.0);
+            double sumWgt = 0.0;
+            for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                const double weight = it->cotWeight();
+                lap += weight * it->dst()->pos();
+                sumWgt += weight;
+            }
+            lap /= sumWgt;
+
+            Vec3 div(0.0);
+            for (Vec3 grad : rotGrads[v]) {
+                div += grad;
+            }
+            div /= v->degree();
+
+            const Vec3 newPos = lap - 0.01 * div;
+            v->setPos(newPos);
+        }
+    }
 
     // Check patch
-    std::ofstream writer("hoge.off");
-    writer << "NOFF\n";
-    writer << internal.size() << " 0 0\n";
-    for (int i = 0; i < internal.size(); i++) {
-        const Vec3 &p = internal[i]->pos();
-        const Vec3 &n = newNormals[i];
-        writer << p.x() << " " << p.y() << " " << p.z();
-        writer << " " << n.x() << " " << n.y() << " " << n.z() << std::endl;
+    std::ofstream writer("hoge.obj");
+    int vCount = 1;
+    for (auto *f : insideFaces) {
+        std::vector<Vec3> verts;
+        Vec3 center(0.0);
+        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+            const Vec3 p = it->pos();
+            verts.push_back(p);
+            center += p;
+        }
+
+        center /= verts.size();
+        for (Vec3 v : verts) {
+            Vec3 p = (Vec3)(rotations[f] * (EigenVector3)(v - center)) + center;
+            writer << "v " << p.x() << " " << p.y() << " " << p.z() << "\n";
+        }
+
+        writer << "f";
+        for (int i = 0; i < verts.size(); i++) {
+            writer << " " << (vCount + i);
+        }
+        writer << "\n";
+        vCount += verts.size();
     }
     writer.close();
 }

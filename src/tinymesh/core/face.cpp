@@ -54,6 +54,14 @@ double Face::area() const {
     return area;
 }
 
+int Face::numCorners() const {
+    int count = 0;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        count++;
+    }
+    return count;
+}
+
 bool Face::isHole() const {
     // Face is hole if all the vertices are at the boundary.
     for (auto it = this->he_begin(); it != this->he_end(); ++it) {
