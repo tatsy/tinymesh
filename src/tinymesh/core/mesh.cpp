@@ -15,7 +15,7 @@
 #include <Eigen/Core>
 
 #include "core/debug.h"
-#include "core/types.h"
+#include "core/utils.h"
 #include "core/vec.h"
 #include "core/vertex.h"
 #include "core/edge.h"

@@ -54,6 +54,7 @@ public:
 
     Vec3 normal() const;
     double area() const;
+    int numCorners() const;
 
     bool isHole() const;
     bool isBoundary() const;

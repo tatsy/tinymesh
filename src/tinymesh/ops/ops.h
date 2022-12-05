@@ -2,8 +2,8 @@
 #pragma once
 #endif
 
-#ifndef TINYMESH_UTILS_H
-#define TINYMESH_UTILS_H
+#ifndef TINYMESH_OPS_H
+#define TINYMESH_OPS_H
 
 #include "core/api.h"
 #include "core/mesh.h"
@@ -25,4 +25,4 @@ TINYMESH_API EigenMatrix getHeatKernelSignatures(EigenSparseMatrix &L, int K = 3
 
 }  // namespace tinymesh
 
-#endif  // TINYMESH_UTILS_H
+#endif  // TINYMESH_OPS_H

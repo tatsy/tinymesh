@@ -1,14 +1,23 @@
+#ifdef _MSC_VER
 #pragma once
+#endif
+
+#ifndef TINYMESH_VEC_H
+#define TINYMESH_VEC_H
 
 #include <array>
 #include <algorithm>
 #include <functional>
 #include <type_traits>
 
+#include <Eigen/Core>
+
 template <typename Float, int Dims>
 class Vec {
     static_assert(std::is_floating_point<Float>::value, "Vector base type must be floating point number!");
     static_assert(Dims > 1, "Vector dimension must be more than 1!");
+
+    using EigenVectorType = Eigen::Matrix<Float, Dims, 1>;
 
 public:
     Vec() {
@@ -25,6 +34,20 @@ public:
         elems[0] = x;
         if (Dims >= 1) elems[1] = y;
         if (Dims >= 2) elems[2] = z;
+    }
+
+    Vec(const EigenVectorType &v) {
+        for (int d = 0; d < Dims; d++) {
+            elems[d] = v(d);
+        }
+    }
+
+    operator EigenVectorType() const {
+        EigenVectorType v;
+        for (int d = 0; d < Dims; d++) {
+            v(d) = elems[d];
+        }
+        return v;
     }
 
     bool operator==(const Vec &other) const {
@@ -281,3 +304,5 @@ struct hash<Vec<Float, Dims>> {
 };
 
 }  // namespace std
+
+#endif  // TINYMESH_VEC_H

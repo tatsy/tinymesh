@@ -1,5 +1,5 @@
 #define TINYMESH_API_EXPORT
-#include "utils.h"
+#include "ops.h"
 
 #include <vector>
 
