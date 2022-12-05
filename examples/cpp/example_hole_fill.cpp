@@ -38,12 +38,8 @@ int main(int argc, char **argv) {
         for (int i = 0; i < mesh.numFaces(); i++) {
             tms::Face *f = mesh.face(i);
             if (f->isHole()) {
-                holeFaces.push_back(f);
+                holeFillAdvancingFront(mesh, f);
             }
-        }
-
-        for (auto *f : holeFaces) {
-            holeFillAdvancingFront(mesh, f);
         }
         const std::string outfile = (dirpath / fs::path((basename + "_fill_adv_front" + extension).c_str())).string();
         mesh.save(outfile);

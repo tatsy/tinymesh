@@ -102,7 +102,7 @@ std::vector<Vec3> Mesh::getVertices() const {
 std::vector<uint32_t> Mesh::getVertexIndices() const {
     std::vector<uint32_t> ret;
     for (const auto &f : faces_) {
-        if (f->isBoundary()) {
+        if (f->isHole()) {
             continue;
         }
 

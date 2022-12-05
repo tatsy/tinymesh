@@ -20,7 +20,18 @@ build = "build.py"
 exclude = ["src/*", "tests/*", "cmake/*", "data/*", "figures/*"]
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.11"
-toml = "^0.9"
+python = ">=3.9,<3.11"
 setuptools = "^57.4.0"
 pybind11 = "^2.10.1"
+
+[tool.poetry.group.dev.dependencies]
+yapf = "^0.32.0"
+flake8 = "^6.0.0"
+mypy = "^0.991"
+isort = "^5.10.1"
+pytest = "^7.2.0"
+jupyterlab = "^3.5.0"
+open3d = "^0.16.1"
+scipy = "^1.9.3"
+numpy = "^1.23.5"
+matplotlib = "^3.6.2"
