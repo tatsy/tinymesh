@@ -24,19 +24,19 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Install Pipenv
+      - name: Install Poetry
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pipenv
+          python -m pip install poetry
 
-      - name: Cache Pipenv
+      - name: Cache Poetry
         uses: actions/cache@v3
-        id: pipenv-cache
+        id: poetry-cache
         with:
           path: ~/.local/share/virtualenvs
-          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile') }}
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile') }}
+            ${{ runner.os }}-poetry-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install Google Test
         run: |
@@ -67,16 +67,11 @@ jobs:
         shell: bash
         run: ctest -C $BUILD_TYPE
 
-      - name: Install Python dependencies
+      - name: Install Python modules
         if: steps.pipenv-cache.outputs.cache-hit != 'true'
         run: |
-          pipenv lock
-          pipenv sync --dev
-
-      - name: Install module with Poetry
-        run: |
-          pipenv run poetry install
+          poetry install
 
       - name: Python module test
         run: |
-          pipenv run pytest -s tests
+          poetry run pytest -s tests

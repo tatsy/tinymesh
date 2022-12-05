@@ -629,7 +629,10 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             const Vec3 perp = cross(e12, e10);
             const Vec3 e12_rot90 = normalize(cross(e12, perp)) * length(l12);
 
-            const double A = 0.5 * length(cross(p1 - p0, p2 - p0));
+            // NOTE: gradient should be divided by "2A" rather than "2,"
+            // but here, it's just divided by the latter to make its value be
+            // proportional to the edge length.
+            // const double A = 0.5 * length(cross(p1 - p0, p2 - p0));
             const Vec3 grad = (Vec3)(rotations[it->face()] * (EigenVector3)e12_rot90) / 2.0;
             grads.push_back(grad);
         }
@@ -658,33 +661,6 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             v->setPos(newPos);
         }
     }
-
-    // Check patch
-    std::ofstream writer("hoge.obj");
-    int vCount = 1;
-    for (auto *f : insideFaces) {
-        std::vector<Vec3> verts;
-        Vec3 center(0.0);
-        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
-            const Vec3 p = it->pos();
-            verts.push_back(p);
-            center += p;
-        }
-
-        center /= verts.size();
-        for (Vec3 v : verts) {
-            Vec3 p = (Vec3)(rotations[f] * (EigenVector3)(v - center)) + center;
-            writer << "v " << p.x() << " " << p.y() << " " << p.z() << "\n";
-        }
-
-        writer << "f";
-        for (int i = 0; i < verts.size(); i++) {
-            writer << " " << (vCount + i);
-        }
-        writer << "\n";
-        vCount += verts.size();
-    }
-    writer.close();
 }
 
 }  // namespace tinymesh

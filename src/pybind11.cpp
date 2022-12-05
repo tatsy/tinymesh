@@ -85,6 +85,7 @@ PYBIND11_MODULE(tinymesh, m) {
         .def(py::init<>())
         .def("area", &Face::area)
         .def("is_boundary", &Face::isBoundary)
+        .def("is_hole", &Face::isHole)
         .def("is_locked", &Face::isLocked);
 
     /*** Utilities */
@@ -130,4 +131,6 @@ PYBIND11_MODULE(tinymesh, m) {
     /*** Hole filling ***/
     m.def("hole_fill_min_dihedral", &holeFillMinDihedral, "Max-area hole filling", py::arg("mesh"), py::arg("face"),
           py::arg("dihedral_bound") = Pi);
+    m.def("hole_fill_advancing_front", &holeFillAdvancingFront, "Advancing front hole filling", py::arg("mesh"),
+          py::arg("face"));
 }

@@ -1,23 +1,25 @@
 v0.2.4
 ---
-* Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
-* Add const version of iterators.
+*   Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
+*   Add const version of iterators.
+*   Advancing front method [Zhao et al. 2007] is implemented.
+*   Change dev-env manager to Poetry.
 
 v0.2.3
 ---
-* Update some method names (e.g., `isStatic` -> `isLocked`)
+*   Update some method names (e.g., `isStatic` -> `isLocked`)
 
 v0.2.2
 ---
-* Change Python env manager to Pipenv.
-* Add methods computing approximated Laplacian-Beltrami operators (adjacent, cotangent, Belkin+2008).
-* Add IPython notebooks as Pythons examples rather than simple scripts.
-* Change traversal order of elements around a vertex to counter-clockwise order.
-* Add heat kernel signature [Sun et al. 2009].
+*   Change Python env manager to Pipenv.
+*   Add methods computing approximated Laplacian-Beltrami operators (adjacent, cotangent, Belkin+2008).
+*   Add IPython notebooks as Pythons examples rather than simple scripts.
+*   Change traversal order of elements around a vertex to counter-clockwise order.
+*   Add heat kernel signature [Sun et al. 2009].
 
 v0.2.1
 ---
-*  Minor bug fix for GCC v8.
+*   Minor bug fix for GCC v8.
 
 v0.2.0
 ---
@@ -34,4 +36,4 @@ v0.2.0
 
 v0.1.0
 ---
-* First release
+*   First release

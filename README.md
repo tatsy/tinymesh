@@ -32,6 +32,7 @@ Here is the list of modules and reference papers for that.
 *   **Hole filling**
     *   Min-area hole filling [[Barequet and Sharir 1995]](https://www.sciencedirect.com/science/article/pii/016783969400011G?via%3Dihub)
     *   Min-dihedral angle [[Liepa 2003]](http://diglib.eg.org/handle/10.2312/SGP.SGP03.200-206)
+    *   Advancing front [[Zhao et al. 2007]](https://link.springer.com/article/10.1007/s00371-007-0167-y)
 
 Install
 ---
@@ -83,6 +84,7 @@ Run examples
 #### Python
 
 ```shell
+# Run "poetry shell" to enable virtual env.
 python examples/python/fill_and_fair.py data/models/bunny.ply
 ```
 
@@ -120,7 +122,7 @@ Gallery
   </tr>
 </table>
 
-#### Denoising (L0)
+#### Denoising (L0 mesh smoothing)
 
 <table>
   <tr>
@@ -134,6 +136,22 @@ Gallery
     <td width="30%"><img src="figures/fandisk_denoise_l0.png" width="100%"/></td>
   </tr>
 </table>
+
+#### Hole filling
+
+<table>
+  <tr>
+    <td width="30%">Original</td>
+    <td width="30%">Hole filled (minimum dihedral angles)</td>
+    <td width="30%">Hole filled (advancing front)</td>
+  </tr>
+  <tr>
+    <td width="30%"><img src="figures/bunny_holes.png" width="100%"/></td>
+    <td width="30%"><img src="figures/bunny_hole_fill_min_dihedral.png" width="100%"/></td>
+    <td width="30%"><img src="figures/bunny_hole_fill_adv_front.png" width="100%"/></td>
+  </tr>
+</table>
+
 
 Notice
 ---
