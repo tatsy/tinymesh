@@ -28,6 +28,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install poetry
+          poetry config virtualenvs.path ~/.local/share/virtualenvs
 
       - name: Cache Poetry
         uses: actions/cache@v3
