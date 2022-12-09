@@ -143,21 +143,31 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
 
             const double theta = std::atan2(length(cross(nv, nf)), dot(nv, nf));
             EigenMatrix3 R;
-            if (theta < 1.0e-3) {
+            if (theta < 1.0e-6) {
+                // co-planar
                 R.setIdentity();
             } else {
+                // not co-planar
                 const Vec3 axis = normalize(cross(nv, nf));
                 R = rotationAxisAngle(theta, axis);
             }
 
-            const Vec3 rot_u = (Vec3)(R * (EigenVector3)uv);
-            const Vec3 rot_v = (Vec3)(R * (EigenVector3)vv);
+            const Vec3 rot_u = normalize((Vec3)(R * (EigenVector3)uv));
+            const Vec3 rot_v = normalize((Vec3)(R * (EigenVector3)vv));
             const EigenMatrix2 Mf = faceTensors[it->index()];
 
-            const double dot_u0 = dot(rot_u, uf);
-            const double dot_u1 = dot(rot_u, vf);
-            const double dot_v0 = dot(rot_v, uf);
-            const double dot_v1 = dot(rot_v, vf);
+            double dot_u0 = dot(rot_u, uf);
+            double dot_u1 = dot(rot_u, vf);
+            double dot_v0 = dot(rot_v, uf);
+            double dot_v1 = dot(rot_v, vf);
+
+            double dot_u_norm = std::sqrt(dot_u0 * dot_u0 + dot_u1 * dot_u1);
+            double dot_v_norm = std::sqrt(dot_v0 * dot_v0 + dot_v1 * dot_v1);
+            dot_u0 /= dot_u_norm;
+            dot_u1 /= dot_u_norm;
+            dot_v0 /= dot_v_norm;
+            dot_v1 /= dot_v_norm;
+
             const double ev =
                 Mf(0, 0) * dot_u0 * dot_u0 + 2.0 * Mf(0, 1) * dot_u0 * dot_u1 + Mf(1, 1) * dot_u1 * dot_u1;
             const double gv =
@@ -168,7 +178,8 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
             EigenMatrix2 Mv;
             Mv << ev, fv,  //
                 fv, gv;    //
-            const double weight = it->area() / 3.0;
+
+            const double weight = it->area();
             M += weight * Mv;
             sumWgt += weight;
         }
@@ -199,8 +210,8 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<Vec3>, std::vec
 
         double k_max = eigval(0);
         double k_min = eigval(1);
-        Vec3 t_max = eigvec(0, 0) * u + eigvec(0, 1) * v;
-        Vec3 t_min = eigvec(1, 0) * u + eigvec(1, 1) * v;
+        Vec3 t_max = normalize(eigvec(0, 0) * u + eigvec(0, 1) * v);
+        Vec3 t_min = normalize(eigvec(1, 0) * u + eigvec(1, 1) * v);
         if (k_max < k_min) {
             std::swap(k_max, k_min);
             std::swap(t_max, t_min);

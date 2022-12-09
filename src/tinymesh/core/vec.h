@@ -268,6 +268,26 @@ Vec<Float, Dims> normalize(const Vec<Float, Dims> &v) {
 }
 
 // Arithmetics for 3D vectors
+
+//! check if the triangle is obtuse
+template <typename Float, int Dims>
+bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
+    const Float l0 = length(b - a);
+    const Float l1 = length(c - b);
+    const Float l2 = length(a - c);
+    std::array<Float, 3> ls = { l0, l1, l2 };
+    std::sort(ls.begin(), ls.end(), std::less<Float>());
+    return ls[0] * ls[0] + ls[1] * ls[1] < ls[2] * ls[2];
+}
+
+//! cotangent for angle a-b-c
+template <typename Float, int Dims>
+Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
+    const Vec3 e0 = a - b;
+    const Vec3 e1 = c - b;
+    return dot(e0, e1) / (length(cross(e0, e1)) + (Float)1.0e-12);
+}
+
 template <typename Float, int Dims>
 Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec<Float, Dims> &v3,
                const Vec<Float, Dims> &v1rev, typename std::enable_if<Dims == 3>::type * = 0) {
