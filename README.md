@@ -17,6 +17,9 @@ Modules
 
 Here is the list of modules and reference papers for that.
 
+*   **Geometric properties**
+    *   Principal curvatures [[Rusinkiewicz 2004]](https://ieeexplore.ieee.org/document/1335277)
+    *   Heat kernel signatures [[Sun et al. 2009]](https://onlinelibrary.wiley.com/doi/10.1111/j.1467-8659.2009.01515.x)
 *   **Smoothing**
     *   Laplacian smoothing
     *   Taubin smoothing [[Taubin 1995]](https://dl.acm.org/doi/10.1145/218380.218473)
@@ -39,9 +42,9 @@ Install
 
 The module is tested its compilation using the following compilers.
 
-*   **Windows** - Visual Studio 2019
-*   **MacOS** - Apple Clang 11.0 (MacOS 10.15)
-*   **Linux** - LLVM Clang 10.0, GNU C Compiler 9.4.0
+*   **Windows** - Visual Studio 2022 (Microsoft Windows Server 2022)
+*   **MacOS** - Apple Clang 11.0 (MacOS 11.7)
+*   **Linux** - LLVM Clang 11.0, GNU C Compiler 9.4.0 (Ubuntu 22.04 LTS)
 
 ### Library and examples (C++)
 
@@ -84,7 +87,7 @@ Run examples
 #### Python
 
 ```shell
-# Run "poetry shell" to enable virtual env.
+# Run "poetry shell" to enable virtualenv if you test with poetry.
 python examples/python/fill_and_fair.py data/models/bunny.ply
 ```
 

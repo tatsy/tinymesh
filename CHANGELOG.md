@@ -4,6 +4,7 @@ v0.2.4
 *   Add const version of iterators.
 *   Advancing front method [Zhao et al. 2007] is implemented.
 *   Change dev-env manager to Poetry.
+*   Add a method to compute principal curvatures (and thier directions) [Rusinkiewicz 2004].
 
 v0.2.3
 ---

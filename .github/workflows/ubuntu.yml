@@ -58,9 +58,9 @@ jobs:
       - name: Install LLVM Clang
         if: ${{ matrix.compiler == 'clang' }}
         run: |
-          sudo apt-get install -y clang-10 clang++-10
-          export LLVM_CC=clang-10
-          export LLVM_CXX=clang++-10
+          sudo apt-get install -y clang-11 clang++-11
+          export LLVM_CC=clang-11
+          export LLVM_CXX=clang++-11
 
       - name: Install Google Test
         env:
