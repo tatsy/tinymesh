@@ -26,6 +26,9 @@ struct hash<IndexPair> {
 
 }  // namespace std
 
+//! Local coordinate frame
+using LocalFrame = std::tuple<Vec3, Vec3, Vec3>;
+
 //! Rodrigues rotation formula
 inline EigenMatrix3 matrixCrossProd(const Vec3 &w) {
     EigenMatrix3 K;

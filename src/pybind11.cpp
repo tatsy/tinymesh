@@ -95,27 +95,23 @@ PYBIND11_MODULE(tinymesh, m) {
         .value("BELKIN08", MeshLaplace::Belkin08);
 
     m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
-
     m.def("get_heat_kernel_signatures", &getHeatKernelSignatures, "Heat kernel signatures", py::arg("mesh"),
           py::arg("K") = 300, py::arg("n_times") = 100);
+    m.def("get_principal_curvatures", &getPrincipalCurvatures, "Principal curvatures", py::arg("mesh"));
 
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,
           py::arg("cotangent_weight") = false, py::arg("iterations") = 3);
-
     m.def("smooth_taubin", &smoothTaubin, "Taubin smoothing", py::arg("mesh"), py::arg("shrink") = 0.5,
           py::arg("inflate") = 0.53, py::arg("iterations") = 3);
-
     m.def("implicit_fairing", &implicitFairing, "Implicit fairing", py::arg("mesh"), py::arg("epsilon") = 1.0,
           py::arg("iterations") = 1);
 
     /*** Denoising ***/
     m.def("denoise_normal_gaussian", &denoiseNormalGaussian, "Denoising by normal Gaussian filter", py::arg("mesh"),
           py::arg("sigma") = 0.2, py::arg("iterations") = 3);
-
     m.def("denoise_normal_bilateral", &denoiseNormalBilateral, "Denoising by normal bilateral filter", py::arg("mesh"),
           py::arg("sigma_c") = 0.2, py::arg("sigma_s") = 0.1, py::arg("iterations") = 3);
-
     m.def("denoise_l0_smooth", &denoiseL0Smooth, "Denoising by L0 smoothing", py::arg("mesh"), py::arg("alpha") = 0.1,
           py::arg("beta") = 0.001);
 

@@ -1,4 +1,5 @@
 import os
+from functools import partial
 from itertools import product
 
 import pytest
@@ -15,21 +16,24 @@ filenames = [
 ]
 
 methods = [
-    tms.remesh_triangular,
-    lambda m: tms.simplify_qem(m,
-                               m.num_faces() // 2),
-    lambda m: tms.simplify_qem(m,
-                               m.num_faces() // 10),
+    partial(tms.get_mesh_laplacian, type=tms.MeshLaplace.ADJACENT),
+    partial(tms.get_mesh_laplacian, type=tms.MeshLaplace.COTANGENT),
+    partial(tms.get_mesh_laplacian, type=tms.MeshLaplace.BELKIN08),
+    tms.get_principal_curvatures,
 ]
 
 
 @pytest.mark.parametrize("filename", filenames)
-def test_hole_fill(filename):
+def test_hks(filename):
     filename = os.path.join(CWD, model_dir, filename)
     mesh = tms.Mesh(filename)
+    mesh.fill_holes()
+
+    L = tms.get_mesh_laplacian(mesh, tms.MeshLaplace.COTANGENT)
+    K = min(L.shape[0], 200)
 
     try:
-        mesh.fill_holes()
+        tms.get_heat_kernel_signatures(L, K)
     except Exception:
         pytest.fail('Failed!')
 
@@ -37,7 +41,7 @@ def test_hole_fill(filename):
 
 
 @pytest.mark.parametrize("method, filename", product(methods, filenames))
-def test_remesh_method(method, filename):
+def test_ops_method(method, filename):
     filename = os.path.join(CWD, model_dir, filename)
     mesh = tms.Mesh(filename)
     mesh.fill_holes()

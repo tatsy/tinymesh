@@ -9,6 +9,7 @@ set(SOURCE_FILES
   gtest.cpp
   test_filters.cpp
   test_mesh.cpp
+  test_ops.cpp
   test_remesh.cpp
   test_vec.cpp)
 
