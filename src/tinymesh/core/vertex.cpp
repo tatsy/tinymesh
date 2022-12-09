@@ -71,10 +71,29 @@ double Vertex::K() const {
     double sumAreas = 0.0;
     for (int i = 0; i < N; i++) {
         const int j = (i + 1) % N;
-        const Vec3 e1 = neighbors[i]->pos() - pos();
-        const Vec3 e2 = neighbors[j]->pos() - pos();
+        const Vec3 &p0 = pos();
+        const Vec3 &p1 = neighbors[i]->pos();
+        const Vec3 &p2 = neighbors[j]->pos();
+        const Vec3 e1 = p1 - p0;
+        const Vec3 e2 = p2 - p0;
         sumAngles += std::atan2(length(cross(e1, e2)), dot(e1, e2));
-        sumAreas += length(cross(e1, e2)) / 6.0;
+
+        // Safe Volonoi area calculation [Meyer et al. 2003]
+        if (!obtuse(p0, p1, p2)) {
+            const double l1 = length(e1);
+            const double l2 = length(e2);
+            const double A1 = 0.125 * l1 * l1 * cot(p0, p2, p1);
+            const double A2 = 0.125 * l2 * l2 * cot(p0, p1, p2);
+            sumAreas += A1 + A2;
+        } else {
+            if (dot(e1, e2) < 0.0) {
+                // triangle is obtuse at "p0"
+                sumAreas += 0.5 * length(cross(e1, e2)) * 0.5;
+            } else {
+                // otherwise
+                sumAreas += 0.5 * length(cross(e1, e2)) * 0.25;
+            }
+        }
     }
     return (2.0 * Pi - sumAngles) / sumAreas;
 }
@@ -92,25 +111,36 @@ double Vertex::H() const {
     double sumAreas = 0.0;
     for (int i = 0; i < N; i++) {
         const int prev = (i - 1 + N) % N;
-        const int post = (i + 1) % N;
+        const int next = (i + 1) % N;
 
         const Vec3 &p0 = pos();
         const Vec3 &p1 = neighbors[i]->pos();
-        const Vec3 &p2 = neighbors[post]->pos();
+        const Vec3 &p2 = neighbors[next]->pos();
         const Vec3 &p3 = neighbors[prev]->pos();
 
-        const double sin_a = length(cross(p0 - p2, p1 - p2));
-        const double cos_a = dot(p0 - p2, p1 - p2);
-        const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
-        const double sin_b = length(cross(p0 - p3, p1 - p3));
-        const double cos_b = dot(p0 - p3, p1 - p3);
-        const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
-        const double weight = 0.5 * (cot_a + cot_b);
+        const double cot_a = cot(p0, p2, p1);
+        const double cot_b = cot(p0, p3, p1);
+        const double weight = cot_a + cot_b;
         laplace += weight * (neighbors[i]->pos() - pos());
 
+        // Safe Volonoi area calculation [Meyer et al. 2003]
         const Vec3 e1 = p1 - p0;
         const Vec3 e2 = p2 - p0;
-        sumAreas += length(cross(e1, e2)) / 6.0;
+        if (!obtuse(p0, p1, p2)) {
+            const double l1 = length(e1);
+            const double l2 = length(e2);
+            const double A1 = 0.125 * l1 * l1 * cot(p0, p2, p1);
+            const double A2 = 0.125 * l2 * l2 * cot(p0, p1, p2);
+            sumAreas += A1 + A2;
+        } else {
+            if (dot(e1, e2) < 0.0) {
+                // triangle is obtuse at "p0"
+                sumAreas += 0.5 * length(cross(e1, e2)) * 0.5;
+            } else {
+                // otherwise
+                sumAreas += 0.5 * length(cross(e1, e2)) * 0.25;
+            }
+        }
     }
     return -1.0 * dot(laplace, this->normal()) / (2.0 * sumAreas);
 }
