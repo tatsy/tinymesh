@@ -10,7 +10,7 @@
 
 namespace tinymesh {
 
-void getMeshLaplacianAdjacent(Mesh &mesh, EigenSparseMatrix &L) {
+void getMeshLaplacianAdjacent(const Mesh &mesh, EigenSparseMatrix &L) {
     const int N = mesh.numVertices();
     std::vector<EigenTriplet> triplets;
     for (int i = 0; i < N; i++) {
@@ -27,7 +27,7 @@ void getMeshLaplacianAdjacent(Mesh &mesh, EigenSparseMatrix &L) {
     L.setFromTriplets(triplets.begin(), triplets.end());
 }
 
-void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
+void getMeshLaplacianCotangent(const Mesh &mesh, EigenSparseMatrix &L) {
     const int N = mesh.numVertices();
     std::vector<EigenTriplet> triplets;
     for (int i = 0; i < N; i++) {
@@ -49,7 +49,7 @@ void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
  * Reference:
  * Belkin et al., "Discrete Laplacian Operator on Meshed Surfaces," 2008.
  */
-void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
+void getMeshLaplacianBelkin08(const Mesh &mesh, EigenSparseMatrix &L) {
     // Compute average edge length
     double avgEdgeLength = 0.0;
     for (int i = 0; i < mesh.numEdges(); i++) {
@@ -90,7 +90,7 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
     // L = A * W;
 }
 
-EigenSparseMatrix getMeshLaplacian(Mesh &mesh, MeshLaplace type) {
+EigenSparseMatrix getMeshLaplacian(const Mesh &mesh, MeshLaplace type) {
     EigenSparseMatrix L;
     if (type == MeshLaplace::Adjacent) {
         getMeshLaplacianAdjacent(mesh, L);

@@ -65,16 +65,16 @@ public:
         return faces_[index].get();
     }
 
-    size_t numVertices() {
+    size_t numVertices() const {
         return vertices_.size();
     }
-    size_t numEdges() {
+    size_t numEdges() const {
         return edges_.size();
     }
-    size_t numHalfedges() {
+    size_t numHalfedges() const {
         return halfedges_.size();
     }
-    size_t numFaces() {
+    size_t numFaces() const {
         return faces_.size();
     }
 

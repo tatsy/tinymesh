@@ -9,7 +9,6 @@ CWD = os.getcwd()
 
 model_dir = 'data/models'
 filenames = [
-    'box.obj',
     'torus.obj',
     'fandisk.ply',
     'bunny.ply',
