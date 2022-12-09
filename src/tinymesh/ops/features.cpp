@@ -166,7 +166,8 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
                               Mf(1, 1) * dot_u1 * dot_v1;
 
             EigenMatrix2 Mv;
-            Mv << ev, fv, fv, gv;
+            Mv << ev, fv,  //
+                fv, gv;    //
             const double weight = it->area() / 3.0;
             M += weight * Mv;
             sumWgt += weight;
