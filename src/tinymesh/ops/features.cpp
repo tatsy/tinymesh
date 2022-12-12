@@ -303,7 +303,7 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh) {
         const Vec3 vv2 = std::get<1>(F2);
 
         EigenVector2 uf_v0, vf_v0;
-        const Vec3 rot0_uf = R0 * EigenVector3(uf);
+        const Vec3 rot0_uf = R0 * uf;
         const Vec3 rot0_vf = R0 * vf;
         uf_v0 << dot(rot0_uf, uv0), dot(rot0_uf, vv0);
         vf_v0 << dot(rot0_vf, uv0), dot(rot0_vf, vv0);
