@@ -36,10 +36,26 @@ public:
         if (Dims >= 2) elems[2] = z;
     }
 
+    explicit Vec(const Vec &other) {
+        std::copy(other.elems.begin(), other.elems.end(), elems.begin());
+    }
+
+    Vec &operator=(const Vec other) {
+        std::copy(other.elems.begin(), other.elems.end(), elems.begin());
+        return *this;
+    }
+
     Vec(const EigenVectorType &v) {
         for (int d = 0; d < Dims; d++) {
             elems[d] = v(d);
         }
+    }
+
+    Vec &operator=(const EigenVectorType &v) {
+        for (int d = 0; d < Dims; d++) {
+            elems[d] = v(d);
+        }
+        return *this;
     }
 
     operator EigenVectorType() const {
@@ -236,6 +252,11 @@ Vec<Float, Dims> operator/(const Vec<Float, Dims> &v, Float s) {
     auto ret = v;
     ret /= s;
     return ret;
+}
+
+template <typename Float, int Rows, int Cols>
+Vec<Float, Rows> operator*(const Eigen::Matrix<Float, Rows, Cols> &m, const Vec<Float, Cols> &v) {
+    return Vec<Float, Rows>(m * Eigen::Matrix<Float, Cols, 1>(v));
 }
 
 // GLSL like vector arithmetics

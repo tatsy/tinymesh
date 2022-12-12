@@ -28,9 +28,16 @@ TINYMESH_API EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int
 TINYMESH_API void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors,
                                       const std::vector<LocalFrame> &frames);
 
-//! Compute principal curvatures and their directions
-TINYMESH_API std::tuple<std::vector<double>, std::vector<double>, std::vector<Vec3>, std::vector<Vec3>>
-getPrincipalCurvatures(const Mesh &mesh);
+/**
+ * Compute principal curvatures and their directions [Rusinkiewicz 2004]
+ */
+TINYMESH_API std::tuple<EigenVector, EigenVector, EigenMatrix, EigenMatrix> getPrincipalCurvatures(const Mesh &mesh);
+
+/**
+ * Computer principal curvatures with derivatives [Rusinkiewicz 2004] 
+ */
+TINYMESH_API std::tuple<EigenVector, EigenVector, EigenVector, EigenVector, EigenMatrix, EigenMatrix>
+getPrincipalCurvaturesWithDerivatives(const Mesh &mesh);
 
 }  // namespace tinymesh
 

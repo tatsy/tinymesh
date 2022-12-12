@@ -34,9 +34,25 @@ public:
 
     bool operator==(const Vertex &other) const;
 
+    //! Number of connected vertices
     int degree() const;
+
+    //! Compute vertex normal with those of surrounding faces
     Vec3 normal() const;
+
+    //! Obtuse-safe Volonoi area calculation [Meyer et al. 2003]
+    double volonoiArea() const;
+
+    //! Volonoi area in specified face [Meyer et al. 2003]
+    double volonoiArea(const Face *const f) const;
+
+    /**
+     * Gaussian curvature for vertex [Meyer et al. 2003]
+     */
     double K() const;
+    /**
+     * Mean curvature for vertex [Meyer et al. 2003] 
+     */
     double H() const;
 
     VertexIterator v_begin();
@@ -128,7 +144,6 @@ private:
  * HalfedgeIterator
  * @detail Traverse outward halfedges in the clockwise order.
  */
-
 class TINYMESH_API Vertex::HalfedgeIterator {
 public:
     HalfedgeIterator(Halfedge *he);
