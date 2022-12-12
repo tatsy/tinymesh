@@ -48,6 +48,9 @@ inline EigenMatrix3 rotationAxisAngle(double theta, const Vec3 &axis) {
 inline EigenMatrix3 rotationFromTwoVectors(const Vec3 &v0, const Vec3 &v1) {
     const Vec3 outer = cross(v0, v1);
     const double theta = std::atan2(length(outer), dot(v0, v1));
+    if (std::abs(theta) < 1.0e-12) {
+        return EigenMatrix3::Identity();
+    }
     const Vec3 axis = normalize(outer);
     return rotationAxisAngle(theta, axis);
 }
