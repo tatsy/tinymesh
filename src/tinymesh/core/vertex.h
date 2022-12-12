@@ -36,7 +36,14 @@ public:
 
     int degree() const;
     Vec3 normal() const;
+
+    /**
+     * Gaussian curvature for vertex [Meyer et al. 2003]
+     */
     double K() const;
+    /**
+     * Mean curvature for vertex [Meyer et al. 2003] 
+     */
     double H() const;
 
     VertexIterator v_begin();
@@ -128,7 +135,6 @@ private:
  * HalfedgeIterator
  * @detail Traverse outward halfedges in the clockwise order.
  */
-
 class TINYMESH_API Vertex::HalfedgeIterator {
 public:
     HalfedgeIterator(Halfedge *he);

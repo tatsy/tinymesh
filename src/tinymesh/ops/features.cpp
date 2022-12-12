@@ -10,6 +10,45 @@
 #include "core/vertex.h"
 #include "core/face.h"
 
+namespace {
+
+void getPrincipalCurvaturesFromTensors(std::vector<double> &ks_max, std::vector<double> &ks_min,
+                                       std::vector<Vec3> &ts_max, std::vector<Vec3> &ts_min,
+                                       const std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame> &frames) {
+    const int Nv = (int)tensors.size();
+    ks_max.resize(Nv);
+    ks_min.resize(Nv);
+    ts_max.resize(Nv);
+    ts_min.resize(Nv);
+
+    for (size_t i = 0; i < Nv; i++) {
+        const EigenMatrix2 M = tensors[i];
+        const LocalFrame F = frames[i];
+        const Vec3 u = std::get<0>(F);
+        const Vec3 v = std::get<1>(F);
+
+        Eigen::SelfAdjointEigenSolver<EigenMatrix2> solver(M);
+        const EigenMatrix2 eigvec = solver.eigenvectors();
+        const EigenVector2 eigval = solver.eigenvalues();
+
+        double k_max = eigval(0);
+        double k_min = eigval(1);
+        Vec3 t_max = normalize(eigvec(0, 0) * u + eigvec(0, 1) * v);
+        Vec3 t_min = normalize(eigvec(1, 0) * u + eigvec(1, 1) * v);
+        if (k_max < k_min) {
+            std::swap(k_max, k_min);
+            std::swap(t_max, t_min);
+        }
+
+        ks_max[i] = k_max;
+        ks_min[i] = k_min;
+        ts_max[i] = t_max;
+        ts_min[i] = t_min;
+    }
+}
+
+}  // namespace
+
 namespace tinymesh {
 
 EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTimes) {
@@ -156,17 +195,10 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
             const Vec3 rot_v = normalize((Vec3)(R * (EigenVector3)vv));
             const EigenMatrix2 Mf = faceTensors[it->index()];
 
-            double dot_u0 = dot(rot_u, uf);
-            double dot_u1 = dot(rot_u, vf);
-            double dot_v0 = dot(rot_v, uf);
-            double dot_v1 = dot(rot_v, vf);
-
-            double dot_u_norm = std::sqrt(dot_u0 * dot_u0 + dot_u1 * dot_u1);
-            double dot_v_norm = std::sqrt(dot_v0 * dot_v0 + dot_v1 * dot_v1);
-            dot_u0 /= dot_u_norm;
-            dot_u1 /= dot_u_norm;
-            dot_v0 /= dot_v_norm;
-            dot_v1 /= dot_v_norm;
+            const double dot_u0 = dot(rot_u, uf);
+            const double dot_u1 = dot(rot_u, vf);
+            const double dot_v0 = dot(rot_v, uf);
+            const double dot_v1 = dot(rot_v, vf);
 
             const double ev =
                 Mf(0, 0) * dot_u0 * dot_u0 + 2.0 * Mf(0, 1) * dot_u0 * dot_u1 + Mf(1, 1) * dot_u1 * dot_u1;
@@ -188,8 +220,7 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
     }
 }
 
-std::tuple<std::vector<double>, std::vector<double>, std::vector<Vec3>, std::vector<Vec3>> getPrincipalCurvatures(
-    const Mesh &mesh) {
+std::tuple<EigenVector, EigenVector, EigenMatrix, EigenMatrix> getPrincipalCurvatures(const Mesh &mesh) {
     std::vector<EigenMatrix2> tensors;
     std::vector<LocalFrame> frames;
     getCurvatureTensors(mesh, tensors, frames);
@@ -198,32 +229,147 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<Vec3>, std::vec
     std::vector<double> ks_min;
     std::vector<Vec3> ts_max;
     std::vector<Vec3> ts_min;
-    for (size_t i = 0; i < mesh.numVertices(); i++) {
-        const EigenMatrix2 M = tensors[i];
-        const LocalFrame F = frames[i];
-        const Vec3 u = std::get<0>(F);
-        const Vec3 v = std::get<1>(F);
+    getPrincipalCurvaturesFromTensors(ks_max, ks_min, ts_max, ts_min, tensors, frames);
 
-        Eigen::SelfAdjointEigenSolver<EigenMatrix2> solver(M);
-        const EigenMatrix2 eigvec = solver.eigenvectors();
-        const EigenVector2 eigval = solver.eigenvalues();
-
-        double k_max = eigval(0);
-        double k_min = eigval(1);
-        Vec3 t_max = normalize(eigvec(0, 0) * u + eigvec(0, 1) * v);
-        Vec3 t_min = normalize(eigvec(1, 0) * u + eigvec(1, 1) * v);
-        if (k_max < k_min) {
-            std::swap(k_max, k_min);
-            std::swap(t_max, t_min);
-        }
-
-        ks_max.push_back(k_max);
-        ks_min.push_back(k_min);
-        ts_max.push_back(t_max);
-        ts_min.push_back(t_min);
+    const int Nv = (int)ks_max.size();
+    EigenVector kv_max(Nv);
+    EigenVector kv_min(Nv);
+    EigenMatrix tv_max(Nv, 3);
+    EigenMatrix tv_min(Nv, 3);
+    for (size_t i = 0; i < Nv; i++) {
+        kv_max(i) = ks_max[i];
+        kv_min(i) = ks_min[i];
+        tv_max.row(i) << ts_max[i].x(), ts_max[i].y(), ts_max[i].z();
+        tv_min.row(i) << ts_min[i].x(), ts_min[i].y(), ts_min[i].z();
     }
 
-    return { ks_max, ks_min, ts_max, ts_min };
+    return { kv_max, kv_min, tv_max, tv_min };
+}
+
+std::tuple<EigenVector, EigenVector, EigenVector, EigenVector, EigenMatrix, EigenMatrix>
+getPrincipalCurvaturesWithDerivatives(const Mesh &mesh) {
+    std::vector<EigenMatrix2> tensors;
+    std::vector<LocalFrame> frames;
+    getCurvatureTensors(mesh, tensors, frames);
+
+    std::vector<double> ks_max;
+    std::vector<double> ks_min;
+    std::vector<Vec3> ts_max;
+    std::vector<Vec3> ts_min;
+    getPrincipalCurvaturesFromTensors(ks_max, ks_min, ts_max, ts_min, tensors, frames);
+
+    auto rotation = [](const EigenMatrix3 &R, const Vec3 &v) -> Vec3 { return (Vec3)(R * (EigenVector3)v); };
+
+    // Computer per-face curvature derivative tensors
+    std::vector<EigenVector4> faceTensors;
+    std::vector<LocalFrame> faceFrames;
+    for (int i = 0; i < mesh.numFaces(); i++) {
+        Face *f = mesh.face(i);
+        std::vector<Vertex *> vertices;
+        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+            vertices.push_back(it.ptr());
+        }
+        Assertion(vertices.size() == 3, "Non-triangle face detected!");
+
+        Vertex *v0 = vertices[0];
+        Vertex *v1 = vertices[1];
+        Vertex *v2 = vertices[2];
+        const Vec3 p0 = v0->pos();
+        const Vec3 p1 = v1->pos();
+        const Vec3 p2 = v2->pos();
+        const Vec3 e0 = p2 - p1;
+        const Vec3 e1 = p0 - p2;
+        const Vec3 e2 = p1 - p0;
+        const Vec3 n0 = v0->normal();
+        const Vec3 n1 = v1->normal();
+        const Vec3 n2 = v2->normal();
+
+        const Vec3 uf = normalize(p1 - p0);
+        const Vec3 wf = normalize(cross(uf, p2 - p0));
+        const Vec3 vf = normalize(cross(wf, uf));
+
+        const EigenMatrix3 R0 = rotationFromTwoVectors(wf, n0);
+        const EigenMatrix3 R1 = rotationFromTwoVectors(wf, n1);
+        const EigenMatrix3 R2 = rotationFromTwoVectors(wf, n2);
+
+        const double dot_e0_u = dot(e0, uf);
+        const double dot_e0_v = dot(e0, vf);
+        const double dot_e1_u = dot(e1, uf);
+        const double dot_e1_v = dot(e1, vf);
+        const double dot_e2_u = dot(e2, uf);
+        const double dot_e2_v = dot(e2, vf);
+
+        LocalFrame F0 = frames[v0->index()];
+        LocalFrame F1 = frames[v1->index()];
+        LocalFrame F2 = frames[v2->index()];
+
+        const Vec3 uv0 = std::get<0>(F0);
+        const Vec3 vv0 = std::get<1>(F0);
+        const Vec3 uv1 = std::get<0>(F1);
+        const Vec3 vv1 = std::get<1>(F1);
+        const Vec3 uv2 = std::get<0>(F2);
+        const Vec3 vv2 = std::get<1>(F2);
+
+        EigenVector2 uf_v0, vf_v0;
+        const Vec3 rot0_uf = rotation(R0, uf);
+        const Vec3 rot0_vf = rotation(R0, vf);
+        uf_v0 << dot(rot0_uf, uv0), dot(rot0_uf, vv0);
+        vf_v0 << dot(rot0_vf, uv0), dot(rot0_vf, vv0);
+        EigenVector2 uf_v1, vf_v1;
+        const Vec3 rot1_uf = rotation(R1, uf);
+        const Vec3 rot1_vf = rotation(R1, vf);
+        uf_v1 << dot(rot1_uf, uv1), dot(rot1_uf, vv1);
+        vf_v1 << dot(rot1_vf, uv1), dot(rot1_vf, vv1);
+        EigenVector2 uf_v2, vf_v2;
+        const Vec3 rot2_uf = rotation(R2, uf);
+        const Vec3 rot2_vf = rotation(R2, vf);
+        uf_v2 << dot(rot2_uf, uv2), dot(rot2_uf, vv2);
+        vf_v2 << dot(rot2_vf, uv2), dot(rot2_vf, vv2);
+
+        const EigenMatrix2 M0 = tensors[v0->index()];
+        const EigenMatrix2 M1 = tensors[v1->index()];
+        const EigenMatrix2 M2 = tensors[v2->index()];
+
+        EigenMatrix A0(4, 4);
+        EigenVector b0(4);
+        A0.setZero();
+        b0.setZero();
+        A0.row(0) << dot_e0_u, dot_e0_v, 0.0, 0.0;
+        A0.row(1) << 0.0, dot_e0_u, dot_e0_v, 0.0;
+        A0.row(2) << 0.0, dot_e0_u, dot_e0_v, 0.0;
+        A0.row(3) << 0.0, 0.0, dot_e0_u, dot_e0_v;
+        b0 << (M2 - M1) * uf_v0, (M2 - M1) * vf_v0;
+
+        EigenMatrix A1(4, 4);
+        EigenVector b1(4);
+        A1.setZero();
+        b1.setZero();
+        A1.row(0) << dot_e1_u, dot_e1_v, 0.0, 0.0;
+        A1.row(1) << 0.0, dot_e1_u, dot_e1_v, 0.0;
+        A1.row(2) << 0.0, dot_e1_u, dot_e1_v, 0.0;
+        A1.row(3) << 0.0, 0.0, dot_e1_u, dot_e1_v;
+        b1 << (M0 - M2) * uf_v1, (M0 - M2) * vf_v1;
+
+        EigenMatrix A2(4, 4);
+        EigenVector b2(4);
+        A2.setZero();
+        b2.setZero();
+        A2.row(0) << dot_e2_u, dot_e2_v, 0.0, 0.0;
+        A2.row(1) << 0.0, dot_e2_u, dot_e2_v, 0.0;
+        A2.row(2) << 0.0, dot_e2_u, dot_e2_v, 0.0;
+        A2.row(3) << 0.0, 0.0, dot_e2_u, dot_e2_v;
+        b2 << (M1 - M0) * uf_v2, (M1 - M0) * vf_v2;
+
+        EigenMatrix A(12, 4);
+        EigenVector b(12);
+        A << A0, A1, A2;
+        b << b0, b1, b2;
+
+        EigenMatrix AA = A.transpose() * A;
+        EigenVector Ab = A.transpose() * b;
+        Eigen::LLT<EigenMatrix> solver(AA);
+        EigenVector4 abcd = solver.solve(Ab);
+    }
 }
 
 }  // namespace tinymesh
