@@ -4,6 +4,7 @@
 #include <set>
 #include <vector>
 
+#include "core/debug.h"
 #include "core/face.h"
 #include "core/halfedge.h"
 
@@ -44,7 +45,7 @@ int Vertex::degree() const {
 Vec3 Vertex::normal() const {
     Vec3 norm = Vec3(0.0);
     for (auto it = f_begin(); it != f_end(); ++it) {
-        norm += it->normal() * it->area();
+        norm += it->normal() * this->volonoiArea(it.ptr());
     }
     return normalize(norm);
 }
@@ -56,6 +57,83 @@ bool Vertex::isBoundary() const {
         }
     }
     return false;
+}
+
+double Vertex::volonoiArea() const {
+    std::vector<const Vertex *> neighbors;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        neighbors.push_back(it.ptr());
+    }
+
+    const int N = (int)neighbors.size();
+    double sumArea = 0.0;
+    for (int i = 0; i < N; i++) {
+        const int j = (i + 1) % N;
+        const Vec3 &p0 = pos();
+        const Vec3 &p1 = neighbors[i]->pos();
+        const Vec3 &p2 = neighbors[j]->pos();
+        const Vec3 e1 = p1 - p0;
+        const Vec3 e2 = p2 - p0;
+
+        // Safe Volonoi area calculation [Meyer et al. 2003]
+        if (!obtuse(p0, p1, p2)) {
+            const double l1 = length(e1);
+            const double l2 = length(e2);
+            const double A1 = 0.125 * l1 * l1 * cot(p0, p2, p1);
+            const double A2 = 0.125 * l2 * l2 * cot(p0, p1, p2);
+            sumArea += A1 + A2;
+        } else {
+            if (dot(e1, e2) < 0.0) {
+                // triangle is obtuse at "p0"
+                sumArea += 0.5 * length(cross(e1, e2)) * 0.5;
+            } else {
+                // otherwise
+                sumArea += 0.5 * length(cross(e1, e2)) * 0.25;
+            }
+        }
+    }
+    return sumArea;
+}
+
+double Vertex::volonoiArea(const Face *const f) const {
+    int index = -1;
+    int count = 0;
+
+    std::vector<const Vertex *> vertices;
+    for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+        vertices.push_back(it.ptr());
+        if (it.ptr() == this) {
+            index = count;
+        }
+        count += 1;
+    }
+    Assertion(index >= 0, "Vertex is not included in the face!");
+    Assertion(vertices.size() == 3, "Non-triangle face detected!");
+
+    const Vec3 p0 = vertices[index]->pos();
+    const Vec3 p1 = vertices[(index + 1) % vertices.size()]->pos();
+    const Vec3 p2 = vertices[(index + 2) % vertices.size()]->pos();
+    const Vec3 e1 = p1 - p0;
+    const Vec3 e2 = p2 - p0;
+
+    // Safe Volonoi area calculation [Meyer et al. 2003]
+    double area = 0.0;
+    if (!obtuse(p0, p1, p2)) {
+        const double l1 = length(e1);
+        const double l2 = length(e2);
+        const double A1 = 0.125 * l1 * l1 * cot(p0, p2, p1);
+        const double A2 = 0.125 * l2 * l2 * cot(p0, p1, p2);
+        area = A1 + A2;
+    } else {
+        if (dot(e1, e2) < 0.0) {
+            // triangle is obtuse at "p0"
+            area = 0.5 * length(cross(e1, e2)) * 0.5;
+        } else {
+            // otherwise
+            area = 0.5 * length(cross(e1, e2)) * 0.25;
+        }
+    }
+    return area;
 }
 
 double Vertex::K() const {
