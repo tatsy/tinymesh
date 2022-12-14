@@ -100,6 +100,7 @@ PYBIND11_MODULE(tinymesh, m) {
     m.def("get_principal_curvatures", &getPrincipalCurvatures, "Principal curvatures", py::arg("mesh"));
     m.def("get_principal_curvatures_with_derivatives", &getPrincipalCurvaturesWithDerivatives,
           "Principal curvatures with derivatives", py::arg("mesh"));
+    m.def("get_feature_line_field", &getFeatureLineField, "Feature line field", py::arg("mesh"));
 
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,
