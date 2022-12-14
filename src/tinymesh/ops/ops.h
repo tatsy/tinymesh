@@ -34,10 +34,15 @@ TINYMESH_API void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2
 TINYMESH_API std::tuple<EigenVector, EigenVector, EigenMatrix, EigenMatrix> getPrincipalCurvatures(const Mesh &mesh);
 
 /**
- * Computer principal curvatures with derivatives [Rusinkiewicz 2004] 
+ * Compute principal curvatures with derivatives [Rusinkiewicz 2004] 
  */
 TINYMESH_API std::tuple<EigenVector, EigenVector, EigenVector, EigenVector, EigenMatrix, EigenMatrix>
 getPrincipalCurvaturesWithDerivatives(const Mesh &mesh);
+
+/**
+ * Compute feature line field [Leifman and Tal 2012]
+ */
+TINYMESH_API EigenMatrix getFeatureLineField(const Mesh &mesh);
 
 }  // namespace tinymesh
 

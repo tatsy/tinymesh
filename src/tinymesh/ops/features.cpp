@@ -8,6 +8,7 @@
 #include <Spectra/MatOp/SparseSymMatProd.h>
 
 #include "core/vertex.h"
+#include "core/halfedge.h"
 #include "core/face.h"
 
 namespace {
@@ -143,7 +144,7 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
         A(5, 2) = dot(e2, v);
         b(5) = dot(n1 - n0, v);
 
-        EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(3, 3);
+        EigenMatrix AA = A.transpose() * A;
         EigenVector Ab = A.transpose() * b;
 
         Eigen::LLT<EigenMatrix> solver(AA);
@@ -369,7 +370,7 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh) {
         A << A0, A1, A2;
         b << b0, b1, b2;
 
-        EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(4, 4);
+        EigenMatrix AA = A.transpose() * A;
         EigenVector Ab = A.transpose() * b;
         Eigen::LLT<EigenMatrix> solver(AA);
         EigenVector4 abcd = solver.solve(Ab);
@@ -407,22 +408,22 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh) {
             const double dot_v0 = dot(rot_v, uf);
             const double dot_v1 = dot(rot_v, vf);
 
-            const double av = Mf(0) * dot_u0 * dot_u0 * dot_u0 +                                     //
-                              3.0 * Mf(1) * dot_u0 * dot_u0 * dot_u1 +                               //
-                              3.0 * Mf(2) * dot_u0 * dot_u1 * dot_u1 +                               //
-                              Mf(3) * dot_u1 * dot_u1 * dot_u1;                                      //
-            const double bv = Mf(0) * dot_u0 * dot_u0 * dot_v0 +                                     //
+            const double av = Mf(0) * (dot_u0 * dot_u0 * dot_u0) +                                   //
+                              Mf(1) * (3.0 * dot_u0 * dot_u0 * dot_u1) +                             //
+                              Mf(2) * (3.0 * dot_u0 * dot_u1 * dot_u1) +                             //
+                              Mf(3) * (dot_u1 * dot_u1 * dot_u1);                                    //
+            const double bv = Mf(0) * (dot_u0 * dot_u0 * dot_v0) +                                   //
                               Mf(1) * (dot_u0 * dot_u0 * dot_v1 + 2.0 * dot_u0 * dot_u1 * dot_v0) +  //
                               Mf(2) * (2.0 * dot_u0 * dot_u1 * dot_v1 + dot_u1 * dot_u1 * dot_v0) +  //
-                              Mf(3) * dot_u1 * dot_u1 * dot_v1;                                      //
-            const double cv = Mf(0) * dot_u0 * dot_v0 * dot_v0 +                                     //
+                              Mf(3) * (dot_u1 * dot_u1 * dot_v1);                                    //
+            const double cv = Mf(0) * (dot_u0 * dot_v0 * dot_v0) +                                   //
                               Mf(1) * (2.0 * dot_u0 * dot_v0 * dot_v1 + dot_u1 * dot_v0 * dot_v0) +  //
                               Mf(2) * (dot_u0 * dot_v1 * dot_v1 + 2.0 * dot_u1 * dot_v0 * dot_v1) +  //
-                              Mf(3) * dot_u1 * dot_v1 * dot_v1;                                      //
-            const double dv = Mf(0) * dot_v0 * dot_v0 * dot_v0 +                                     //
-                              3.0 * Mf(1) * dot_v0 * dot_v0 * dot_v1 +                               //
-                              3.0 * Mf(2) * dot_v0 * dot_v1 * dot_v1 +                               //
-                              Mf(3) * dot_v1 * dot_v1 * dot_v1;                                      //
+                              Mf(3) * (dot_u1 * dot_v1 * dot_v1);                                    //
+            const double dv = Mf(0) * (dot_v0 * dot_v0 * dot_v0) +                                   //
+                              Mf(1) * (3.0 * dot_v0 * dot_v0 * dot_v1) +                             //
+                              Mf(2) * (3.0 * dot_v0 * dot_v1 * dot_v1) +                             //
+                              Mf(3) * (dot_v1 * dot_v1 * dot_v1);                                    //
             EigenVector4 Mv;
             Mv << av, bv, cv, dv;
 
@@ -465,6 +466,178 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh) {
     }
 
     return { kv_max, kv_min, ev_max, ev_min, tv_max, tv_min };
+}
+
+EigenMatrix getFeatureLineField(const Mesh &mesh) {
+    const auto cuv = getPrincipalCurvaturesWithDerivatives(mesh);
+    const EigenVector kv_max = std::get<0>(cuv);
+    const EigenVector kv_min = std::get<1>(cuv);
+    const EigenVector ev_max = std::get<2>(cuv);
+    const EigenVector ev_min = std::get<3>(cuv);
+    const EigenMatrix tv_max = std::get<4>(cuv);
+    const EigenMatrix tv_min = std::get<5>(cuv);
+
+    const int NONE = 0;
+    const int VALLEY = 1;
+    const int RIDGE = -1;
+
+    auto checkRV = [&](const Vertex *v1, const Vertex *v2) -> int {
+        const int i1 = v1->index();
+        const int i2 = v2->index();
+        const Vec3 p1 = v1->pos();
+        const Vec3 p2 = v2->pos();
+
+        const auto t1 = ev_max.row(i1);
+        Vec3 t1_max(t1(0), t1(1), t1(2));
+        const auto t2 = ev_max.row(i2);
+        Vec3 t2_max(t2(0), t2(1), t2(2));
+
+        const double k1_max = kv_max(i1);
+        const double k1_min = kv_min(i1);
+        const double k2_max = kv_max(i2);
+        const double k2_min = kv_min(i2);
+
+        double e1_max = ev_max(i1);
+        double e2_max = ev_max(i2);
+        if (dot(t1_max, t2_max) < 0.0) {
+            t2_max = -1.0 * t2_max;
+            e2_max = -1.0 * e2_max;
+        }
+
+        if (e1_max * e2_max >= 0.0) {
+            return NONE;
+        }
+
+        const double c1 = e1_max * dot(p2 - p1, t1_max);
+        const double c2 = e2_max * dot(p1 - p2, t2_max);
+
+        if (k1_max > std::abs(k1_min) && k2_max > std::abs(k2_min)) {
+            if (c1 > 0.0 && c2 > 0.0) {
+                return RIDGE;
+            }
+        }
+
+        if (k1_max < std::abs(k1_min) && k2_max < std::abs(k2_min)) {
+            if (c1 < 0.0 && c2 < 0.0) {
+                return VALLEY;
+            }
+        }
+
+        return NONE;
+    };
+
+    // Mark ridge/valley faces
+    std::vector<int> faceRVFlags(mesh.numFaces());
+    for (size_t i = 0; i < mesh.numFaces(); i++) {
+        const Face *f = mesh.face(i);
+        std::vector<const Vertex *> vs;
+        for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+            vs.push_back(it.ptr());
+        }
+        Assertion(vs.size() == 3, "Non-triangle face detected!");
+
+        const int rv0 = checkRV(vs[0], vs[1]);
+        const int rv1 = checkRV(vs[1], vs[2]);
+        const int rv2 = checkRV(vs[2], vs[0]);
+        if (rv0 != NONE || rv1 != NONE || rv2 != NONE) {
+            if (rv0 >= 0 && rv1 >= 0 && rv2 >= 0) {
+                faceRVFlags[i] = VALLEY;
+            }
+
+            if (rv0 <= 0 && rv1 <= 0 && rv2 <= 0) {
+                faceRVFlags[i] = RIDGE;
+            }
+        }
+    }
+
+    // Detect ridge/valley vertices
+    std::vector<Vec3> rvDirections(mesh.numVertices(), Vec3(0.0));
+    std::vector<int> rvMask(mesh.numVertices(), 0);
+    for (size_t i = 0; i < mesh.numFaces(); i++) {
+        const Face *f = mesh.face(i);
+        if (faceRVFlags[f->index()] != NONE) {
+            continue;
+        }
+
+        int count = 0;
+        int opposite = -1;
+        for (auto it = f->f_begin(); it != f->f_end(); ++it) {
+            if (faceRVFlags[it->index()] != NONE) {
+                opposite = it->index();
+                count++;
+            }
+        }
+
+        if (count != 1) {
+            continue;
+        }
+
+        const Face *g = mesh.face(opposite);
+        Assertion(faceRVFlags[g->index()] != NONE, "Something is wrong!");
+
+        bool valid = false;
+        for (auto it = f->he_begin(); it != f->he_end(); ++it) {
+            if (it->rev()->face() == g) {
+                const Vertex *v0 = it->src();
+                const Vertex *v1 = it->dst();
+                const Vertex *v2 = it->next()->dst();
+
+                const Vec3 p0 = v0->pos();
+                const Vec3 p1 = v1->pos();
+                const Vec3 p2 = v2->pos();
+                const Vec3 e1 = p1 - p0;
+                const Vec3 e2 = p2 - p0;
+                const Vec3 n = normalize(cross(e1, e2));
+                const Vec3 d = normalize(cross(n, e1));
+
+                const int orient = faceRVFlags[g->index()];
+                rvDirections[v0->index()] += (double)orient * d;
+                rvDirections[v1->index()] += (double)orient * d;
+                rvMask[v0->index()] += 1;
+                rvMask[v1->index()] += 1;
+
+                valid = true;
+                break;
+            }
+        }
+
+        Assertion(valid, "Something is wrong!");
+    }
+
+    for (int i = 0; i < mesh.numVertices(); i++) {
+        if (rvMask[i] != 0) {
+            rvDirections[i] = normalize(rvDirections[i] / (double)rvMask[i]);
+        }
+    }
+
+    // Solve Laplace equation
+    for (int kIter = 0; kIter < 5000; kIter++) {
+        for (size_t i = 0; i < mesh.numVertices(); i++) {
+            const Vertex *v = mesh.vertex(i);
+            if (rvMask[i] == 0) {
+                Vec3 dd(0.0);
+                double sumWgt = 0.0;
+                for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                    const double weight = it->cotWeight();
+                    dd += weight * rvDirections[it->dst()->index()];
+                    sumWgt += weight;
+                }
+                rvDirections[i] = 0.9 * rvDirections[i] + 0.1 * dd / sumWgt;
+            }
+        }
+    }
+
+    // Convert std::vector to EigenMatrix
+    EigenMatrix ret(mesh.numVertices(), 3);
+    for (size_t i = 0; i < mesh.numVertices(); i++) {
+        Vec3 d = rvDirections[i];
+        const double l = length(d);
+        if (l > 1.0e-8) {
+            d /= l;
+        }
+        ret.row(i) << d.x(), d.y(), d.z();
+    }
+    return ret;
 }
 
 }  // namespace tinymesh
