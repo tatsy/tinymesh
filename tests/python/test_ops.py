@@ -20,6 +20,8 @@ methods = [
     partial(tms.get_mesh_laplacian, type=tms.MeshLaplace.COTANGENT),
     partial(tms.get_mesh_laplacian, type=tms.MeshLaplace.BELKIN08),
     tms.get_principal_curvatures,
+    tms.get_principal_curvatures_with_derivatives,
+    tms.get_feature_line_field,
 ]
 
 

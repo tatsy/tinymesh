@@ -116,19 +116,40 @@ std::vector<uint32_t> Mesh::getVertexIndices() const {
     return ret;
 }
 
-double Mesh::getAvgEdgeLength() const {
+double Mesh::getMeanEdgeLength() const {
     std::unordered_set<Halfedge *> visited;
-    double avgLength = 0.0;
-    int count = 0;
+    double mean = 0.0;
     for (int i = 0; i < halfedges_.size(); i++) {
         Halfedge *he = halfedges_[i].get();
         if (visited.count(he->rev_) != 0) continue;
 
-        avgLength += halfedges_[i]->length();
-        visited.insert(he);
-        count++;
+        mean += halfedges_[i]->length();
     }
-    return avgLength / count;
+    return mean / (double)visited.size();
+}
+
+double Mesh::getMeanDihedralAngle() const {
+    std::unordered_set<Halfedge *> visited;
+    double mean = 0.0;
+    for (int i = 0; i < halfedges_.size(); i++) {
+        Halfedge *he = halfedges_[i].get();
+        if (visited.count(he) != 0) continue;
+        if (visited.count(he->rev_) != 0) continue;
+        visited.insert(he);
+
+        Halfedge *rev = he->rev_;
+        Vertex *vh1 = he->src();
+        Vertex *vh2 = he->next()->dst();
+        Vertex *vh3 = rev->src();
+        Vertex *vh4 = rev->next()->dst();
+
+        const Vec3 p1 = vh1->pos();
+        const Vec3 p2 = vh2->pos();
+        const Vec3 p3 = vh3->pos();
+        const Vec3 p4 = vh4->pos();
+        mean += dihedral(p2, p1, p3, p4);
+    }
+    return mean / (double)visited.size();
 }
 
 void Mesh::construct() {

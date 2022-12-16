@@ -234,7 +234,7 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
 
 void Mesh::holeFillAdvancingFront_(Face *face) {
     // Compute average edge length
-    const double avgEdgeLen = getAvgEdgeLength();
+    const double avgEdgeLen = getMeanEdgeLength();
 
     // Original boundary vertices
     std::vector<Vertex *> boundary;

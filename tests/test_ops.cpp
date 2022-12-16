@@ -42,6 +42,14 @@ TEST_P(MeshOpsTest, GetPrincipalCurvatures) {
     ASSERT_NO_FATAL_FAILURE(getPrincipalCurvatures(mesh));
 }
 
+TEST_P(MeshOpsTest, GetPrincipalCurvaturesWithDerivatives) {
+    ASSERT_NO_FATAL_FAILURE(getPrincipalCurvaturesWithDerivatives(mesh));
+}
+
+TEST_P(MeshOpsTest, GetFeatureLineField) {
+    ASSERT_NO_FATAL_FAILURE(getFeatureLineField(mesh));
+}
+
 static std::vector<std::string> filenames = {
     "torus.obj",
     "fandisk.ply",

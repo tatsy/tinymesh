@@ -41,7 +41,8 @@ public:
     bool collapseHE(Halfedge *he);
     void fillHoles();
 
-    double getAvgEdgeLength() const;
+    double getMeanEdgeLength() const;
+    double getMeanDihedralAngle() const;
 
     bool verify() const;
 
