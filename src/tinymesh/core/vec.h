@@ -306,7 +306,7 @@ template <typename Float, int Dims>
 Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
     const Vec3 e0 = a - b;
     const Vec3 e1 = c - b;
-    return dot(e0, e1) / (length(cross(e0, e1)) + (Float)1.0e-12);
+    return dot(e0, e1) / (length(cross(e0, e1)) + (Float)1.0e-20);
 }
 
 template <typename Float, int Dims>

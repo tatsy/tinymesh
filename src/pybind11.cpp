@@ -97,10 +97,12 @@ PYBIND11_MODULE(tinymesh, m) {
     m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
     m.def("get_heat_kernel_signatures", &getHeatKernelSignatures, "Heat kernel signatures", py::arg("mesh"),
           py::arg("K") = 300, py::arg("n_times") = 100);
-    m.def("get_principal_curvatures", &getPrincipalCurvatures, "Principal curvatures", py::arg("mesh"));
+    m.def("get_principal_curvatures", &getPrincipalCurvatures, "Principal curvatures", py::arg("mesh"),
+          py::arg("smooth_tensors") = false);
     m.def("get_principal_curvatures_with_derivatives", &getPrincipalCurvaturesWithDerivatives,
-          "Principal curvatures with derivatives", py::arg("mesh"));
-    m.def("get_feature_line_field", &getFeatureLineField, "Feature line field", py::arg("mesh"));
+          "Principal curvatures with derivatives", py::arg("mesh"), py::arg("smooth_tensors") = false);
+    m.def("get_feature_line_field", &getFeatureLineField, "Feature line field", py::arg("mesh"),
+          py::arg("smooth_tensors") = false);
 
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,

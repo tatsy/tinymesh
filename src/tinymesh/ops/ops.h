@@ -31,18 +31,19 @@ TINYMESH_API void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2
 /**
  * Compute principal curvatures and their directions [Rusinkiewicz 2004]
  */
-TINYMESH_API std::tuple<EigenVector, EigenVector, EigenMatrix, EigenMatrix> getPrincipalCurvatures(const Mesh &mesh);
+TINYMESH_API std::tuple<EigenVector, EigenVector, EigenMatrix, EigenMatrix> getPrincipalCurvatures(
+    const Mesh &mesh, bool smoothTensors = false);
 
 /**
  * Compute principal curvatures with derivatives [Rusinkiewicz 2004] 
  */
 TINYMESH_API std::tuple<EigenVector, EigenVector, EigenVector, EigenVector, EigenMatrix, EigenMatrix>
-getPrincipalCurvaturesWithDerivatives(const Mesh &mesh);
+getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors = false);
 
 /**
  * Compute feature line field [Leifman and Tal 2012]
  */
-TINYMESH_API EigenMatrix getFeatureLineField(const Mesh &mesh);
+TINYMESH_API EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors = false);
 
 }  // namespace tinymesh
 

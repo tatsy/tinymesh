@@ -43,9 +43,18 @@ int Vertex::degree() const {
 }
 
 Vec3 Vertex::normal() const {
+    // Normal weighting scheme in [Max 1999]
+    // Reference: Weights for Computing Vertex Normals from Facet Normals
     Vec3 norm = Vec3(0.0);
-    for (auto it = f_begin(); it != f_end(); ++it) {
-        norm += it->normal() * this->volonoiArea(it.ptr());
+    for (auto it = he_begin(); it != he_end(); ++it) {
+        const Vec3 p0 = this->pos();
+        const Vec3 p1 = it->dst()->pos();
+        const Vec3 p2 = it->next()->dst()->pos();
+        const Vec3 e1 = p1 - p0;
+        const Vec3 e2 = p2 - p0;
+        const double l1 = length(e1);
+        const double l2 = length(e2);
+        norm += cross(e1, e2) / (l1 * l1 * l2 * l2);
     }
     return normalize(norm);
 }

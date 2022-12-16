@@ -25,6 +25,9 @@ class Viewer(object):
         self.height = height
         self.aspect = width / height
         self.dpi = 100
+        self.set_identity()
+
+    def set_identity(self):
         self.M = np.eye(4)
         self.V = np.eye(4)
         self.P = np.eye(4)
