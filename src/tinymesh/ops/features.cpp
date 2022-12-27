@@ -65,7 +65,7 @@ void getPrincipalCurvaturesFromTensors(std::vector<double> &ks_max, std::vector<
 
 void smoothingTensors(std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame> &frames, const Mesh &mesh) {
     const int Nv = (int)tensors.size();
-    const double avgLen = mesh.getAvgEdgeLength();
+    const double avgLen = mesh.getMeanEdgeLength();
     std::vector<EigenMatrix2> smoothTensors(Nv);
     for (size_t i = 0; i < Nv; i++) {
         const Vertex *vertex = mesh.vertex(i);
@@ -156,7 +156,7 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
         normals[i] = mesh.vertex(i)->normal();
     }
 
-    const double avgLen = mesh.getAvgEdgeLength();
+    const double avgLen = mesh.getMeanEdgeLength();
     std::vector<Vec3> smoothNorms(mesh.numVertices());
     for (size_t i = 0; i < mesh.numVertices(); i++) {
         Vertex *vertex = mesh.vertex(i);
@@ -224,7 +224,7 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
         A(5, 2) = dot(e2, vf);
         b(5) = dot(n1 - n0, vf);
 
-        EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(4, 4);
+        EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(3, 3);
         EigenVector Ab = A.transpose() * b;
         EigenVector3 efg = AA.llt().solve(Ab);
 

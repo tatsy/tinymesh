@@ -31,14 +31,7 @@ int main(int argc, char **argv) {
         {
             tms::Mesh mesh(argv[1]);
             mesh.fillHoles();
-
-            double Lavg = 0.0;
-            for (int i = 0; i < (int)mesh.numEdges(); i++) {
-                tms::Edge *e = mesh.edge(i);
-                const double l = e->length();
-                Lavg += l;
-            }
-            Lavg = Lavg / mesh.numEdges();
+            const double Lavg = mesh.getMeanEdgeLength();
 
             // Add noise
             for (int i = 0; i < (int)mesh.numVertices(); i++) {

@@ -11,7 +11,6 @@
 #include "eigen.h"
 #include "vertex.h"
 #include "face.h"
-#include "edge.h"
 #include "halfedge.h"
 
 using E = IndexPair;
@@ -214,12 +213,6 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
                     it->rev_ = rev;
                     rev->rev_ = it.ptr();
 
-                    Edge *new_edge = new Edge();
-                    it->edge_ = new_edge;
-                    rev->edge_ = new_edge;
-                    new_edge->halfedge_ = it.ptr();
-                    addEdge(new_edge);
-
                     it->isBoundary_ = false;
                     rev->isBoundary_ = false;
                 } else {
@@ -234,7 +227,7 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
 
 void Mesh::holeFillAdvancingFront_(Face *face) {
     // Compute average edge length
-    const double avgEdgeLen = getAvgEdgeLength();
+    const double avgEdgeLen = getMeanEdgeLength();
 
     // Original boundary vertices
     std::vector<Vertex *> boundary;
@@ -517,12 +510,6 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
                         it->rev_ = rev;
                         rev->rev_ = it.ptr();
                         it->isBoundary_ = rev->isBoundary_;
-
-                        Edge *new_edge = new Edge();
-                        it->edge_ = new_edge;
-                        rev->edge_ = new_edge;
-                        new_edge->halfedge_ = it.ptr();
-                        addEdge(new_edge);
                     } else {
                         printf("%d %d %p\n", i, j, it.ptr());
                     }

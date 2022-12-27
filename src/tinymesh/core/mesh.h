@@ -9,6 +9,7 @@
 #include <vector>
 #include <set>
 #include <memory>
+#include <unordered_set>
 #include <unordered_map>
 
 #include "core/api.h"
@@ -41,18 +42,14 @@ public:
     bool collapseHE(Halfedge *he);
     void fillHoles();
 
-    double getAvgEdgeLength() const;
+    double getMeanEdgeLength() const;
+    double getMeanDihedralAngle() const;
 
     bool verify() const;
 
     Vertex *vertex(int index) const {
         Assertion(index >= 0 && index < (int)vertices_.size(), "Vertex index out of bounds!");
         return vertices_[index].get();
-    }
-
-    Edge *edge(int index) const {
-        Assertion(index >= 0 && index < (int)edges_.size(), "Edge index out of bounds!");
-        return edges_[index].get();
     }
 
     Halfedge *halfedge(int index) const {
@@ -65,18 +62,10 @@ public:
         return faces_[index].get();
     }
 
-    size_t numVertices() const {
-        return vertices_.size();
-    }
-    size_t numEdges() const {
-        return edges_.size();
-    }
-    size_t numHalfedges() const {
-        return halfedges_.size();
-    }
-    size_t numFaces() const {
-        return faces_.size();
-    }
+    size_t numVertices() const;
+    size_t numEdges() const;
+    size_t numHalfedges() const;
+    size_t numFaces() const;
 
 private:
     // Private methods
@@ -88,11 +77,9 @@ private:
     void construct();
 
     void addVertex(Vertex *v);
-    void addEdge(Edge *e);
     void addHalfedge(Halfedge *he);
     void addFace(Face *f);
     void removeVertex(Vertex *v);
-    void removeEdge(Edge *e);
     void removeHalfedge(Halfedge *he);
     void removeFace(Face *f);
 
@@ -110,7 +97,7 @@ private:
 
     // Private parameters
     std::vector<std::shared_ptr<Vertex>> vertices_;
-    std::vector<std::shared_ptr<Edge>> edges_;
+    //std::vector<std::shared_ptr<Edge>> edges_;
     std::vector<std::shared_ptr<Halfedge>> halfedges_;
     std::vector<std::shared_ptr<Face>> faces_;
     std::vector<uint32_t> indices_;

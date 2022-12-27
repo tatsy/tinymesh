@@ -18,7 +18,6 @@
 #include "core/utils.h"
 #include "core/vec.h"
 #include "core/vertex.h"
-#include "core/edge.h"
 #include "core/face.h"
 #include "core/halfedge.h"
 #include "core/filesystem.h"
@@ -45,10 +44,31 @@ Mesh::Mesh(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indic
     construct(vertices, indices);
 }
 
+size_t Mesh::numVertices() const {
+    return vertices_.size();
+}
+
+size_t Mesh::numEdges() const {
+    std::unordered_set<Halfedge *> hes;
+    for (size_t i = 0; i < halfedges_.size(); i++) {
+        Halfedge *he = halfedges_[i].get();
+        if (hes.count(he) != 0 || hes.count(he->rev_) != 0) continue;
+        hes.insert(he);
+    }
+    return hes.size();
+}
+
+size_t Mesh::numHalfedges() const {
+    return halfedges_.size();
+}
+
+size_t Mesh::numFaces() const {
+    return faces_.size();
+}
+
 void Mesh::load(const std::string &filename) {
     // Clear existing elements
     vertices_.clear();
-    edges_.clear();
     halfedges_.clear();
     faces_.clear();
 
@@ -68,7 +88,6 @@ void Mesh::load(const std::string &filename) {
 void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
     // Clear existing elements
     vertices_.clear();
-    edges_.clear();
     halfedges_.clear();
     faces_.clear();
 
@@ -116,19 +135,46 @@ std::vector<uint32_t> Mesh::getVertexIndices() const {
     return ret;
 }
 
-double Mesh::getAvgEdgeLength() const {
+double Mesh::getMeanEdgeLength() const {
     std::unordered_set<Halfedge *> visited;
-    double avgLength = 0.0;
+    double mean = 0.0;
     int count = 0;
     for (int i = 0; i < halfedges_.size(); i++) {
         Halfedge *he = halfedges_[i].get();
+        if (visited.count(he) != 0) continue;
         if (visited.count(he->rev_) != 0) continue;
-
-        avgLength += halfedges_[i]->length();
         visited.insert(he);
+
+        mean += halfedges_[i]->length();
         count++;
     }
-    return avgLength / count;
+    return mean / count;
+}
+
+double Mesh::getMeanDihedralAngle() const {
+    std::unordered_set<Halfedge *> visited;
+    double mean = 0.0;
+    int count = 0;
+    for (int i = 0; i < halfedges_.size(); i++) {
+        Halfedge *he = halfedges_[i].get();
+        if (visited.count(he) != 0) continue;
+        if (visited.count(he->rev_) != 0) continue;
+        visited.insert(he);
+
+        Halfedge *rev = he->rev_;
+        Vertex *vh1 = he->src();
+        Vertex *vh2 = he->next()->dst();
+        Vertex *vh3 = rev->src();
+        Vertex *vh4 = rev->next()->dst();
+
+        const Vec3 p1 = vh1->pos();
+        const Vec3 p2 = vh2->pos();
+        const Vec3 p3 = vh3->pos();
+        const Vec3 p4 = vh4->pos();
+        mean += dihedral(p1, p3, p2, p4);
+        count += 1;
+    }
+    return mean / count;
 }
 
 void Mesh::construct() {
@@ -220,12 +266,6 @@ void Mesh::construct() {
                 Halfedge *rev = iba->second;
                 he->rev_ = rev;
                 rev->rev_ = he;
-
-                auto edge = new Edge();
-                addEdge(edge);
-                he->edge_ = edge;
-                rev->edge_ = edge;
-                edge->halfedge_ = he;
             } else {
                 he->rev_ = nullptr;
             }
@@ -268,14 +308,8 @@ void Mesh::construct() {
                 addHalfedge(rev);
                 boundaryHalfedges.push_back(rev);
 
-                auto edge = new Edge();
-                addEdge(edge);
-
                 it->rev_ = rev;
                 rev->rev_ = it;
-                edge->halfedge_ = it;
-                it->edge_ = edge;
-                rev->edge_ = edge;
 
                 rev->face_ = face;
                 rev->src_ = it->next_->src_;
@@ -541,10 +575,6 @@ bool Mesh::splitHE(Halfedge *he) {
     auto he11 = new Halfedge();
     auto he12 = new Halfedge();
 
-    auto e_new = new Edge();
-    auto e0 = new Edge();
-    auto e1 = new Edge();
-
     auto he0 = he->next_;
     auto he1 = he0->next_;
     auto he2 = rev->next_;
@@ -582,19 +612,6 @@ bool Mesh::splitHE(Halfedge *he) {
     rev_new->next_ = he2;
     he2->next_ = he12;
     he12->next_ = rev_new;
-
-    // Set edge-halfedge links
-    e_new->halfedge_ = he_new;
-    he_new->edge_ = e_new;
-    rev_new->edge_ = e_new;
-
-    e0->halfedge_ = he01;
-    he01->edge_ = e0;
-    he02->edge_ = e0;
-
-    e1->halfedge_ = he11;
-    he11->edge_ = e1;
-    he12->edge_ = e1;
 
     // Update rev half-edges
     he->rev_ = rev;
@@ -658,9 +675,6 @@ bool Mesh::splitHE(Halfedge *he) {
     addFace(f0_new);
     addFace(f1_new);
     addVertex(v_new);
-    addEdge(e_new);
-    addEdge(e0);
-    addEdge(e1);
     addHalfedge(he_new);
     addHalfedge(rev_new);
     addHalfedge(he01);
@@ -683,7 +697,6 @@ bool Mesh::collapseHE(Halfedge *he) {
      *        v3
      */
 
-    Edge *e = he->edge_;
     Halfedge *rev = he->rev_;
     Assertion(he->index_ < (int)halfedges_.size(), "Daemon halfedge detected!");
     Assertion(rev->index_ < (int)halfedges_.size(), "Daemon halfedge detected!");
@@ -781,25 +794,15 @@ bool Mesh::collapseHE(Halfedge *he) {
     }
 
     // Update edges and opposite halfedges
-    Edge *e0 = he->next()->next()->edge();
-    Edge *e1 = he->next()->edge();
     Halfedge *he0 = he->next()->next()->rev();
     Halfedge *he1 = he->next()->rev();
-    e0->halfedge_ = he0;
     he0->rev_ = he1;
-    he0->edge_ = e0;
     he1->rev_ = he0;
-    he1->edge_ = e0;
 
-    Edge *e2 = rev->next()->next()->edge();
-    Edge *e3 = rev->next()->edge();
     Halfedge *he2 = rev->next()->next()->rev();
     Halfedge *he3 = rev->next()->rev();
-    e2->halfedge_ = he2;
     he2->rev_ = he3;
-    he2->edge_ = e2;
     he3->rev_ = he2;
-    he3->edge_ = e2;
 
     // Update halfedge of the origin vertex (v0)
     v_remain->halfedge_ = he0;
@@ -809,11 +812,6 @@ bool Mesh::collapseHE(Halfedge *he) {
     v1->halfedge_ = he1;
     v2->halfedge_ = he2;
     v3->halfedge_ = he3;
-
-    // Remove edges
-    removeEdge(e);
-    removeEdge(e1);
-    removeEdge(e3);
 
     // Remove halfedges
     Face *f0 = he->face_;
@@ -934,28 +932,10 @@ bool Mesh::verify() const {
         success &= verifyVertex(v);
     }
 
-    for (int i = 0; i < (int)edges_.size(); i++) {
-        Edge *e = edges_[i].get();
-        if (e->index() != i) {
-            Warn("Edge index does not match array index: e[%d].index = %d", i, e->index());
-            success = false;
-        }
-
-        if (e->halfedge_ == nullptr) {
-            Warn("Edge[%d] is not with non-null halfedge!", e->index());
-            success = false;
-        }
-    }
-
     for (int i = 0; i < (int)halfedges_.size(); i++) {
         auto he = halfedges_[i];
         if (he->index() != i) {
             Warn("Halfedge index does not match array index: he[%d].index = %d", i, he->index());
-            success = false;
-        }
-
-        if (he->edge_ == nullptr) {
-            Warn("Halfedge[%d] is not with non-null edge!", he->index());
             success = false;
         }
     }
@@ -1005,11 +985,6 @@ void Mesh::addVertex(Vertex *v) {
     vertices_.emplace_back(v);
 }
 
-void Mesh::addEdge(Edge *e) {
-    e->index_ = static_cast<int>(edges_.size());
-    edges_.emplace_back(e);
-}
-
 void Mesh::addHalfedge(Halfedge *he) {
     he->index_ = static_cast<int>(halfedges_.size());
     halfedges_.emplace_back(he);
@@ -1030,18 +1005,6 @@ void Mesh::removeVertex(Vertex *v) {
         std::swap(vertices_[v->index_]->index_, vertices_[nVerts - 1]->index_);
     }
     vertices_.resize(nVerts - 1);
-}
-
-void Mesh::removeEdge(Edge *e) {
-    const int nEdges = (int)edges_.size();
-    Assertion((*e) == (*edges_[e->index_]), "Invalid edge indexing!");
-    Assertion(e->index_ < nEdges, "Edge index out of range!");
-
-    if (e->index_ < nEdges - 1) {
-        std::swap(edges_[e->index_], edges_[nEdges - 1]);
-        std::swap(edges_[e->index_]->index_, edges_[nEdges - 1]->index_);
-    }
-    edges_.resize(nEdges - 1);
 }
 
 void Mesh::removeHalfedge(Halfedge *he) {

@@ -14,7 +14,6 @@ bool Halfedge::operator==(const Halfedge &other) const {
     ret &= (src_ == other.src_);
     ret &= (next_ == other.next_);
     ret &= (rev_ == other.rev_);
-    ret &= (edge_ == other.edge_);
     ret &= (face_ == other.face_);
     ret &= (index_ == other.index_);
     return ret;

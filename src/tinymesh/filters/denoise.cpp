@@ -1,12 +1,13 @@
 #define TINYMESH_API_EXPORT
 #include "filters.h"
 
+#include <unordered_set>
+
 #include "core/debug.h"
 #include "core/openmp.h"
 #include "core/mesh.h"
 #include "core/vertex.h"
 #include "core/halfedge.h"
-#include "core/edge.h"
 #include "core/face.h"
 
 #define EIGEN_ENABLE_SPARSE
@@ -36,11 +37,7 @@ namespace tinymesh {
 
 void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
     // Average edge length
-    double avgEdge = 0.0;
-    for (int e = 0; e < (int)mesh.numEdges(); e++) {
-        avgEdge += mesh.edge(e)->length();
-    }
-    avgEdge /= mesh.numEdges();
+    double avgEdge = mesh.getMeanEdgeLength();
 
     for (int it = 0; it < iterations; it++) {
         // Smooth vertex positions
@@ -106,11 +103,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
 
 void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, int iterations) {
     // Average edge length
-    double avgEdge = 0.0;
-    for (int e = 0; e < (int)mesh.numEdges(); e++) {
-        avgEdge += mesh.edge(e)->length();
-    }
-    avgEdge /= mesh.numEdges();
+    double avgEdge = mesh.getMeanEdgeLength();
 
     for (int it = 0; it < iterations; it++) {
         // Smooth vertex positions
@@ -182,41 +175,21 @@ void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
     const int ne = (int)mesh.numEdges();
     const int nv = (int)mesh.numVertices();
 
+    // List unique halfedges
+    std::unordered_set<Halfedge *> uniqueHEs;
+    for (int i = 0; i < mesh.numHalfedges(); i++) {
+        Halfedge *he = mesh.halfedge(i);
+        if (uniqueHEs.count(he) != 0) continue;
+        if (uniqueHEs.count(he->rev()) != 0) continue;
+        uniqueHEs.insert(he);
+    }
+    std::vector<Halfedge *> edges(uniqueHEs.begin(), uniqueHEs.end());
+    Assertion(edges.size() == ne, "Collecting unique edges inconsistent!");
+
     // Construct sparse matrices D and R
     std::vector<EigenTriplet> tripR;
-    double avgEdge = 0.0;
-    double avgDihed = 0.0;
-    for (int e = 0; e < ne; e++) {
-        Edge *edge = mesh.edge(e);
-        Halfedge *he = edge->halfedge();
-        Halfedge *rev = he->rev();
-
-        Vertex *vh1 = he->src();
-        Vertex *vh2 = he->next()->dst();
-        Vertex *vh3 = rev->src();
-        Vertex *vh4 = rev->next()->dst();
-
-        const int i1 = vh1->index();
-        const int i2 = vh2->index();
-        const int i3 = vh3->index();
-        const int i4 = vh4->index();
-
-        tripR.emplace_back(e, i1, 1.0);
-        tripR.emplace_back(e, i2, -1.0);
-        tripR.emplace_back(e, i3, 1.0);
-        tripR.emplace_back(e, i4, -1.0);
-
-        const Vec3 p1 = vh1->pos();
-        const Vec3 p2 = vh2->pos();
-        const Vec3 p3 = vh3->pos();
-        const Vec3 p4 = vh4->pos();
-        double l13 = length(p1 - p3);
-
-        avgEdge += std::sqrt(l13);
-        avgDihed += dihedral(p2, p1, p3, p4);
-    }
-    avgEdge /= ne;
-    avgDihed /= ne;
+    double avgEdge = mesh.getMeanEdgeLength();
+    double avgDihed = mesh.getMeanDihedralAngle();
 
     EigenSparseMatrix R(ne, nv);
     R.setFromTriplets(tripR.begin(), tripR.end());
@@ -255,9 +228,8 @@ void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
     while (beta < bmax) {
         // Construct sparse matrix D
         std::vector<EigenTriplet> tripD;
-        for (int e = 0; e < ne; e++) {
-            Edge *edge = mesh.edge(e);
-            Halfedge *he = edge->halfedge();
+        for (int e = 0; e < edges.size(); e++) {
+            Halfedge *he = edges[e];
             Halfedge *rev = he->rev();
 
             Vertex *vh1 = he->src();
