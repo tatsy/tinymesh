@@ -171,7 +171,7 @@ double Mesh::getMeanDihedralAngle() const {
         const Vec3 p2 = vh2->pos();
         const Vec3 p3 = vh3->pos();
         const Vec3 p4 = vh4->pos();
-        mean += dihedral(p1, p3, p2, p4);
+        mean += dihedral(p2, p1, p3, p4);
         count += 1;
     }
     return mean / count;
