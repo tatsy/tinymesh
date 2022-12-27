@@ -138,7 +138,6 @@ std::vector<uint32_t> Mesh::getVertexIndices() const {
 double Mesh::getMeanEdgeLength() const {
     std::unordered_set<Halfedge *> visited;
     double mean = 0.0;
-    int count = 0;
     for (int i = 0; i < halfedges_.size(); i++) {
         Halfedge *he = halfedges_[i].get();
         if (visited.count(he) != 0) continue;
@@ -146,15 +145,13 @@ double Mesh::getMeanEdgeLength() const {
         visited.insert(he);
 
         mean += halfedges_[i]->length();
-        count++;
     }
-    return mean / count;
+    return mean / (double)visited.size();
 }
 
 double Mesh::getMeanDihedralAngle() const {
     std::unordered_set<Halfedge *> visited;
     double mean = 0.0;
-    int count = 0;
     for (int i = 0; i < halfedges_.size(); i++) {
         Halfedge *he = halfedges_[i].get();
         if (visited.count(he) != 0) continue;
@@ -172,9 +169,8 @@ double Mesh::getMeanDihedralAngle() const {
         const Vec3 p3 = vh3->pos();
         const Vec3 p4 = vh4->pos();
         mean += dihedral(p2, p1, p3, p4);
-        count += 1;
     }
-    return mean / count;
+    return mean / (double)visited.size();
 }
 
 void Mesh::construct() {
