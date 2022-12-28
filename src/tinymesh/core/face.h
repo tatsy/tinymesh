@@ -12,6 +12,8 @@
 
 namespace tinymesh {
 
+class Triangle;
+
 class TINYMESH_API Face {
 public:
     // Forward declaration
@@ -32,6 +34,8 @@ public:
     Face &operator=(Face &&face) noexcept = default;
 
     bool operator==(const Face &other) const;
+
+    Triangle toTriangle() const;
 
     VertexIterator v_begin();
     VertexIterator v_end();

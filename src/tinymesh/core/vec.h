@@ -331,10 +331,9 @@ Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec
     return std::acos(std::max(-1.0, std::min(cosTheta, 1.0)));
 }
 
-// Hash
 namespace std {
 
-//template <>
+// Hash
 template <typename Float, int Dims>
 struct hash<Vec<Float, Dims>> {
     std::size_t operator()(const Vec<Float, Dims> &v) const {
@@ -345,6 +344,33 @@ struct hash<Vec<Float, Dims>> {
         return h;
     }
 };
+
+template <typename Float, int Dims>
+Vec<Float, Dims> abs(const Vec<Float, Dims> &v) {
+    Vec<Float, Dims> ret;
+    for (int d = 0; d < Dims; d++) {
+        ret[d] = std::abs(v[d]);
+    }
+    return ret;
+}
+
+template <typename Float, int Dims>
+Vec<Float, Dims> min(const Vec<Float, Dims> &v0, const Vec<Float, Dims> &v1) {
+    Vec<Float, Dims> v;
+    for (int d = 0; d < Dims; d++) {
+        v[d] = std::min(v0[d], v1[d]);
+    }
+    return v;
+}
+
+template <typename Float, int Dims>
+Vec<Float, Dims> max(const Vec<Float, Dims> &v0, const Vec<Float, Dims> &v1) {
+    Vec<Float, Dims> v;
+    for (int d = 0; d < Dims; d++) {
+        v[d] = std::max(v0[d], v1[d]);
+    }
+    return v;
+}
 
 }  // namespace std
 
