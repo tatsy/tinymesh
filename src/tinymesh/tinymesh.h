@@ -8,6 +8,7 @@
 #include "core/api.h"
 #include "core/debug.h"
 #include "core/vec.h"
+#include "core/bounds.h"
 #include "core/openmp.h"
 #include "core/filesystem.h"
 
@@ -16,6 +17,9 @@
 #include "core/edge.h"
 #include "core/halfedge.h"
 #include "core/face.h"
+
+#include "core/triangle.h"
+#include "core/bvh.h"
 
 #include "ops/ops.h"
 #include "remesh/remesh.h"

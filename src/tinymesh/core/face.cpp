@@ -3,8 +3,10 @@
 
 #include <vector>
 
+#include "debug.h"
 #include "vertex.h"
 #include "halfedge.h"
+#include "triangle.h"
 
 namespace tinymesh {
 
@@ -16,6 +18,17 @@ bool Face::operator==(const Face &other) const {
     ret &= (halfedge_ == other.halfedge_);
     ret &= (index_ == other.index_);
     return ret;
+}
+
+Triangle Face::toTriangle() const {
+    std::vector<Vec3> vs;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        vs.push_back(it->pos());
+    }
+
+    Assertion(vs.size() == 3, "Non-triangle face cannot be converted to Triangle!");
+
+    return { vs[0], vs[1], vs[2] };
 }
 
 Vec3 Face::normal() const {
