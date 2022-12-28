@@ -14,17 +14,36 @@
 
 namespace tinymesh {
 
+/**
+ * Hausdorff distance of two meshes 
+ */
+TINYMESH_API double getHausdorffDistance(const Mesh &m0, const Mesh &m1);
+
+/**
+ * Compute per-vertex shortest distances 
+ */
+TINYMESH_API EigenVector getPerVertexShortestDistances(const Mesh &src, const Mesh &dst);
+
+//! Enumerator for mesh Laplacian types
 enum MeshLaplace : int {
     Adjacent,
     Cotangent,
     Belkin08,
 };
 
+/**
+ * 
+ */
 TINYMESH_API EigenSparseMatrix getMeshLaplacian(const Mesh &mesh, MeshLaplace type);
 
+/**
+ * 
+ */
 TINYMESH_API EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K = 300, int nTimes = 100);
 
-//! Compute per-vertex curvature tensor (i.e., the 2nd fundamental form)
+/**
+ * Compute per-vertex curvature tensor (i.e., the 2nd fundamental form)
+ */
 TINYMESH_API void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors,
                                       const std::vector<LocalFrame> &frames);
 

@@ -88,7 +88,12 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("is_hole", &Face::isHole)
         .def("is_locked", &Face::isLocked);
 
-    /*** Utilities */
+    /*** Metrics ***/
+    m.def("get_hausdorff_distance", &getHausdorffDistance, "Hausdorff distance", py::arg("mesh0"), py::arg("mesh1"));
+    m.def("get_per_vertex_shortest_distances", &getPerVertexShortestDistances, "Per-vertex shortest distances",
+          py::arg("src"), py::arg("dst"));
+
+    /*** Utilities ***/
     py::enum_<MeshLaplace>(m, "MeshLaplace")
         .value("ADJACENT", MeshLaplace::Adjacent)
         .value("COTANGENT", MeshLaplace::Cotangent)
