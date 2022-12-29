@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < mesh.numFaces(); i++) {
             tms::Face *f = mesh.face(i);
             if (f->isHole()) {
-                holeFillMinDihedral(mesh, f, Pi / 6.0);
+                tms::holeFillMinDihedral(mesh, f, Pi / 6.0);
             }
         }
         const std::string outfile = (dirpath / fs::path((basename + "_fill_minDA" + extension).c_str())).string();
@@ -38,10 +38,21 @@ int main(int argc, char **argv) {
         for (int i = 0; i < mesh.numFaces(); i++) {
             tms::Face *f = mesh.face(i);
             if (f->isHole()) {
-                holeFillAdvancingFront(mesh, f);
+                tms::holeFillAdvancingFront(mesh, f);
             }
         }
         const std::string outfile = (dirpath / fs::path((basename + "_fill_adv_front" + extension).c_str())).string();
+        mesh.save(outfile);
+        printf("Save: %s\n", outfile.c_str());
+    }
+
+    // Context-based coherent surface completion [Harary and Tal 2016]
+    {
+        tms::Mesh mesh(argv[1]);
+        tms::holeFillContextCoherent(mesh);
+
+        const std::string outfile =
+            (dirpath / fs::path((basename + "_fill_context_coherent" + extension).c_str())).string();
         mesh.save(outfile);
         printf("Save: %s\n", outfile.c_str());
     }
