@@ -191,6 +191,18 @@ private:
 using Vec2 = Vec<double, 2>;
 using Vec3 = Vec<double, 3>;
 
+// standard output
+template <typename Float, int Dims>
+std::ostream &operator<<(std::ostream &os, const Vec<Float, Dims> &v) {
+    os << "[ ";
+    for (int d = 0; d < Dims; d++) {
+        os << v[d];
+        if (d != Dims - 1) os << ", ";
+    }
+    os << " ]";
+    return os;
+}
+
 // Basic arithmetics
 template <typename Float, int Dims>
 Vec<Float, Dims> operator+(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2) {

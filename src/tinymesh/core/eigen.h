@@ -5,6 +5,8 @@
 #ifndef TINYMESH_EIGEN_H
 #define TINYMESH_EIGEN_H
 
+#include <cstdint>
+
 using FloatType = double;
 using IndexType = int64_t;
 
@@ -17,6 +19,9 @@ using EigenMatrix2 = Eigen::Matrix<FloatType, 2, 2>;
 using EigenMatrix3 = Eigen::Matrix<FloatType, 3, 3>;
 using EigenMatrix4 = Eigen::Matrix<FloatType, 4, 4>;
 using EigenMatrix = Eigen::Matrix<FloatType, Eigen::Dynamic, Eigen::Dynamic>;
+
+//! SVD using Eigen
+void eigenSVD(const EigenMatrix &A, EigenMatrix &U, EigenVector &Sigma, EigenMatrix &V);
 
 // #ifdef EIGEN_ENABLE_SPARSE
 #include <Eigen/SparseCore>
