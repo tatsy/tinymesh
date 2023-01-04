@@ -535,6 +535,11 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
 }
 
 EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors) {
+    const auto ret = getFeatureLineFieldWithFlags(mesh, smoothTensors);
+    return std::get<0>(ret);
+}
+
+std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &mesh, bool smoothTensors) {
     const auto cuv = getPrincipalCurvaturesWithDerivatives(mesh, smoothTensors);
     const EigenVector kv_max = std::get<0>(cuv);
     const EigenVector kv_min = std::get<1>(cuv);
@@ -623,7 +628,8 @@ EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors) {
 
     // Detect ridge/valley vertices
     std::vector<Vec3> rvDirections(mesh.numVertices(), Vec3(0.0));
-    std::vector<int> rvMask(mesh.numVertices(), 0);
+    EigenVector ridgeValleyFlags(mesh.numVertices());
+    ridgeValleyFlags.setZero();
     for (size_t i = 0; i < mesh.numFaces(); i++) {
         const Face *f = mesh.face(i);
         if (faceRVFlags[f->index()] != NONE) {
@@ -664,8 +670,8 @@ EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors) {
                 const int orient = faceRVFlags[g->index()];
                 rvDirections[v0->index()] += (double)orient * d;
                 rvDirections[v1->index()] += (double)orient * d;
-                rvMask[v0->index()] += 1;
-                rvMask[v1->index()] += 1;
+                ridgeValleyFlags(v0->index()) += 1.0;
+                ridgeValleyFlags(v1->index()) += 1.0;
 
                 valid = true;
                 break;
@@ -676,8 +682,9 @@ EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors) {
     }
 
     for (int i = 0; i < mesh.numVertices(); i++) {
-        if (rvMask[i] != 0) {
-            rvDirections[i] /= (double)rvMask[i];
+        if (ridgeValleyFlags[i] != 0) {
+            rvDirections[i] /= ridgeValleyFlags(i);
+            ridgeValleyFlags(i) = 1.0;
             if (length(rvDirections[i]) > 1.0e-8) {
                 rvDirections[i] = normalize(rvDirections[i]);
             }
@@ -688,7 +695,7 @@ EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors) {
     for (int kIter = 0; kIter < 2000; kIter++) {
         for (size_t i = 0; i < mesh.numVertices(); i++) {
             const Vertex *v = mesh.vertex(i);
-            if (rvMask[i] == 0) {
+            if (ridgeValleyFlags(i) == 0.0) {
                 Vec3 dd(0.0);
                 double sumWgt = 0.0;
                 for (auto it = v->he_begin(); it != v->he_end(); ++it) {
@@ -710,7 +717,7 @@ EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors) {
         Vec3 d = rvDirections[i];
         ret.row(i) << d.x(), d.y(), d.z();
     }
-    return ret;
+    return std::make_tuple(ret, ridgeValleyFlags);
 }
 
 }  // namespace tinymesh

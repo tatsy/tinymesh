@@ -128,9 +128,13 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
     }
     mesh.save("1_initial_hole_fill.ply");
 
-    // 2. Compute HKS
-    EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
-    EigenMatrix hks = getHeatKernelSignatures(L);
+    // 2. Compute HKS and feature line fields
+    const EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
+    const EigenMatrix hks = getHeatKernelSignatures(L);
+
+    const auto flff = getFeatureLineFieldWithFlags(mesh, true);
+    const EigenMatrix &flf = std::get<0>(flff);
+    const EigenVector &rvFlags = std::get<1>(flff);
 
     // 3. Collect patches
     const int N = (int)mesh.numVertices();
@@ -182,6 +186,16 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
 
         for (auto vid : patchVertSets[i]) {
             patchVerts[i].push_back(mesh.vertex(vid));
+        }
+    }
+
+    std::unordered_map<int, std::vector<int>> tgtPatchAssign;
+    for (int i = 0; i < nTgt; i++) {
+        for (int k : patchVertSets[tgtIds[i]]) {
+            if (tgtPatchAssign.count(k) == 0) {
+                tgtPatchAssign[k] = std::vector<int>();
+            }
+            tgtPatchAssign[k].push_back(tgtIds[i]);
         }
     }
 
@@ -250,14 +264,46 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         // 6. Compute rigid registration
         std::vector<EigenMatrix3> rotations(nTgt);
         std::vector<EigenVector3> translations(nTgt);
+        std::unordered_map<int, double> dissimilarities(nTgt);
         for (int i = 0; i < nTgt; i++) {
             const std::vector<Vertex *> tgtPatch = patchVerts[tgtIds[i]];
             const std::vector<Vertex *> srcPatch = patchVerts[pairIds[i]];
             solveRigidICP(tgtPatch, srcPatch, hks, rotations[i], translations[i]);
+
+            double dissim = 0.0;
+            double sumWgt = 0.0;
+            for (Vertex *vt : tgtPatch) {
+                Vertex *closest = nullptr;
+                double minDist = 1.0e20;
+                for (Vertex *vs : srcPatch) {
+                    const Vec3 pt = vt->pos();
+                    const Vec3 ps = (Vec3)(rotations[i] * vs->pos()) + (Vec3)translations[i];
+                    const double dist = length(pt - ps);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = vs;
+                    }
+                }
+
+                const EigenVector ft_ = flf.row(vt->index());
+                const EigenVector fs_ = flf.row(closest->index());
+
+                const Vec3 ft(ft_(0), ft_(1), ft_(2));
+                const Vec3 fs(fs_(0), fs_(1), fs_(2));
+
+                double w = 1.0;
+                if (rvFlags(closest->index()) != 0.0) {
+                    w = (double)tgtPatch.size();
+                }
+                double l = length(ft - (Vec3)(rotations[i] * fs));
+                dissim += w * l * l;
+                sumWgt += w;
+            }
+            dissimilarities[tgtIds[i]] = dissim / sumWgt;
         }
 
         // Patch BVHs
-        std::vector<BVH> patchBVHs(nTgt);
+        std::unordered_map<int, BVH> patchBVHs(nTgt);
         for (int i = 0; i < nTgt; i++) {
             std::vector<Vec3> vertices;
             std::vector<uint32_t> indices;
@@ -274,27 +320,68 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 }
             }
             Assertion(indices.size() % 3 == 0, "Non-triangle face detected!");
-            patchBVHs[i].construct(vertices, indices);
+            patchBVHs[tgtIds[i]] = BVH(vertices, indices);
         }
 
         // Update vertex positions
-        for (int i = 0; i < nTgt; i++) {
-            const int tgtId = tgtIds[i];
+        std::unordered_map<int, Vec3> newPoss;
+        std::unordered_map<int, Vec3> offsets;
+        for (auto it : tgtPatchAssign) {
+            const int tgtId = it.first;
+            const std::vector<int> &neighbors = it.second;
             const Vec3 orgPos = mesh.vertex(tgtId)->pos();
 
             Vec3 newPos(0.0);
-            int count = 0;
-            for (int j = 0; j < nTgt; j++) {
-                // if (i == j) continue;
-                if (patchVertSets[tgtIds[j]].count(tgtId) == 0) continue;
+            double sumWgt = 0.0;
+            for (int k : neighbors) {
+                if (patchBVHs.count(k) == 0) continue;
 
-                const BVH &bvh = patchBVHs[j];
+                const BVH &bvh = patchBVHs[k];
                 const Vec3 closest = bvh.closestPoint(orgPos);
-                newPos += closest;
-                count += 1;
+                const double dissim = dissimilarities[k];
+                const double weight = 1.0 / (std::pow(dissim, 5.0) + 1.0e-12);
+                newPos += weight * closest;
+                sumWgt += weight;
             }
-            newPos = 0.9 * orgPos + 0.1 * (newPos / (double)count);
-            mesh.vertex(tgtId)->setPos(newPos);
+            newPos /= sumWgt;
+
+            if (mesh.vertex(tgtId)->isLocked()) {
+                // Boundary vertices
+                newPoss[tgtId] = Vec3(0.0);
+                offsets[tgtId] = orgPos - newPos;
+            } else {
+                // Patch vertices
+                newPoss[tgtId] = newPos;
+                offsets[tgtId] = Vec3(0.0);
+            }
+        }
+
+        // Smooth offsets
+        for (int lapIters = 0; lapIters < 1000; lapIters++) {
+            for (int i = 0; i < nTgt; i++) {
+                const int tgtId = tgtIds[i];
+                const Vertex *v = mesh.vertex(tgtId);
+
+                Vec3 offset(0.0);
+                double sumWgt = 0.0;
+                for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                    const double weight = it->cotWeight();
+                    offset += weight * offsets[it->dst()->index()];
+                    sumWgt += weight;
+                }
+                offsets[tgtId] = offset / sumWgt;
+            }
+        }
+
+        // Update
+        const double invQ = 1.0 / 10.0;
+        for (int i = 0; i < nTgt; i++) {
+            const int tgtId = tgtIds[i];
+            Vertex *v = mesh.vertex(tgtId);
+
+            const Vec3 orgPos = v->pos();
+            const Vec3 newPos = orgPos + invQ * (newPoss[tgtId] + offsets[tgtId] - orgPos);
+            v->setPos(newPos);
             std::cout << "org: " << orgPos << std::endl;
             std::cout << "new: " << newPos << std::endl;
         }

@@ -63,6 +63,8 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors = fal
  * Compute feature line field [Leifman and Tal 2012]
  */
 TINYMESH_API EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors = false);
+TINYMESH_API std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &mesh,
+                                                                               bool smoothTensors = false);
 
 }  // namespace tinymesh
 
