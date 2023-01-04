@@ -7,6 +7,8 @@
 #include <queue>
 #include <unordered_set>
 
+#include <Eigen/SparseCholesky>
+
 #include "utils.h"
 #include "eigen.h"
 #include "vertex.h"
@@ -611,9 +613,10 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
     }
 
     // Compute rotated gradients
-    std::unordered_map<Vertex *, std::vector<Vec3>> rotGrads;
+    std::unordered_map<Vertex *, Vec3> rotGrads;
     for (Vertex *v : insideVerts) {
-        std::vector<Vec3> grads;
+        Vec3 sumGrad(0.0);
+        int count = 0;
         for (auto it = v->he_begin(); it != v->he_end(); ++it) {
             Assertion(it->next()->next()->next() == it.ptr(), "Non-triangle face is detected!");
             Vertex *v0 = it->src();
@@ -634,32 +637,80 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             // proportional to the edge length.
             // const double A = 0.5 * length(cross(p1 - p0, p2 - p0));
             const Vec3 grad = (Vec3)(rotations[it->face()] * (EigenVector3)e12_rot90) / 2.0;
-            grads.push_back(grad);
+            sumGrad += grad;
+            count++;
         }
-        rotGrads[v] = grads;
+        rotGrads[v] = sumGrad / (double)count;
     }
 
     // Solve Poisson equation
-    for (int kIter = 0; kIter < 1000; kIter++) {
-        for (Vertex *v : insideVerts) {
-            Vec3 lap(0.0);
-            double sumWgt = 0.0;
-            for (auto it = v->he_begin(); it != v->he_end(); ++it) {
-                const double weight = it->cotWeight();
-                lap += weight * it->dst()->pos();
-                sumWgt += weight;
-            }
-            lap /= sumWgt;
-
-            Vec3 div(0.0);
-            for (Vec3 grad : rotGrads[v]) {
-                div += grad;
-            }
-            div /= v->degree();
-
-            const Vec3 newPos = lap - 0.01 * div;
-            v->setPos(newPos);
+    std::vector<EigenTriplet> tripInner;
+    std::vector<EigenTriplet> tripOuter;
+    std::unordered_map<Vertex *, uint32_t> uniqueInner;
+    std::unordered_map<Vertex *, uint32_t> uniqueOuter;
+    int countInner = 0;
+    int countOuter = 0;
+    for (Vertex *v : insideVerts) {
+        if (uniqueInner.count(v) == 0) {
+            uniqueInner[v] = countInner;
+            countInner++;
         }
+        const int i = uniqueInner[v];
+        double sumWgt = 0.0;
+        for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+            Vertex *u = it->dst();
+            const double weight = it->cotWeight();
+            if (insideVerts.count(u) != 0) {
+                // inner vertex
+                if (uniqueInner.count(u) == 0) {
+                    uniqueInner[u] = countInner;
+                    countInner++;
+                }
+                const int j = uniqueInner[u];
+                tripInner.emplace_back(i, j, -weight);
+            } else {
+                // outer vertex
+                if (uniqueOuter.count(u) == 0) {
+                    uniqueOuter[u] = countOuter;
+                    countOuter++;
+                }
+                const int j = uniqueOuter[u];
+                tripOuter.emplace_back(i, j, -weight);
+            }
+            sumWgt += weight;
+        }
+        tripInner.emplace_back(i, i, sumWgt);
+    }
+
+    EigenMatrix bInner(countInner, 3);
+    bInner.setZero();
+    for (auto it : uniqueInner) {
+        const Vec3 &rg = rotGrads[it.first];
+        bInner.row(it.second) << rg.x(), rg.y(), rg.z();
+    }
+
+    EigenMatrix xOuter(countOuter, 3);
+    xOuter.setZero();
+    for (auto it : uniqueOuter) {
+        const Vec3 &p = it.first->pos();
+        xOuter.row(it.second) << p.x(), p.y(), p.z();
+    }
+
+    EigenSparseMatrix LL(countInner, countInner);
+    LL.setFromTriplets(tripInner.begin(), tripInner.end());
+
+    EigenSparseMatrix SS(countInner, countOuter);
+    SS.setFromTriplets(tripOuter.begin(), tripOuter.end());
+
+    EigenMatrix bb = bInner - SS * xOuter;
+    Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
+    EigenMatrix xx = solver.solve(bb);
+
+    for (auto it : uniqueInner) {
+        Vertex *v = it.first;
+        const uint32_t i = it.second;
+        const Vec3 newPos(xx(i, 0), xx(i, 1), xx(i, 2));
+        v->setPos(newPos);
     }
 }
 
