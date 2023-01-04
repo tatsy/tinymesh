@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include <Eigen/LU>
+#include <Eigen/SparseCholesky>
 
 #include "core/mesh.h"
 #include "core/vertex.h"
@@ -23,8 +24,8 @@ namespace tinymesh {
 
 namespace {
 
-double solveRigidICP(const std::vector<Vertex *> tgtPatch, const std::vector<Vertex *> srcPatch, const EigenMatrix &hks,
-                     EigenMatrix3 &R, EigenVector3 &t) {
+double solveRigidICP(const std::vector<Vertex *> &tgtPatch, const std::vector<Vertex *> &srcPatch,
+                     const EigenMatrix &hks, EigenMatrix3 &R, EigenVector3 &t) {
     const int nTgtSize = (int)tgtPatch.size();
     const int nSrcSize = (int)srcPatch.size();
     EigenMatrix X(nSrcSize, 3);
@@ -90,8 +91,8 @@ double patchDissimilarity(const std::vector<std::vector<Vertex *>> &patches, con
     for (int tgtId : tgtCands) {
         double minDist = 1.0e20;
         for (int srcId : srcCands) {
-            const std::vector<Vertex *> tgtPatch = patches[tgtId];
-            const std::vector<Vertex *> srcPatch = patches[srcId];
+            const std::vector<Vertex *> &tgtPatch = patches[tgtId];
+            const std::vector<Vertex *> &srcPatch = patches[srcId];
             const double dist = solveRigidICP(tgtPatch, srcPatch, hks, R_unused, t_unused);
             if (dist < minDist) {
                 minDist = dist;
@@ -174,6 +175,16 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
     const int nSrc = (int)srcIds.size();
     const int nTgt = (int)tgtIds.size();
 
+    // Inverse table to source/target IDs
+    std::unordered_map<int, int> src2glbIds;
+    for (int i = 0; i < nSrc; i++) {
+        src2glbIds[srcIds[i]] = i;
+    }
+    std::unordered_map<int, int> tgt2glbIds;
+    for (int i = 0; i < nTgt; i++) {
+        tgt2glbIds[tgtIds[i]] = i;
+    }
+
     // Vertex to patch table
     std::vector<std::vector<Vertex *>> patchVerts(N);
     std::vector<std::unordered_set<int>> patchVertSets(N);
@@ -210,12 +221,12 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         for (auto v : patchVerts[i]) {
             const EigenVector f = hks.row(v->index());
             hksMean += f;
-            hksSigma += f * f;
+            hksSigma += f.cwiseProduct(f);
         }
 
         hksMean /= (double)N;
         hksSigma /= (double)N;
-        hksSigma = (hksSigma - hksMean * hksMean).array().max(0.0);
+        hksSigma = (hksSigma - hksMean.cwiseProduct(hksMean)).array().max(0.0);
         hksSigma = hksSigma.cwiseSqrt();
 
         hksMean /= hksMean.maxCoeff();
@@ -265,7 +276,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         std::vector<EigenMatrix3> rotations(nTgt);
         std::vector<EigenVector3> translations(nTgt);
         std::unordered_map<int, double> dissimilarities(nTgt);
-        for (int i = 0; i < nTgt; i++) {
+        omp_parallel_for(int i = 0; i < nTgt; i++) {
             const std::vector<Vertex *> tgtPatch = patchVerts[tgtIds[i]];
             const std::vector<Vertex *> srcPatch = patchVerts[pairIds[i]];
             solveRigidICP(tgtPatch, srcPatch, hks, rotations[i], translations[i]);
@@ -356,22 +367,73 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             }
         }
 
-        // Smooth offsets
-        for (int lapIters = 0; lapIters < 1000; lapIters++) {
-            for (int i = 0; i < nTgt; i++) {
-                const int tgtId = tgtIds[i];
-                const Vertex *v = mesh.vertex(tgtId);
+        // Smooth offsets by Laplacian
+        std::vector<EigenTriplet> tripTgt;
+        std::vector<EigenTriplet> tripSrc;
+        std::unordered_map<uint32_t, uint32_t> uniqueBoundary;
+        int countBoundary = 0;
 
-                Vec3 offset(0.0);
-                double sumWgt = 0.0;
-                for (auto it = v->he_begin(); it != v->he_end(); ++it) {
-                    const double weight = it->cotWeight();
-                    offset += weight * offsets[it->dst()->index()];
-                    sumWgt += weight;
+        for (int i = 0; i < nTgt; i++) {
+            const int tgtId = tgtIds[i];
+            const Vertex *v = mesh.vertex(tgtId);
+
+            double sumWgt = 0.0;
+            for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                Vertex *u = it->dst();
+                const double weight = it->cotWeight();
+                if (u->isLocked()) {
+                    // source
+                    if (uniqueBoundary.count(u->index()) == 0) {
+                        uniqueBoundary[u->index()] = countBoundary;
+                        countBoundary++;
+                    }
+                    const int j = uniqueBoundary[u->index()];
+                    tripSrc.emplace_back(i, j, -weight);
+                } else {
+                    // target
+                    const int j = tgt2glbIds[u->index()];
+                    tripTgt.emplace_back(i, j, -weight);
                 }
-                offsets[tgtId] = offset / sumWgt;
+                sumWgt += weight;
             }
+            tripTgt.emplace_back(i, i, sumWgt);
         }
+
+        EigenSparseMatrix LL(nTgt, nTgt);
+        LL.setFromTriplets(tripTgt.begin(), tripTgt.end());
+        EigenSparseMatrix SS(nTgt, countBoundary);
+        SS.setFromTriplets(tripSrc.begin(), tripSrc.end());
+
+        EigenMatrix xxSrc(countBoundary, 3);
+        xxSrc.setZero();
+        for (auto it : uniqueBoundary) {
+            const Vec3 &v = offsets[it.first];
+            xxSrc.row(it.second) << v.x(), v.y(), v.z();
+        }
+
+        EigenMatrix bb = -SS * xxSrc;
+        Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
+        EigenMatrix xx = solver.solve(bb);
+
+        for (int i = 0; i < nTgt; i++) {
+            offsets[tgtIds[i]] = Vec3(xx(i, 0), xx(i, 1), xx(i, 2));
+        }
+
+        // for (int lapIters = 0; lapIters < 1000; lapIters++) {
+        //     for (int i = 0; i < nTgt; i++) {
+        //         const int tgtId = tgtIds[i];
+        //         const Vertex *v = mesh.vertex(tgtId);
+
+        //         Vec3 offset(0.0);
+        //         double sumWgt = 0.0;
+        //         for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+        //             const double weight = it->cotWeight();
+        //             offset += weight * offsets[it->dst()->index()];
+        //             sumWgt += weight;
+        //         }
+        //         offsets[tgtId] = offset / sumWgt;
+        //     }
+        // }
 
         // Update
         const double invQ = 1.0 / 10.0;
