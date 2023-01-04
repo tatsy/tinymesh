@@ -3,6 +3,7 @@
 
 #include <Eigen/Eigenvalues>
 #include <Eigen/Cholesky>
+#include <Eigen/SparseCholesky>
 #include <Spectra/SymEigsSolver.h>
 #include <Spectra/MatOp/DenseSymMatProd.h>
 #include <Spectra/MatOp/SparseSymMatProd.h>
@@ -226,7 +227,7 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
 
         EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(3, 3);
         EigenVector Ab = A.transpose() * b;
-        EigenVector3 efg = AA.llt().solve(Ab);
+        EigenVector3 efg = AA.ldlt().solve(Ab);
 
         EigenMatrix2 M;
         M << efg(0), efg(1), efg(1), efg(2);
@@ -692,29 +693,80 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
     }
 
     // Solve Laplace equation
-    for (int kIter = 0; kIter < 2000; kIter++) {
-        for (size_t i = 0; i < mesh.numVertices(); i++) {
-            const Vertex *v = mesh.vertex(i);
-            if (ridgeValleyFlags(i) == 0.0) {
-                Vec3 dd(0.0);
-                double sumWgt = 0.0;
-                for (auto it = v->he_begin(); it != v->he_end(); ++it) {
-                    const double weight = it->cotWeight();
-                    dd += weight * rvDirections[it->dst()->index()];
-                    sumWgt += weight;
-                }
-                rvDirections[i] = 0.5 * rvDirections[i] + 0.5 * dd / sumWgt;
-                if (length(rvDirections[i]) > 1.0e-8) {
-                    rvDirections[i] = normalize(rvDirections[i]);
-                }
+    std::vector<EigenTriplet> tripNonRV;
+    std::vector<EigenTriplet> tripRV;
+    std::unordered_map<uint32_t, uint32_t> uniqueNonRV;
+    std::unordered_map<uint32_t, uint32_t> uniqueRV;
+    int countNonRV = 0;
+    int countRV = 0;
+    for (size_t i = 0; i < mesh.numVertices(); i++) {
+        const Vertex *v = mesh.vertex(i);
+        if (ridgeValleyFlags(i) == 0.0) {
+            // non-ridge-valley vertex
+            if (uniqueNonRV.count(i) == 0) {
+                uniqueNonRV[i] = countNonRV;
+                countNonRV++;
             }
+            const int row = uniqueNonRV[i];
+            double sumWgt = 0.0;
+            for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                Vertex *u = it->dst();
+                const double weight = it->cotWeight();
+                if (ridgeValleyFlags(u->index()) != 0.0) {
+                    // ridge-valley vertex
+                    if (uniqueRV.count(u->index()) == 0) {
+                        uniqueRV[u->index()] = countRV;
+                        countRV++;
+                    }
+                    const int col = uniqueRV[u->index()];
+                    tripRV.emplace_back(row, col, -weight);
+                } else {
+                    // non-ridge-valley vertex
+                    if (uniqueNonRV.count(u->index()) == 0) {
+                        uniqueNonRV[u->index()] = countNonRV;
+                        countNonRV++;
+                    }
+                    const int col = uniqueNonRV[u->index()];
+                    tripNonRV.emplace_back(row, col, -weight);
+                }
+                sumWgt += weight;
+            }
+            tripNonRV.emplace_back(row, row, sumWgt);
         }
+    }
+
+    EigenSparseMatrix LL(countNonRV, countNonRV);
+    LL.setFromTriplets(tripNonRV.begin(), tripNonRV.end());
+    EigenSparseMatrix SS(countNonRV, countRV);
+    SS.setFromTriplets(tripRV.begin(), tripRV.end());
+
+    EigenMatrix bbNonRV(countNonRV, 3);
+    bbNonRV.setZero();
+    for (auto it : uniqueNonRV) {
+        const Vec3 &v = rvDirections[it.first];
+        bbNonRV.row(it.second) << v.x(), v.y(), v.z();
+    }
+
+    EigenMatrix xxRV(countRV, 3);
+    xxRV.setZero();
+    for (auto it : uniqueRV) {
+        const Vec3 &v = rvDirections[it.first];
+        xxRV.row(it.second) << v.x(), v.y(), v.z();
+    }
+
+    EigenMatrix bb = -SS * xxRV;
+    Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
+    EigenMatrix xx = solver.solve(bb);
+
+    for (auto it : uniqueNonRV) {
+        const int i = it.second;
+        rvDirections[it.first] = normalize(Vec3(xx(i, 0), xx(i, 1), xx(i, 2)));
     }
 
     // Convert std::vector to EigenMatrix
     EigenMatrix ret(mesh.numVertices(), 3);
     for (size_t i = 0; i < mesh.numVertices(); i++) {
-        Vec3 d = rvDirections[i];
+        const Vec3 &d = rvDirections[i];
         ret.row(i) << d.x(), d.y(), d.z();
     }
     return std::make_tuple(ret, ridgeValleyFlags);

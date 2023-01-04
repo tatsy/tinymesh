@@ -669,18 +669,18 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
         tripInner.emplace_back(i, i, sumWgt);
     }
 
-    EigenMatrix bInner(countInner, 3);
-    bInner.setZero();
+    EigenMatrix bbInner(countInner, 3);
+    bbInner.setZero();
     for (auto it : uniqueInner) {
         const Vec3 &rg = rotGrads[it.first];
-        bInner.row(it.second) << rg.x(), rg.y(), rg.z();
+        bbInner.row(it.second) << rg.x(), rg.y(), rg.z();
     }
 
-    EigenMatrix xOuter(countOuter, 3);
-    xOuter.setZero();
+    EigenMatrix xxOuter(countOuter, 3);
+    xxOuter.setZero();
     for (auto it : uniqueOuter) {
         const Vec3 &p = it.first->pos();
-        xOuter.row(it.second) << p.x(), p.y(), p.z();
+        xxOuter.row(it.second) << p.x(), p.y(), p.z();
     }
 
     EigenSparseMatrix LL(countInner, countInner);
@@ -689,7 +689,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
     EigenSparseMatrix SS(countInner, countOuter);
     SS.setFromTriplets(tripOuter.begin(), tripOuter.end());
 
-    EigenMatrix bb = bInner - SS * xOuter;
+    EigenMatrix bb = bbInner - SS * xxOuter;
     Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
     EigenMatrix xx = solver.solve(bb);
 
