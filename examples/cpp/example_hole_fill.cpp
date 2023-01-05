@@ -48,12 +48,12 @@ int main(int argc, char **argv) {
 
     // Context-based coherent surface completion [Harary and Tal 2016]
     {
-        // tms::Mesh mesh(argv[1]);
-        // tms::holeFillContextCoherent(mesh);
+        tms::Mesh mesh(argv[1]);
+        tms::holeFillContextCoherent(mesh);
 
-        // const std::string outfile =
-        //     (dirpath / fs::path((basename + "_fill_context_coherent" + extension).c_str())).string();
-        // mesh.save(outfile);
-        // printf("Save: %s\n", outfile.c_str());
+        const std::string outfile =
+            (dirpath / fs::path((basename + "_fill_context_coherent" + extension).c_str())).string();
+        mesh.save(outfile);
+        printf("Save: %s\n", outfile.c_str());
     }
 }
