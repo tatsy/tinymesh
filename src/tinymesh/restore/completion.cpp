@@ -82,26 +82,21 @@ double solveRigidICP(const std::vector<Vertex *> &tgtPatch, const std::vector<Ve
     return error;
 }
 
-double patchDissimilarity(const std::vector<std::vector<Vertex *>> &patches, const EigenMatrix &hks,
-                          const std::vector<int> tgtCands, const std::vector<int> &srcCands) {
-    const int nCands = tgtCands.size();
-    double dissim = 0.0;
-    EigenMatrix3 R_unused;
-    EigenVector3 t_unused;
-    for (int tgtId : tgtCands) {
-        double minDist = 1.0e20;
-        for (int srcId : srcCands) {
-            const std::vector<Vertex *> &tgtPatch = patches[tgtId];
-            const std::vector<Vertex *> &srcPatch = patches[srcId];
-            const double dist = solveRigidICP(tgtPatch, srcPatch, hks, R_unused, t_unused);
-            if (dist < minDist) {
-                minDist = dist;
-            }
-        }
-        dissim += minDist / (double)nCands;
-    }
-    return dissim;
-}
+// double patchDissimilarity(const std::vector<std::vector<Vertex *>> &patches, const EigenMatrix &hks,
+//                           const std::vector<int> &candsForTgt, int tgtId) {
+//     EigenMatrix3 R_unused;
+//     EigenVector3 t_unused;
+//     double minDist = 1.0e20;
+//     for (int srcId : candsForTgt) {
+//         const std::vector<Vertex *> &tgtPatch = patches[tgtId];
+//         const std::vector<Vertex *> &srcPatch = patches[srcId];
+//         const double dist = solveRigidICP(tgtPatch, srcPatch, hks, R_unused, t_unused);
+//         if (dist < minDist) {
+//             minDist = dist;
+//         }
+//     }
+//     return minDist;
+// }
 
 }  // namespace
 
@@ -210,7 +205,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         }
     }
 
-    // Compute patch descriptors
+    // 4. Compute patch descriptors
     std::vector<EigenVector> descriptors(N);
     for (int i = 0; i < N; i++) {
         EigenVector hksMean(hks.cols());
@@ -236,19 +231,21 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         descriptors[i] << hksMean, hksSigma;
     }
 
-    // 4. Collect candidate patches
-    const int nCands = std::max(5, (int)(0.001 * N));
-    std::vector<std::vector<int>> candidates(N, std::vector<int>(nCands, 0));
-    for (int i = 0; i < N; i++) {
+    // 5. Collect candidate patches
+    const int nCands = std::max(10, (int)(0.001 * nSrc));
+    std::vector<std::vector<int>> candidates(nTgt, std::vector<int>(nCands, 0));
+    for (int i = 0; i < nTgt; i++) {
         std::vector<std::pair<double, int>> dists;
-        for (int j = 0; j < N; j++) {
-            const double d = (descriptors[i] - descriptors[j]).norm();
-            dists.emplace_back(d, j);
+        for (int j = 0; j < nSrc; j++) {
+            const int tgtId = tgtIds[i];
+            const int srcId = srcIds[j];
+            const double d = (descriptors[tgtId] - descriptors[srcId]).squaredNorm();
+            dists.emplace_back(d, srcId);
         }
 
         std::sort(dists.begin(), dists.end());
         for (int j = 0; j < nCands; j++) {
-            candidates[i][j] = dists[j + 1].second;
+            candidates[i][j] = dists[j].second;
         }
     }
 
@@ -256,33 +253,36 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         printf("iter = %d\n", kIter);
 
         // 5. Compute most similar patch for each target patch
+        std::vector<EigenMatrix3> rotations(nTgt);
+        std::vector<EigenVector3> translations(nTgt);
         std::vector<int> pairIds(nTgt, 0);
-        omp_parallel_for(int i = 0; i < nTgt; i++) {
+        for (int i = 0; i < nTgt; i++) {
+            const int tgtId = tgtIds[i];
+            EigenMatrix3 R;
+            EigenVector3 t;
             double minEps = 1.0e20;
             int minId = -1;
-            for (int j = 0; j < nSrc; j++) {
-                const int tgtId = tgtIds[i];
-                const int srcId = srcIds[j];
-                const double eps = patchDissimilarity(patchVerts, hks, candidates[tgtId], candidates[srcId]);
+            for (int srcId : candidates[i]) {
+                const std::vector<Vertex *> &tgtPatch = patchVerts[tgtId];
+                const std::vector<Vertex *> &srcPatch = patchVerts[srcId];
+                const double eps = solveRigidICP(tgtPatch, srcPatch, hks, R, t);
                 if (eps < minEps) {
                     minEps = eps;
                     minId = srcId;
+                    rotations[i] = R;
+                    translations[i] = t;
                 }
             }
             pairIds[i] = minId;
         }
 
-        // 6. Compute rigid registration
-        std::vector<EigenMatrix3> rotations(nTgt);
-        std::vector<EigenVector3> translations(nTgt);
-        std::unordered_map<int, double> dissimilarities(nTgt);
-        omp_parallel_for(int i = 0; i < nTgt; i++) {
-            const std::vector<Vertex *> tgtPatch = patchVerts[tgtIds[i]];
-            const std::vector<Vertex *> srcPatch = patchVerts[pairIds[i]];
-            solveRigidICP(tgtPatch, srcPatch, hks, rotations[i], translations[i]);
-
+        // 6. Compute patch dissimilarities
+        std::unordered_map<int, double> dissimilarities;
+        for (int i = 0; i < nTgt; i++) {
             double dissim = 0.0;
             double sumWgt = 0.0;
+            const std::vector<Vertex *> &tgtPatch = patchVerts[tgtIds[i]];
+            const std::vector<Vertex *> &srcPatch = patchVerts[pairIds[i]];
             for (Vertex *vt : tgtPatch) {
                 Vertex *closest = nullptr;
                 double minDist = 1.0e20;
@@ -334,7 +334,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             patchBVHs[tgtIds[i]] = BVH(vertices, indices);
         }
 
-        // Update vertex positions
+        // 7. Update vertex positions
         std::unordered_map<int, Vec3> newPoss;
         std::unordered_map<int, Vec3> offsets;
         for (auto it : tgtPatchAssign) {
@@ -350,7 +350,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 const BVH &bvh = patchBVHs[k];
                 const Vec3 closest = bvh.closestPoint(orgPos);
                 const double dissim = dissimilarities[k];
-                const double weight = 1.0 / (std::pow(dissim, 5.0) + 1.0e-12);
+                const double weight = 1.0;  // / (std::pow(dissim, 5.0) + 1.0e-12);
                 newPos += weight * closest;
                 sumWgt += weight;
             }
@@ -418,22 +418,6 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         for (int i = 0; i < nTgt; i++) {
             offsets[tgtIds[i]] = Vec3(xx(i, 0), xx(i, 1), xx(i, 2));
         }
-
-        // for (int lapIters = 0; lapIters < 1000; lapIters++) {
-        //     for (int i = 0; i < nTgt; i++) {
-        //         const int tgtId = tgtIds[i];
-        //         const Vertex *v = mesh.vertex(tgtId);
-
-        //         Vec3 offset(0.0);
-        //         double sumWgt = 0.0;
-        //         for (auto it = v->he_begin(); it != v->he_end(); ++it) {
-        //             const double weight = it->cotWeight();
-        //             offset += weight * offsets[it->dst()->index()];
-        //             sumWgt += weight;
-        //         }
-        //         offsets[tgtId] = offset / sumWgt;
-        //     }
-        // }
 
         // Update
         const double invQ = 1.0 / 10.0;
