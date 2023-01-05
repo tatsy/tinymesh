@@ -108,6 +108,8 @@ PYBIND11_MODULE(tinymesh, m) {
           "Principal curvatures with derivatives", py::arg("mesh"), py::arg("smooth_tensors") = false);
     m.def("get_feature_line_field", &getFeatureLineField, "Feature line field", py::arg("mesh"),
           py::arg("smooth_tensors") = false);
+    m.def("get_feature_line_field_with_flags", getFeatureLineFieldWithFlags,
+          "Feature line field with ridge/valley flags", py::arg("mesh"), py::arg("smooth_tensors") = false);
 
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,

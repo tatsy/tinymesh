@@ -82,22 +82,6 @@ double solveRigidICP(const std::vector<Vertex *> &tgtPatch, const std::vector<Ve
     return error;
 }
 
-// double patchDissimilarity(const std::vector<std::vector<Vertex *>> &patches, const EigenMatrix &hks,
-//                           const std::vector<int> &candsForTgt, int tgtId) {
-//     EigenMatrix3 R_unused;
-//     EigenVector3 t_unused;
-//     double minDist = 1.0e20;
-//     for (int srcId : candsForTgt) {
-//         const std::vector<Vertex *> &tgtPatch = patches[tgtId];
-//         const std::vector<Vertex *> &srcPatch = patches[srcId];
-//         const double dist = solveRigidICP(tgtPatch, srcPatch, hks, R_unused, t_unused);
-//         if (dist < minDist) {
-//             minDist = dist;
-//         }
-//     }
-//     return minDist;
-// }
-
 }  // namespace
 
 void holeFillMinDihedral(Mesh &mesh, Face *face, double dihedralBound) {
@@ -122,7 +106,6 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             holeFillAdvancingFront(mesh, f);
         }
     }
-    mesh.save("1_initial_hole_fill.ply");
 
     // 2. Compute HKS and feature line fields
     const EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
@@ -276,6 +259,21 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             pairIds[i] = minId;
         }
 
+        // for (int i = 0; i < nTgt; i++) {
+        //     const std::vector<Vertex *> &verts = patchVerts[pairIds[i]];
+        //     char filename[256];
+        //     sprintf(filename, "patch_%03d.off", i);
+        //     std::ofstream writer(filename, std::ios::out);
+        //     writer << "OFF\n";
+        //     writer << verts.size() << " 0 0\n";
+        //     for (Vertex *v : verts) {
+        //         const Vec3 p0 = v->pos();
+        //         const Vec3 p1 = (Vec3)(rotations[i] * p0) + (Vec3)translations[i];
+        //         writer << p1.x() << " " << p1.y() << " " << p1.z() << "\n";
+        //     }
+        //     writer.close();
+        // }
+
         // 6. Compute patch dissimilarities
         std::unordered_map<int, double> dissimilarities;
         for (int i = 0; i < nTgt; i++) {
@@ -306,7 +304,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 if (rvFlags(closest->index()) != 0.0) {
                     w = (double)tgtPatch.size();
                 }
-                double l = length(ft - (Vec3)(rotations[i] * fs));
+                const double l = length(ft - (Vec3)(rotations[i] * fs));
                 dissim += w * l * l;
                 sumWgt += w;
             }
