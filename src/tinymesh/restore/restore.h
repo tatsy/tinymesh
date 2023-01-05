@@ -28,7 +28,7 @@ TINYMESH_API void holeFillAdvancingFront(Mesh &mesh, Face *face);
 /**
  * Context-based Coherent Surface Completion [Harary et al. 2016]
  */
-TINYMESH_API void holeFillContextCoherent(Mesh &mesh, int patchRadius = 2, int maxiters = 10);
+TINYMESH_API void holeFillContextCoherent(Mesh &mesh, int patchRadius = 2, int maxiters = 30);
 
 }  // namespace tinymesh
 
