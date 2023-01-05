@@ -196,8 +196,8 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
         const Vec3 n1 = smoothNorms[v1->index()];
         const Vec3 n2 = smoothNorms[v2->index()];
 
-        const Vec3 uf = normalize(p1 - p0);
-        const Vec3 nf = normalize(cross(uf, p2 - p0));
+        const Vec3 uf = normalize(e0);
+        const Vec3 nf = normalize(cross(e0, e1));
         const Vec3 vf = normalize(cross(nf, uf));
 
         EigenMatrix A(6, 3);
@@ -243,10 +243,9 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
         Vertex *vertex = mesh.vertex(i);
         const Vec3 np = vertex->normal();
         Vec3 up, vp;
-        if (std::abs(np.x()) > 0.1) {
-            up = normalize(cross(np, Vec3(0.0, 1.0, 0.0)));
-        } else {
-            up = normalize(cross(np, Vec3(1.0, 0.0, 0.0)));
+        for (auto it = vertex->v_begin(); it != vertex->v_end(); ++it) {
+            up = normalize(it->pos() - vertex->pos());
+            break;
         }
         vp = normalize(cross(np, up));
 
@@ -346,114 +345,87 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
         Vertex *v0 = vertices[0];
         Vertex *v1 = vertices[1];
         Vertex *v2 = vertices[2];
-        const Vec3 p0 = v0->pos();
-        const Vec3 p1 = v1->pos();
-        const Vec3 p2 = v2->pos();
-        const Vec3 e0 = p2 - p1;
-        const Vec3 e1 = p0 - p2;
-        const Vec3 e2 = p1 - p0;
-        const Vec3 n0 = v0->normal();
-        const Vec3 n1 = v1->normal();
-        const Vec3 n2 = v2->normal();
+        std::array<Vec3, 3> ps = {
+            ps[0] = v0->pos(),
+            ps[1] = v1->pos(),
+            ps[2] = v2->pos(),
+        };
+        std::array<Vec3, 3> ns = {
+            v0->normal(),
+            v1->normal(),
+            v2->normal(),
+        };
+        std::array<Vec3, 3> es = {
+            es[0] = ps[2] - ps[1],
+            es[1] = ps[0] - ps[2],
+            es[2] = ps[1] - ps[0],
+        };
+        std::array<LocalFrame, 3> vfrms = {
+            frames[v0->index()],
+            frames[v1->index()],
+            frames[v2->index()],
+        };
+        std::array<EigenMatrix2, 3> Mps = {
+            tensors[v0->index()],
+            tensors[v1->index()],
+            tensors[v2->index()],
+        };
 
-        const Vec3 uf = normalize(p1 - p0);
-        const Vec3 nf = normalize(cross(uf, p2 - p0));
+        const Vec3 uf = normalize(es[0]);
+        const Vec3 nf = normalize(cross(es[0], es[1]));
         const Vec3 vf = normalize(cross(nf, uf));
 
-        const EigenMatrix3 R0 = rotationFromTwoVectors(nf, n0);
-        const EigenMatrix3 R1 = rotationFromTwoVectors(nf, n1);
-        const EigenMatrix3 R2 = rotationFromTwoVectors(nf, n2);
+        auto second_form = [](const EigenMatrix2 &M, const EigenVector2 &u, const EigenVector2 &v) -> double {
+            return ((u.transpose() * M) * v).value();
+        };
 
-        const double dot_e0_uf = dot(e0, uf);
-        const double dot_e0_vf = dot(e0, vf);
-        const double dot_e1_uf = dot(e1, uf);
-        const double dot_e1_vf = dot(e1, vf);
-        const double dot_e2_uf = dot(e2, uf);
-        const double dot_e2_vf = dot(e2, vf);
+        std::array<EigenMatrix2, 3> Mfs;
+        for (int k = 0; k < 3; k++) {
+            const EigenMatrix3 rot = rotationFromTwoVectors(ns[k], nf);
+            const Vec3 up = std::get<0>(vfrms[k]);
+            const Vec3 vp = std::get<1>(vfrms[k]);
 
-        LocalFrame F0 = frames[v0->index()];
-        LocalFrame F1 = frames[v1->index()];
-        LocalFrame F2 = frames[v2->index()];
+            EigenVector2 new_uf, new_vf;
+            const Vec3 rot_uf = rot * uf;
+            const Vec3 rot_vf = rot * vf;
+            new_uf << dot(rot_uf, up), dot(rot_uf, vp);
+            new_vf << dot(rot_vf, up), dot(rot_vf, vp);
 
-        const Vec3 up0 = std::get<0>(F0);
-        const Vec3 vp0 = std::get<1>(F0);
-        const Vec3 up1 = std::get<0>(F1);
-        const Vec3 vp1 = std::get<1>(F1);
-        const Vec3 up2 = std::get<0>(F2);
-        const Vec3 vp2 = std::get<1>(F2);
+            const EigenMatrix2 &M = Mps[k];
+            Mfs[k] << second_form(M, new_uf, new_uf),  //
+                second_form(M, new_uf, new_vf),        //
+                second_form(M, new_vf, new_uf),        //
+                second_form(M, new_vf, new_vf);
+        }
 
-        EigenVector2 uf_v0, vf_v0;
-        const Vec3 rot0_uf = R0 * uf;
-        const Vec3 rot0_vf = R0 * vf;
-        uf_v0 << dot(rot0_uf, up0), dot(rot0_uf, vp0);
-        vf_v0 << dot(rot0_vf, up0), dot(rot0_vf, vp0);
-        EigenVector2 uf_v1, vf_v1;
-        const Vec3 rot1_uf = R1 * uf;
-        const Vec3 rot1_vf = R1 * vf;
-        uf_v1 << dot(rot1_uf, up1), dot(rot1_uf, vp1);
-        vf_v1 << dot(rot1_vf, up1), dot(rot1_vf, vp1);
-        EigenVector2 uf_v2, vf_v2;
-        const Vec3 rot2_uf = R2 * uf;
-        const Vec3 rot2_vf = R2 * vf;
-        uf_v2 << dot(rot2_uf, up2), dot(rot2_uf, vp2);
-        vf_v2 << dot(rot2_vf, up2), dot(rot2_vf, vp2);
+        std::array<EigenMatrix, 3> As;
+        std::array<EigenVector, 3> bs;
+        for (int k = 0; k < 3; k++) {
+            const double dot_e_u = dot(es[k], uf);
+            const double dot_e_v = dot(es[k], vf);
 
-        const EigenMatrix2 M0 = tensors[v0->index()];
-        const EigenMatrix2 M1 = tensors[v1->index()];
-        const EigenMatrix2 M2 = tensors[v2->index()];
+            As[k] = EigenMatrix::Zero(4, 4);
+            As[k].row(0) << dot_e_u, dot_e_v, 0.0, 0.0;
+            As[k].row(1) << 0.0, dot_e_u, dot_e_v, 0.0;
+            As[k].row(2) << 0.0, dot_e_u, dot_e_v, 0.0;
+            As[k].row(3) << 0.0, 0.0, dot_e_u, dot_e_v;
 
-        EigenMatrix2 M0_f;
-        M0_f << (uf_v0.transpose() * (M0 * uf_v0)).value(),  //
-            (uf_v0.transpose() * (M0 * vf_v0)).value(),      //
-            (vf_v0.transpose() * (M0 * uf_v0)).value(),      //
-            (vf_v0.transpose() * (M0 * vf_v0)).value();
-        EigenMatrix2 M1_f;
-        M1_f << (uf_v1.transpose() * (M1 * uf_v1)).value(),  //
-            (uf_v1.transpose() * (M1 * vf_v1)).value(),      //
-            (vf_v1.transpose() * (M1 * uf_v1)).value(),      //
-            (vf_v1.transpose() * (M1 * vf_v1)).value();
-        EigenMatrix2 M2_f;
-        M2_f << (uf_v2.transpose() * (M2 * uf_v2)).value(),  //
-            (uf_v2.transpose() * (M2 * vf_v2)).value(),      //
-            (vf_v2.transpose() * (M2 * uf_v2)).value(),      //
-            (vf_v2.transpose() * (M2 * vf_v2)).value();
-
-        EigenVector2 uf_2d, vf_2d;
-        uf_2d << 1.0, 0.0;
-        vf_2d << 0.0, 1.0;
-
-        EigenMatrix A0 = EigenMatrix::Zero(4, 4);
-        EigenVector b0 = EigenVector::Zero(4);
-        A0.row(0) << dot_e0_uf, dot_e0_vf, 0.0, 0.0;
-        A0.row(1) << 0.0, dot_e0_uf, dot_e0_vf, 0.0;
-        A0.row(2) << 0.0, dot_e0_uf, dot_e0_vf, 0.0;
-        A0.row(3) << 0.0, 0.0, dot_e0_uf, dot_e0_vf;
-        b0 << ((M2_f - M1_f) * uf_2d), ((M2_f - M1_f) * vf_2d);
-
-        EigenMatrix A1 = EigenMatrix::Zero(4, 4);
-        EigenVector b1 = EigenVector::Zero(4);
-        A1.row(0) << dot_e1_uf, dot_e1_vf, 0.0, 0.0;
-        A1.row(1) << 0.0, dot_e1_uf, dot_e1_vf, 0.0;
-        A1.row(2) << 0.0, dot_e1_uf, dot_e1_vf, 0.0;
-        A1.row(3) << 0.0, 0.0, dot_e1_uf, dot_e1_vf;
-        b1 << ((M0_f - M2_f) * uf_2d), ((M0_f - M2_f) * vf_2d);
-
-        EigenMatrix A2 = EigenMatrix::Zero(4, 4);
-        EigenVector b2 = EigenVector::Zero(4);
-        A2.row(0) << dot_e2_uf, dot_e2_vf, 0.0, 0.0;
-        A2.row(1) << 0.0, dot_e2_uf, dot_e2_vf, 0.0;
-        A2.row(2) << 0.0, dot_e2_uf, dot_e2_vf, 0.0;
-        A2.row(3) << 0.0, 0.0, dot_e2_uf, dot_e2_vf;
-        b2 << ((M1_f - M0_f) * uf_2d), ((M1_f - M0_f) * vf_2d);
+            const int kp = (k - 1 + 3) % 3;
+            const int kn = (k + 1) % 3;
+            const EigenMatrix2 dMf = Mfs[kp] - Mfs[kn];
+            bs[k] = EigenVector::Zero(4);
+            bs[k] << dMf(0, 0), dMf(0, 1), dMf(1, 0), dMf(1, 1);
+        }
 
         EigenMatrix A(12, 4);
         EigenVector b(12);
-        A << A0, A1, A2;
-        b << b0, b1, b2;
+        A << As[0], As[1], As[2];
+        b << bs[0], bs[1], bs[2];
 
         EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(4, 4);
         EigenVector Ab = A.transpose() * b;
-        EigenVector4 abcd = AA.llt().solve(Ab);
+        EigenVector4 abcd = AA.ldlt().solve(Ab);
+        std::cout << abcd << std::endl;
 
         faceTensors.push_back(abcd);
         faceFrames.emplace_back(uf, vf, nf);
