@@ -24,8 +24,8 @@ namespace tinymesh {
 
 namespace {
 
-double solveRigidICP(const std::vector<Vertex *> tgtPatch, const std::vector<Vertex *> srcPatch, const EigenMatrix &hks,
-                     EigenMatrix3 &R, EigenVector3 &t) {
+double solveRigidICP(const std::vector<Vertex *> &tgtPatch, const std::vector<Vertex *> &srcPatch,
+                     const EigenMatrix &hks, EigenMatrix3 &R, EigenVector3 &t) {
     const int nTgtSize = (int)tgtPatch.size();
     const int nSrcSize = (int)srcPatch.size();
     EigenMatrix X(nSrcSize, 3);
@@ -91,8 +91,8 @@ double patchDissimilarity(const std::vector<std::vector<Vertex *>> &patches, con
     for (int tgtId : tgtCands) {
         double minDist = 1.0e20;
         for (int srcId : srcCands) {
-            const std::vector<Vertex *> tgtPatch = patches[tgtId];
-            const std::vector<Vertex *> srcPatch = patches[srcId];
+            const std::vector<Vertex *> &tgtPatch = patches[tgtId];
+            const std::vector<Vertex *> &srcPatch = patches[srcId];
             const double dist = solveRigidICP(tgtPatch, srcPatch, hks, R_unused, t_unused);
             if (dist < minDist) {
                 minDist = dist;
