@@ -302,6 +302,15 @@ Vec<Float, Dims> normalize(const Vec<Float, Dims> &v) {
 
 // Arithmetics for 3D vectors
 
+//! Angle a-b-c in radian (smaller side)
+template <typename Float, int Dims>
+bool angle(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
+           typename std::enable_if<Dims == 3>::type * = 0) {
+    const Vec3 e0 = a - b;
+    const Vec3 e1 = c - b;
+    return std::atan2(length(cross(e0, e1)), dot(e0, e1));
+}
+
 //! check if the triangle is obtuse
 template <typename Float, int Dims>
 bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,

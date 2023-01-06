@@ -173,6 +173,15 @@ double Mesh::getMeanDihedralAngle() const {
     return mean / (double)visited.size();
 }
 
+double Mesh::getMeanFaceArea() const {
+    double mean = 0.0;
+    for (size_t i = 0; i < faces_.size(); i++) {
+        mean += faces_[i]->area();
+    }
+    mean /= (double)faces_.size();
+    return mean;
+}
+
 void Mesh::construct() {
     for (size_t i = 0; i < indices_.size(); i += 3) {
         if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
@@ -576,11 +585,12 @@ bool Mesh::splitHE(Halfedge *he) {
     auto he2 = rev->next_;
     auto he3 = he2->next_;
 
-    auto f0 = he->face();
-    auto f1 = rev->face();
-    if (f0->isBoundary() || f1->isBoundary()) {
+    if (he->isBoundary()) {
         return false;
     }
+
+    auto f0 = he->face();
+    auto f1 = rev->face();
 
     auto f0_new = new Face();
     auto f1_new = new Face();
@@ -832,6 +842,22 @@ bool Mesh::collapseHE(Halfedge *he) {
     return true;
 }
 
+bool Mesh::collapseFace(Face *f) {
+    std::vector<Halfedge *> hes;
+    for (auto it = f->he_begin(); it != f->he_end(); ++it) {
+        hes.push_back(it.ptr());
+    }
+    Assertion(hes.size() == 3, "Non-triangle face detected!");
+
+    Halfedge *he1 = hes[0];
+    Halfedge *he2 = he1->next_->rev_;
+    if (!collapseHE(he1) || !collapseHE(he2)) {
+        return false;
+    }
+
+    return true;
+}
+
 bool Mesh::flipHE(Halfedge *he) {
     Halfedge *rev = he->rev_;
     if (!rev) {
@@ -999,6 +1025,7 @@ void Mesh::removeVertex(Vertex *v) {
     if (v->index_ < nVerts - 1) {
         std::swap(vertices_[v->index_], vertices_[nVerts - 1]);
         std::swap(vertices_[v->index_]->index_, vertices_[nVerts - 1]->index_);
+        vertices_[nVerts - 1]->index_ = -1;
     }
     vertices_.resize(nVerts - 1);
 }
@@ -1011,6 +1038,7 @@ void Mesh::removeHalfedge(Halfedge *he) {
     if (he->index_ < nHEs - 1) {
         std::swap(halfedges_[he->index_], halfedges_[nHEs - 1]);
         std::swap(halfedges_[he->index_]->index_, halfedges_[nHEs - 1]->index_);
+        halfedges_[nHEs - 1]->index_ = -1;
     }
     halfedges_.resize(nHEs - 1);
 }
@@ -1023,6 +1051,7 @@ void Mesh::removeFace(Face *f) {
     if (f->index_ < nFaces - 1) {
         std::swap(faces_[f->index_], faces_[nFaces - 1]);
         std::swap(faces_[f->index_]->index_, faces_[nFaces - 1]->index_);
+        faces_[nFaces - 1]->index_ = -1;
     }
     faces_.resize(faces_.size() - 1);
 }
