@@ -563,6 +563,10 @@ bool Mesh::splitHE(Halfedge *he) {
         return false;
     }
 
+    if (he->isBoundary() || he->rev_->isBoundary()) {
+        return false;
+    }
+
     // Prepare halfedge / face
     auto he_new = new Halfedge();
     auto he01 = new Halfedge();
@@ -579,10 +583,6 @@ bool Mesh::splitHE(Halfedge *he) {
     auto he1 = he0->next_;
     auto he2 = rev->next_;
     auto he3 = he2->next_;
-
-    if (he->isBoundary()) {
-        return false;
-    }
 
     auto f0 = he->face();
     auto f1 = rev->face();
@@ -878,11 +878,18 @@ bool Mesh::collapseFace(Face *f) {
 
     Halfedge *he1 = hes[0];
     Halfedge *he2 = he1->next_->rev_;
-    if (!collapseHE(he1) || !collapseHE(he2)) {
-        return false;
-    }
+    bool ret = collapseHE(he1);
+    Assertion(he2->index() >= 0 && he2->index() < numHalfedges(), "Error!!");
 
-    return true;
+    ret &= collapseHE(he2);
+
+    return ret;
+
+    // if (!collapseHE(he1) || !collapseHE(he2)) {
+    //     return false;
+    // }
+
+    // return true;
 }
 
 bool Mesh::flipHE(Halfedge *he) {
