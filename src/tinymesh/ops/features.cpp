@@ -128,7 +128,7 @@ void smoothingTensors(std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame
 
 EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTimes) {
     Assertion(K < L.rows(), "Eigenvalues less than matrix size can only be requested!");
-    const int ncv = std::min((int)L.rows(), K * 2);
+    const int ncv = std::min(K * 8, (int)L.rows());
     Spectra::SparseSymMatProd<FloatType> op(L);
     Spectra::SymEigsSolver<Spectra::SparseSymMatProd<FloatType>> eigs(op, K, ncv);
     eigs.init();

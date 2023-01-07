@@ -201,7 +201,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
 
         // 4. Compute patch descriptors
         std::vector<EigenVector> descriptors(N);
-        for (int i = 0; i < N; i++) {
+        omp_parallel_for(int i = 0; i < N; i++) {
             EigenVector hksMean(hksDims);
             EigenVector hksSigma(hksDims);
 
@@ -252,7 +252,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         std::vector<EigenVector3> translations(nTgt);
         std::vector<int> pairIds(nTgt, 0);
         double newError = 0.0;
-        for (int i = 0; i < nTgt; i++) {
+        omp_parallel_for(int i = 0; i < nTgt; i++) {
             const int tgtId = tgtIds[i];
             EigenMatrix3 R;
             EigenVector3 t;
@@ -270,7 +270,8 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 }
             }
             pairIds[i] = minId;
-            newError += minEps;
+
+            omp_atomic(newError += minEps);
         }
 
         // if (std::abs(error - newError) < 1.0e-4) {
@@ -281,7 +282,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
 
         // Compute patch dissimilarities
         std::unordered_map<int, double> dissimilarities;
-        for (int i = 0; i < nTgt; i++) {
+        omp_parallel_for(int i = 0; i < nTgt; i++) {
             double dissim = 0.0;
             double sumWgt = 0.0;
             const std::vector<Vertex *> &tgtPatch = patchVerts[tgtIds[i]];
@@ -313,12 +314,15 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 dissim += w * l * l;
                 sumWgt += w;
             }
-            dissimilarities[tgtIds[i]] = dissim / sumWgt;
+
+            omp_critical {
+                dissimilarities[tgtIds[i]] = dissim / sumWgt;
+            }
         }
 
         // Patch BVHs
         std::unordered_map<int, BVH> patchBVHs(nTgt);
-        for (int i = 0; i < nTgt; i++) {
+        omp_parallel_for(int i = 0; i < nTgt; i++) {
             std::vector<Vec3> vertices;
             std::vector<uint32_t> indices;
             std::unordered_map<Vec3, uint32_t> uniqueVertices;
@@ -543,6 +547,12 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                     hksTable[v] = hksv;
                 }
             }
+        }
+
+        if (kIter % 10 == 0 && kIter != 0) {
+            char filename[256];
+            sprintf(filename, "mesh_%03d.ply", kIter);
+            mesh.save(filename);
         }
     }
 }
