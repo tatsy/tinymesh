@@ -7,6 +7,7 @@
 #include <Spectra/SymEigsSolver.h>
 #include <Spectra/MatOp/DenseSymMatProd.h>
 #include <Spectra/MatOp/SparseSymMatProd.h>
+#include <Spectra/MatOp/SparseSymShiftSolve.h>
 
 #include "core/vertex.h"
 #include "core/halfedge.h"
@@ -133,7 +134,7 @@ EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTime
     Spectra::SymEigsSolver<Spectra::SparseSymMatProd<FloatType>> eigs(op, K, ncv);
     eigs.init();
 
-    eigs.compute(Spectra::SortRule::SmallestMagn, 500, 1.0e-4, Spectra::SortRule::SmallestMagn);
+    eigs.compute(Spectra::SortRule::SmallestMagn, 200, 1.0e-4, Spectra::SortRule::SmallestMagn);
     if (eigs.info() != Spectra::CompInfo::Successful) {
         Error("Eigen decomposition failed!");
     }

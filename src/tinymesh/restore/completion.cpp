@@ -94,7 +94,7 @@ void holeFillAdvancingFront(Mesh &mesh, Face *face) {
     mesh.holeFillAdvancingFront_(face);
 }
 
-void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
+void holeFillContextCoherent(Mesh &mesh, int maxiters) {
     // 0. lock non-hole vertices
     for (size_t i = 0; i < mesh.numVertices(); i++) {
         mesh.vertex(i)->lock();
@@ -108,6 +108,77 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             holeFillAdvancingFront(mesh, f);
         }
     }
+    const double avgLen = mesh.getMeanEdgeLength();
+    const double avgArea = mesh.getMeanFaceArea();
+    for (size_t i = 0; i < mesh.numHalfedges(); i++) {
+        Halfedge *he = mesh.halfedge(i);
+        he->setIsBoundary(false);
+    }
+
+    // 2. Compute patch radius
+    auto curvatures = getPrincipalCurvatures(mesh);
+    const EigenVector &kv_max = std::get<0>(curvatures);
+    const EigenVector &kv_min = std::get<1>(curvatures);
+    std::vector<double> maxCurves(mesh.numVertices());
+    double maxK = 0.0;
+    for (size_t i = 0; i < mesh.numVertices(); i++) {
+        maxCurves[i] = std::max(std::abs(kv_max(i)), std::abs(kv_min(i)));
+        maxK = std::max(maxK, maxCurves[i]);
+    }
+
+    std::vector<double> pis = { 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0 };
+    std::vector<double> mus = { 0.0, 0.5 * maxK, maxK };
+    std::vector<double> vars = { 1.0, 1.0, 1.0 };
+
+    auto gauss = [](double x, double v) -> double { return std::exp(-0.5 * x * x / v) / std::sqrt(2.0 * Pi * v); };
+
+    for (int kIter = 0; kIter < 20; kIter++) {
+        // E step
+        std::vector<std::vector<double>> gamma(mesh.numVertices(), std::vector<double>(3, 0.0));
+        for (int i = 0; i < mesh.numVertices(); i++) {
+            double sumWgt = 0.0;
+            for (int k = 0; k < 3; k++) {
+                gamma[i][k] = pis[k] * gauss(mus[k] - maxCurves[i], vars[k]);
+                sumWgt += gamma[i][k];
+            }
+
+            for (int k = 0; k < 3; k++) {
+                gamma[i][k] /= sumWgt;
+            }
+        }
+
+        // M step
+        pis.assign(3, 0.0);
+        for (int i = 0; i < mesh.numVertices(); i++) {
+            for (int k = 0; k < 3; k++) {
+                pis[k] += gamma[i][k] / (double)mesh.numVertices();
+            }
+        }
+
+        mus.assign(3, 0.0);
+        for (int i = 0; i < mesh.numVertices(); i++) {
+            for (int k = 0; k < 3; k++) {
+                const double Npi = mesh.numVertices() * pis[k];
+                mus[k] += gamma[i][k] * maxCurves[i] / Npi;
+            }
+        }
+
+        vars.assign(3, 0.0);
+        for (int i = 0; i < mesh.numVertices(); i++) {
+            for (int k = 0; k < 3; k++) {
+                const double Npi = mesh.numVertices() * pis[k];
+                const double diff = maxCurves[i] - mus[k];
+                vars[k] += gamma[i][k] * diff * diff / Npi;
+            }
+        }
+    }
+    printf("GMM[0]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[0], mus[0], std::sqrt(vars[0]));
+    printf("GMM[1]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[1], mus[1], std::sqrt(vars[1]));
+    printf("GMM[2]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[2], mus[2], std::sqrt(vars[2]));
+
+    const double patchRadiusReal = (1.0 / (avgLen * mus[1]) + 1.0) * avgLen;
+    printf("R = %f (avgLen = %f)\n", patchRadiusReal, avgLen);
+    const int patchRadius = (int)std::ceil(patchRadiusReal / avgLen);
 
     // 2. Compute heat kernel signatures
     const EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
@@ -121,8 +192,6 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
 
     // Iteration
     double error = 1.0e20;
-    const double avgLen = mesh.getMeanEdgeLength();
-    const double avgArea = mesh.getMeanFaceArea();
     for (int kIter = 0; kIter < maxiters; kIter++) {
         printf("iter = %d\n", kIter);
         const int N = (int)mesh.numVertices();
@@ -252,7 +321,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         std::vector<EigenVector3> translations(nTgt);
         std::vector<int> pairIds(nTgt, 0);
         double newError = 0.0;
-        omp_parallel_for(int i = 0; i < nTgt; i++) {
+        for (int i = 0; i < nTgt; i++) {
             const int tgtId = tgtIds[i];
             EigenMatrix3 R;
             EigenVector3 t;
@@ -270,19 +339,19 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 }
             }
             pairIds[i] = minId;
-
-            omp_atomic(newError += minEps);
+            newError += minEps;
         }
+        newError /= nTgt;
 
         // if (std::abs(error - newError) < 1.0e-4) {
         //     break;
         // }
         // error = newError;
-        printf("error=%.6f\n", newError);
+        printf("error=%.6e\n", newError);
 
         // Compute patch dissimilarities
         std::unordered_map<int, double> dissimilarities;
-        omp_parallel_for(int i = 0; i < nTgt; i++) {
+        for (int i = 0; i < nTgt; i++) {
             double dissim = 0.0;
             double sumWgt = 0.0;
             const std::vector<Vertex *> &tgtPatch = patchVerts[tgtIds[i]];
@@ -315,14 +384,12 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 sumWgt += w;
             }
 
-            omp_critical {
-                dissimilarities[tgtIds[i]] = dissim / sumWgt;
-            }
+            dissimilarities[tgtIds[i]] = dissim / sumWgt;
         }
 
         // Patch BVHs
         std::unordered_map<int, BVH> patchBVHs(nTgt);
-        omp_parallel_for(int i = 0; i < nTgt; i++) {
+        for (int i = 0; i < nTgt; i++) {
             std::vector<Vec3> vertices;
             std::vector<uint32_t> indices;
             std::unordered_map<Vec3, uint32_t> uniqueVertices;
@@ -447,46 +514,34 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             bool update = true;
             do {
                 update = false;
+                if (tgtId >= mesh.numVertices()) {
+                    break;
+                }
+
                 Vertex *v = mesh.vertex(tgtId);
                 for (auto it = v->he_begin(); it != v->he_end(); ++it) {
                     if (it->length() > 1.5 * avgLen) {
                         if (mesh.splitHE(it.ptr())) {
                             isRepaired = true;
                             update = true;
-                            printf("edge split!\n");
+                            // printf("edge split!\n");
                             break;
                         }
                     }
                 }
             } while (update);
         }
-
-        // Check face collapse
-        for (int tgtId : tgtIds) {
-            bool update = true;
-            do {
-                update = false;
-                Vertex *v = mesh.vertex(tgtId);
-                for (auto it = v->f_begin(); it != v->f_end(); ++it) {
-                    if (it->index() < 0) continue;
-
-                    if (it->area() < 0.01 * avgArea) {
-                        if (mesh.collapseFace(it.ptr())) {
-                            isRepaired = true;
-                            update = true;
-                            printf("face collapse! %p\n", it.ptr());
-                            break;
-                        }
-                    }
-                }
-            } while (update);
-        }
+        mesh.verify();
 
         // Check edge flip
         for (int tgtId : tgtIds) {
             bool update = true;
             do {
                 update = false;
+                if (tgtId >= mesh.numVertices()) {
+                    break;
+                }
+
                 Vertex *v = mesh.vertex(tgtId);
                 for (auto it = v->he_begin(); it != v->he_end(); ++it) {
                     const Vec3 v0 = it->src()->pos();
@@ -499,36 +554,70 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                         if (mesh.flipHE(it.ptr())) {
                             isRepaired = true;
                             update = true;
-                            printf("edge flip!\n");
+                            // printf("edge flip!\n");
                             break;
                         }
                     }
                 }
             } while (update);
         }
+        mesh.verify();
 
         // Check edge collapse
         for (int tgtId : tgtIds) {
             bool update = true;
             do {
                 update = false;
+                if (tgtId >= mesh.numVertices()) {
+                    break;
+                }
+
                 Vertex *v = mesh.vertex(tgtId);
                 for (auto it = v->he_begin(); it != v->he_end(); ++it) {
                     const Vec3 v0 = it->src()->pos();
                     const Vec3 v1 = it->dst()->pos();
-                    const Vec3 v2 = it->next()->dst()->pos();
-                    const double theta = angle(v0, v2, v1);
-                    if (theta < Pi / 18.0) {
+                    const Vec3 vl = it->next()->dst()->pos();
+                    const Vec3 vr = it->rev()->next()->dst()->pos();
+                    const double al = angle(v0, vl, v1);
+                    const double ar = angle(v0, vr, v1);
+                    if (al < Pi / 10.0 || ar < Pi / 10.0) {
                         if (mesh.collapseHE(it.ptr())) {
                             isRepaired = true;
                             update = true;
-                            printf("edge collapse!\n");
+                            // printf("edge collapse!\n");
                             break;
                         }
                     }
                 }
             } while (update);
         }
+        mesh.verify();
+
+        // Check face collapse
+        for (int tgtId : tgtIds) {
+            bool update = true;
+            do {
+                update = false;
+                if (tgtId >= mesh.numVertices()) {
+                    break;
+                }
+
+                Vertex *v = mesh.vertex(tgtId);
+                for (auto it = v->f_begin(); it != v->f_end(); ++it) {
+                    if (it->index() < 0) continue;
+
+                    if (it->area() < 0.01 * avgArea) {
+                        if (mesh.collapseFace(it.ptr())) {
+                            isRepaired = true;
+                            update = true;
+                            // printf("face collapse!\n");
+                            break;
+                        }
+                    }
+                }
+            } while (update);
+        }
+        mesh.verify();
 
         if (isRepaired) {
             // Update HKS table
