@@ -5,6 +5,7 @@
 #include <Eigen/Cholesky>
 #include <Eigen/SparseCholesky>
 #include <Spectra/SymEigsSolver.h>
+#include <Spectra/SymEigsShiftSolver.h>
 #include <Spectra/MatOp/DenseSymMatProd.h>
 #include <Spectra/MatOp/SparseSymMatProd.h>
 #include <Spectra/MatOp/SparseSymShiftSolve.h>
@@ -130,11 +131,20 @@ void smoothingTensors(std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame
 EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTimes) {
     Assertion(K < L.rows(), "Eigenvalues less than matrix size can only be requested!");
     const int ncv = std::min(K * 8, (int)L.rows());
-    Spectra::SparseSymMatProd<FloatType> op(L);
-    Spectra::SymEigsSolver<Spectra::SparseSymMatProd<FloatType>> eigs(op, K, ncv);
-    eigs.init();
 
-    eigs.compute(Spectra::SortRule::SmallestMagn, 200, 1.0e-4, Spectra::SortRule::SmallestMagn);
+    // Spectra::SparseSymMatProd<FloatType> op(L);
+    // Spectra::SymEigsSolver<Spectra::SparseSymMatProd<FloatType>> eigs(op, K, ncv);
+    // eigs.init();
+
+    // eigs.compute(Spectra::SortRule::SmallestMagn, 200, 1.0e-4, Spectra::SortRule::SmallestMagn);
+    // if (eigs.info() != Spectra::CompInfo::Successful) {
+    //     Error("Eigen decomposition failed!");
+    // }
+
+    Spectra::SparseSymShiftSolve<FloatType> op(L);
+    Spectra::SymEigsShiftSolver<Spectra::SparseSymShiftSolve<FloatType>> eigs(op, K, ncv, -1.0e-8);
+    eigs.init();
+    eigs.compute(Spectra::SortRule::LargestMagn, 200, 1.0e-4, Spectra::SortRule::SmallestMagn);
     if (eigs.info() != Spectra::CompInfo::Successful) {
         Error("Eigen decomposition failed!");
     }

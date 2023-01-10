@@ -2,7 +2,6 @@
 #include "restore.h"
 
 #include <iostream>
-#include <fstream>
 #include <queue>
 #include <functional>
 #include <unordered_map>
@@ -17,6 +16,7 @@
 #include "core/bvh.h"
 #include "core/eigen.h"
 #include "core/openmp.h"
+#include "core/progress.h"
 
 #include "ops/ops.h"
 
@@ -181,19 +181,27 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
     const int patchRadius = (int)std::ceil(patchRadiusReal / avgLen);
 
     // 2. Compute heat kernel signatures
-    const EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
-    const EigenMatrix hks_ = getHeatKernelSignatures(L);
-    const int hksDims = (int)hks_.cols();
+    int hksDims = -1;
     std::unordered_map<Vertex *, EigenVector> hksTable;
-    for (size_t i = 0; i < mesh.numVertices(); i++) {
-        Vertex *v = mesh.vertex(i);
-        hksTable[v] = hks_.row(i);
+    {
+        auto start = std::chrono::system_clock::now();
+
+        const EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
+        const EigenMatrix hks_ = getHeatKernelSignatures(L, 300, 100);
+        hksDims = (int)hks_.cols();
+        for (size_t i = 0; i < mesh.numVertices(); i++) {
+            Vertex *v = mesh.vertex(i);
+            hksTable[v] = hks_.row(i);
+        }
+
+        auto end = std::chrono::system_clock::now();
+        const int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        printf("[ HKS ] %f sec\n", elapsed / 1000.0);
     }
 
     // Iteration
-    double error = 1.0e20;
+    ProgressBar pbar(maxiters);
     for (int kIter = 0; kIter < maxiters; kIter++) {
-        printf("iter = %d\n", kIter);
         const int N = (int)mesh.numVertices();
 
         // 3. Collect patches
@@ -342,12 +350,7 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
             newError += minEps;
         }
         newError /= nTgt;
-
-        // if (std::abs(error - newError) < 1.0e-4) {
-        //     break;
-        // }
-        // error = newError;
-        printf("error=%.6e\n", newError);
+        pbar.set_description("error=%7.5f", newError);
 
         // Compute patch dissimilarities
         std::unordered_map<int, double> dissimilarities;
@@ -502,8 +505,6 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
             const Vec3 orgPos = v->pos();
             const Vec3 newPos = orgPos + invQ * (newPoss[tgtId] + offsets[tgtId] - orgPos);
             v->setPos(newPos);
-            // std::cout << "org: " << orgPos << std::endl;
-            // std::cout << "new: " << newPos << std::endl;
         }
 
         // 8. Repair mesh
@@ -524,14 +525,12 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
                         if (mesh.splitHE(it.ptr())) {
                             isRepaired = true;
                             update = true;
-                            // printf("edge split!\n");
                             break;
                         }
                     }
                 }
             } while (update);
         }
-        mesh.verify();
 
         // Check edge flip
         for (int tgtId : tgtIds) {
@@ -554,14 +553,12 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
                         if (mesh.flipHE(it.ptr())) {
                             isRepaired = true;
                             update = true;
-                            // printf("edge flip!\n");
                             break;
                         }
                     }
                 }
             } while (update);
         }
-        mesh.verify();
 
         // Check edge collapse
         for (int tgtId : tgtIds) {
@@ -584,14 +581,12 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
                         if (mesh.collapseHE(it.ptr())) {
                             isRepaired = true;
                             update = true;
-                            // printf("edge collapse!\n");
                             break;
                         }
                     }
                 }
             } while (update);
         }
-        mesh.verify();
 
         // Check face collapse
         for (int tgtId : tgtIds) {
@@ -610,14 +605,12 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
                         if (mesh.collapseFace(it.ptr())) {
                             isRepaired = true;
                             update = true;
-                            // printf("face collapse!\n");
                             break;
                         }
                     }
                 }
             } while (update);
         }
-        mesh.verify();
 
         if (isRepaired) {
             // Update HKS table
@@ -638,11 +631,9 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
             }
         }
 
-        if (kIter % 10 == 0 && kIter != 0) {
-            char filename[256];
-            sprintf(filename, "mesh_%03d.ply", kIter);
-            mesh.save(filename);
-        }
+        // Verification
+        mesh.verify();
+        pbar.step();
     }
 }
 
