@@ -11,7 +11,7 @@ function(add_folder SOURCES FOLDER_NAME)
 endfunction()
 
 # ----------
-# Add example module
+# Add example program
 # ----------
 function(ADD_EXAMPLE)
     set(options)
@@ -38,21 +38,28 @@ function(ADD_EXAMPLE)
 endfunction(ADD_EXAMPLE)
 
 # ----------
-# Add test program folder
+# Add test program
 # ----------
-function(add_test_folder FOLDER_NAME)
-    file(GLOB SOURCE_FILES
-         "${FOLDER_NAME}/*.cpp" "${FOLDER_NAME}/*.hpp"
-         "${FOLDER_NAME}/*.c" "${FOLDER_NAME}/*.h")
-    include_directories(${TINYMESH_INCLUDE_DIR} ${GTEST_INCLUDE_DIRS})
-    add_definitions(-DGTEST_LANG_CXX11)
-    add_executable(${FOLDER_NAME} ${SOURCE_FILES})
-    target_link_libraries(${FOLDER_NAME} ${TINYMESH_LIBRARY} ${GTEST_LIBRARIES})
-    target_include_directories(${FOLDER_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+function(ADD_UNIT_TEST)
+    set(options)
+    set(oneValueArgs NAME DEPS)
+    set(multiValueArgs SOURCES)
+    cmake_parse_arguments(ADD_UNIT_TEST "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set_target_properties(${FOLDER_NAME} PROPERTIES FOLDER "Tests")
-    set_target_properties(${FOLDER_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+    message(STATUS "Test: ${ADD_UNIT_TEST_NAME}")
+    add_executable(${ADD_UNIT_TEST_NAME})
+    add_dependencies(${ADD_UNIT_TEST_NAME} ${TINYMESH_LIBRARY})
+
+    target_sources(${ADD_UNIT_TEST_NAME} PRIVATE ${ADD_UNIT_TEST_SOURCES})
+    target_include_directories(${ADD_UNIT_TEST_NAME} PRIVATE ${TINYMESH_INCLUDE_DIR} ${GTEST_INCLUDE_DIRS})
+    target_link_libraries(${ADD_UNIT_TEST_NAME} PRIVATE ${TINYMESH_LIBRARY} ${GTEST_LIBRARIES})
+
+    set_target_properties(${ADD_UNIT_TEST_NAME} PROPERTIES FOLDER "Tests")
+    set_target_properties(${ADD_UNIT_TEST_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     source_group("Source Files" FILES ${SOURCE_FILES})
 
-    add_test(NAME ${FOLDER_NAME} COMMAND ${FOLDER_NAME})
-endfunction(add_test_folder)
+    set(${ADD_UNIT_TEST_DEPS} ${${ADD_UNIT_TEST_DEPS}} ${ADD_UNIT_TEST_NAME} PARENT_SCOPE)
+
+    add_test(NAME ${ADD_UNIT_TEST_NAME} COMMAND ${ADD_UNIT_TEST_NAME})
+    set_tests_properties(${ADD_UNIT_TEST_NAME} PROPERTIES TIMEOUT 120)
+endfunction(ADD_UNIT_TEST)
