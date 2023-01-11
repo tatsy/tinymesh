@@ -5,6 +5,7 @@
 #include <fstream>
 #include <queue>
 #include <functional>
+#include <unordered_set>
 #include <unordered_map>
 
 #include <Eigen/LU>
@@ -25,7 +26,7 @@ namespace tinymesh {
 namespace {
 
 double solveRigidICP(const std::vector<Vertex *> &tgtPatch, const std::vector<Vertex *> &srcPatch,
-                     const EigenMatrix &hks, EigenMatrix3 &R, EigenVector3 &t) {
+                     const std::unordered_map<Vertex *, EigenVector> &hks, EigenMatrix3 &R, EigenVector3 &t) {
     const int nTgtSize = (int)tgtPatch.size();
     const int nSrcSize = (int)srcPatch.size();
     EigenMatrix X(nSrcSize, 3);
@@ -38,9 +39,11 @@ double solveRigidICP(const std::vector<Vertex *> &tgtPatch, const std::vector<Ve
         double minDist = 1.0e20;
         int minId = -1;
         for (int j = 0; j < nTgtSize; j++) {
-            const int srcId = srcPatch[i]->index();
-            const int tgtId = tgtPatch[j]->index();
-            const double dist = (hks.row(srcId) - hks.row(tgtId)).squaredNorm();
+            Vertex *src = srcPatch[i];
+            Vertex *tgt = tgtPatch[j];
+            const auto itSrc = hks.find(src);
+            const auto itTgt = hks.find(tgt);
+            const double dist = (itSrc->second - itTgt->second).squaredNorm();
             if (dist < minDist) {
                 minDist = dist;
                 minId = j;
@@ -107,139 +110,150 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
         }
     }
 
-    // 2. Compute HKS and feature line fields
+    // 2. Compute heat kernel signatures
     const EigenSparseMatrix L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
-    const EigenMatrix hks = getHeatKernelSignatures(L);
-
-    const auto flff = getFeatureLineFieldWithFlags(mesh, true);
-    const EigenMatrix &flf = std::get<0>(flff);
-    const EigenVector &rvFlags = std::get<1>(flff);
-
-    // 3. Collect patches
-    const int N = (int)mesh.numVertices();
-    std::vector<int> srcIds;
-    std::vector<int> tgtIds;
-    std::vector<std::vector<Face *>> patchFaces(N);
-    for (int i = 0; i < N; i++) {
-        Vertex *ctr = mesh.vertex(i);
-        std::unordered_set<Face *> visited;
-        std::queue<std::pair<Face *, int>> que;
-        for (auto it = ctr->f_begin(); it != ctr->f_end(); ++it) {
-            que.push(std::make_pair(it.ptr(), 1));
-        }
-
-        while (!que.empty()) {
-            Face *f = que.front().first;
-            int dist = que.front().second;
-            que.pop();
-
-            if (visited.count(f) != 0) continue;
-
-            visited.insert(f);
-            for (auto it = f->f_begin(); it != f->f_end(); ++it) {
-                if (visited.count(it.ptr()) == 0 && dist + 1 <= patchRadius) {
-                    que.push(std::make_pair(it.ptr(), dist + 1));
-                }
-            }
-        }
-
-        patchFaces[i].assign(visited.begin(), visited.end());
-        if (ctr->isLocked()) {
-            srcIds.push_back(i);
-        } else {
-            tgtIds.push_back(i);
-        }
-    }
-    const int nSrc = (int)srcIds.size();
-    const int nTgt = (int)tgtIds.size();
-
-    // Inverse table to source/target IDs
-    std::unordered_map<int, int> src2glbIds;
-    for (int i = 0; i < nSrc; i++) {
-        src2glbIds[srcIds[i]] = i;
-    }
-    std::unordered_map<int, int> tgt2glbIds;
-    for (int i = 0; i < nTgt; i++) {
-        tgt2glbIds[tgtIds[i]] = i;
+    const EigenMatrix hks_ = getHeatKernelSignatures(L);
+    const int hksDims = (int)hks_.cols();
+    std::unordered_map<Vertex *, EigenVector> hksTable;
+    for (size_t i = 0; i < mesh.numVertices(); i++) {
+        Vertex *v = mesh.vertex(i);
+        hksTable[v] = hks_.row(i);
     }
 
-    // Vertex to patch table
-    std::vector<std::vector<Vertex *>> patchVerts(N);
-    std::vector<std::unordered_set<int>> patchVertSets(N);
-    for (int i = 0; i < N; i++) {
-        for (Face *f : patchFaces[i]) {
-            for (auto it = f->v_begin(); it != f->v_end(); ++it) {
-                patchVertSets[i].insert(it->index());
-            }
-        }
-
-        for (auto vid : patchVertSets[i]) {
-            patchVerts[i].push_back(mesh.vertex(vid));
-        }
-    }
-
-    std::unordered_map<int, std::vector<int>> tgtPatchAssign;
-    for (int i = 0; i < nTgt; i++) {
-        for (int k : patchVertSets[tgtIds[i]]) {
-            if (tgtPatchAssign.count(k) == 0) {
-                tgtPatchAssign[k] = std::vector<int>();
-            }
-            tgtPatchAssign[k].push_back(tgtIds[i]);
-        }
-    }
-
-    // 4. Compute patch descriptors
-    std::vector<EigenVector> descriptors(N);
-    for (int i = 0; i < N; i++) {
-        EigenVector hksMean(hks.cols());
-        EigenVector hksSigma(hks.cols());
-
-        hksMean.setZero();
-        hksSigma.setZero();
-        for (auto v : patchVerts[i]) {
-            const EigenVector f = hks.row(v->index());
-            hksMean += f;
-            hksSigma += f.cwiseProduct(f);
-        }
-
-        hksMean /= (double)N;
-        hksSigma /= (double)N;
-        hksSigma = (hksSigma - hksMean.cwiseProduct(hksMean)).array().max(0.0);
-        hksSigma = hksSigma.cwiseSqrt();
-
-        hksMean /= hksMean.maxCoeff();
-        hksSigma /= hksSigma.maxCoeff();
-
-        descriptors[i].resize(hksMean.rows() + hksSigma.rows());
-        descriptors[i] << hksMean, hksSigma;
-    }
-
-    // 5. Collect candidate patches
-    const int nCands = std::max(10, (int)(0.001 * nSrc));
-    std::vector<std::vector<int>> candidates(nTgt, std::vector<int>(nCands, 0));
-    for (int i = 0; i < nTgt; i++) {
-        std::vector<std::pair<double, int>> dists;
-        for (int j = 0; j < nSrc; j++) {
-            const int tgtId = tgtIds[i];
-            const int srcId = srcIds[j];
-            const double d = (descriptors[tgtId] - descriptors[srcId]).squaredNorm();
-            dists.emplace_back(d, srcId);
-        }
-
-        std::sort(dists.begin(), dists.end());
-        for (int j = 0; j < nCands; j++) {
-            candidates[i][j] = dists[j].second;
-        }
-    }
-
+    // Iteration
+    double error = 1.0e20;
+    const double avgLen = mesh.getMeanEdgeLength();
+    const double avgArea = mesh.getMeanFaceArea();
     for (int kIter = 0; kIter < maxiters; kIter++) {
         printf("iter = %d\n", kIter);
+        const int N = (int)mesh.numVertices();
 
-        // 5. Compute most similar patch for each target patch
+        // 3. Collect patches
+        std::vector<int> srcIds;
+        std::vector<int> tgtIds;
+        std::vector<std::vector<Face *>> patchFaces(N);
+        for (int i = 0; i < N; i++) {
+            Vertex *ctr = mesh.vertex(i);
+            std::unordered_set<Face *> visited;
+            std::queue<std::pair<Face *, int>> que;
+            for (auto it = ctr->f_begin(); it != ctr->f_end(); ++it) {
+                que.push(std::make_pair(it.ptr(), 1));
+            }
+
+            while (!que.empty()) {
+                Face *f = que.front().first;
+                int dist = que.front().second;
+                que.pop();
+
+                if (visited.count(f) != 0) continue;
+
+                visited.insert(f);
+                for (auto it = f->f_begin(); it != f->f_end(); ++it) {
+                    if (visited.count(it.ptr()) == 0 && dist + 1 <= patchRadius) {
+                        que.push(std::make_pair(it.ptr(), dist + 1));
+                    }
+                }
+            }
+
+            patchFaces[i].assign(visited.begin(), visited.end());
+            if (ctr->isLocked()) {
+                srcIds.push_back(i);
+            } else {
+                tgtIds.push_back(i);
+            }
+        }
+        const int nSrc = (int)srcIds.size();
+        const int nTgt = (int)tgtIds.size();
+
+        // Inverse table to source/target IDs
+        std::unordered_map<int, int> src2glbIds;
+        for (int i = 0; i < nSrc; i++) {
+            src2glbIds[srcIds[i]] = i;
+        }
+        std::unordered_map<int, int> tgt2glbIds;
+        for (int i = 0; i < nTgt; i++) {
+            tgt2glbIds[tgtIds[i]] = i;
+        }
+
+        // Vertex to patch table
+        std::vector<std::vector<Vertex *>> patchVerts(N);
+        std::vector<std::unordered_set<int>> patchVertSets(N);
+        for (int i = 0; i < N; i++) {
+            for (Face *f : patchFaces[i]) {
+                for (auto it = f->v_begin(); it != f->v_end(); ++it) {
+                    patchVertSets[i].insert(it->index());
+                }
+            }
+
+            for (auto vid : patchVertSets[i]) {
+                patchVerts[i].push_back(mesh.vertex(vid));
+            }
+        }
+
+        std::unordered_map<int, std::vector<int>> tgtPatchAssign;
+        for (int i = 0; i < nTgt; i++) {
+            for (int k : patchVertSets[tgtIds[i]]) {
+                if (tgtPatchAssign.count(k) == 0) {
+                    tgtPatchAssign[k] = std::vector<int>();
+                }
+                tgtPatchAssign[k].push_back(tgtIds[i]);
+            }
+        }
+
+        // 4. Compute patch descriptors
+        std::vector<EigenVector> descriptors(N);
+        omp_parallel_for(int i = 0; i < N; i++) {
+            EigenVector hksMean(hksDims);
+            EigenVector hksSigma(hksDims);
+
+            hksMean.setZero();
+            hksSigma.setZero();
+            for (auto v : patchVerts[i]) {
+                const EigenVector f = hksTable[v];
+                hksMean += f;
+                hksSigma += f.cwiseProduct(f);
+            }
+
+            hksMean /= (double)N;
+            hksSigma /= (double)N;
+            hksSigma = (hksSigma - hksMean.cwiseProduct(hksMean)).array().max(0.0);
+            hksSigma = hksSigma.cwiseSqrt();
+
+            hksMean /= hksMean.maxCoeff();
+            hksSigma /= hksSigma.maxCoeff();
+
+            descriptors[i].resize(hksMean.rows() + hksSigma.rows());
+            descriptors[i] << hksMean, hksSigma;
+        }
+
+        // 5. Collect candidate patches
+        const int nCands = std::max(10, (int)(0.001 * nSrc));
+        std::vector<std::vector<int>> candidates(nTgt, std::vector<int>(nCands, 0));
+        for (int i = 0; i < nTgt; i++) {
+            std::vector<std::pair<double, int>> dists;
+            for (int j = 0; j < nSrc; j++) {
+                const int tgtId = tgtIds[i];
+                const int srcId = srcIds[j];
+                const double d = (descriptors[tgtId] - descriptors[srcId]).squaredNorm();
+                dists.emplace_back(d, srcId);
+            }
+
+            std::sort(dists.begin(), dists.end());
+            for (int j = 0; j < nCands; j++) {
+                candidates[i][j] = dists[j].second;
+            }
+        }
+
+        const auto flff = getFeatureLineFieldWithFlags(mesh, true);
+        const EigenMatrix &flf = std::get<0>(flff);
+        const EigenVector &rvFlags = std::get<1>(flff);
+
+        // 6. Compute most similar patch for each target patch
         std::vector<EigenMatrix3> rotations(nTgt);
         std::vector<EigenVector3> translations(nTgt);
         std::vector<int> pairIds(nTgt, 0);
-        for (int i = 0; i < nTgt; i++) {
+        double newError = 0.0;
+        omp_parallel_for(int i = 0; i < nTgt; i++) {
             const int tgtId = tgtIds[i];
             EigenMatrix3 R;
             EigenVector3 t;
@@ -248,7 +262,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             for (int srcId : candidates[i]) {
                 const std::vector<Vertex *> &tgtPatch = patchVerts[tgtId];
                 const std::vector<Vertex *> &srcPatch = patchVerts[srcId];
-                const double eps = solveRigidICP(tgtPatch, srcPatch, hks, R, t);
+                const double eps = solveRigidICP(tgtPatch, srcPatch, hksTable, R, t);
                 if (eps < minEps) {
                     minEps = eps;
                     minId = srcId;
@@ -257,26 +271,19 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 }
             }
             pairIds[i] = minId;
+
+            omp_atomic(newError += minEps);
         }
 
-        // for (int i = 0; i < nTgt; i++) {
-        //     const std::vector<Vertex *> &verts = patchVerts[pairIds[i]];
-        //     char filename[256];
-        //     sprintf(filename, "patch_%03d.off", i);
-        //     std::ofstream writer(filename, std::ios::out);
-        //     writer << "OFF\n";
-        //     writer << verts.size() << " 0 0\n";
-        //     for (Vertex *v : verts) {
-        //         const Vec3 p0 = v->pos();
-        //         const Vec3 p1 = (Vec3)(rotations[i] * p0) + (Vec3)translations[i];
-        //         writer << p1.x() << " " << p1.y() << " " << p1.z() << "\n";
-        //     }
-        //     writer.close();
+        // if (std::abs(error - newError) < 1.0e-4) {
+        //     break;
         // }
+        // error = newError;
+        printf("error=%.6f\n", newError);
 
-        // 6. Compute patch dissimilarities
+        // Compute patch dissimilarities
         std::unordered_map<int, double> dissimilarities;
-        for (int i = 0; i < nTgt; i++) {
+        omp_parallel_for(int i = 0; i < nTgt; i++) {
             double dissim = 0.0;
             double sumWgt = 0.0;
             const std::vector<Vertex *> &tgtPatch = patchVerts[tgtIds[i]];
@@ -308,12 +315,15 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 dissim += w * l * l;
                 sumWgt += w;
             }
-            dissimilarities[tgtIds[i]] = dissim / sumWgt;
+
+            omp_critical {
+                dissimilarities[tgtIds[i]] = dissim / sumWgt;
+            }
         }
 
         // Patch BVHs
         std::unordered_map<int, BVH> patchBVHs(nTgt);
-        for (int i = 0; i < nTgt; i++) {
+        omp_parallel_for(int i = 0; i < nTgt; i++) {
             std::vector<Vec3> vertices;
             std::vector<uint32_t> indices;
             std::unordered_map<Vec3, uint32_t> uniqueVertices;
@@ -348,7 +358,7 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
                 const BVH &bvh = patchBVHs[k];
                 const Vec3 closest = bvh.closestPoint(orgPos);
                 const double dissim = dissimilarities[k];
-                const double weight = 1.0;  // / (std::pow(dissim, 5.0) + 1.0e-12);
+                const double weight = 1.0 / (std::pow(dissim, 5.0) + 1.0e-12);
                 newPos += weight * closest;
                 sumWgt += weight;
             }
@@ -426,8 +436,124 @@ void holeFillContextCoherent(Mesh &mesh, int patchRadius, int maxiters) {
             const Vec3 orgPos = v->pos();
             const Vec3 newPos = orgPos + invQ * (newPoss[tgtId] + offsets[tgtId] - orgPos);
             v->setPos(newPos);
-            std::cout << "org: " << orgPos << std::endl;
-            std::cout << "new: " << newPos << std::endl;
+            // std::cout << "org: " << orgPos << std::endl;
+            // std::cout << "new: " << newPos << std::endl;
+        }
+
+        // 8. Repair mesh
+        bool isRepaired = false;
+
+        // Check edge split
+        for (int tgtId : tgtIds) {
+            bool update = true;
+            do {
+                update = false;
+                Vertex *v = mesh.vertex(tgtId);
+                for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                    if (it->length() > 1.5 * avgLen) {
+                        if (mesh.splitHE(it.ptr())) {
+                            isRepaired = true;
+                            update = true;
+                            printf("edge split!\n");
+                            break;
+                        }
+                    }
+                }
+            } while (update);
+        }
+
+        // Check face collapse
+        for (int tgtId : tgtIds) {
+            bool update = true;
+            do {
+                update = false;
+                Vertex *v = mesh.vertex(tgtId);
+                for (auto it = v->f_begin(); it != v->f_end(); ++it) {
+                    if (it->index() < 0) continue;
+
+                    if (it->area() < 0.01 * avgArea) {
+                        if (mesh.collapseFace(it.ptr())) {
+                            isRepaired = true;
+                            update = true;
+                            printf("face collapse! %p\n", it.ptr());
+                            break;
+                        }
+                    }
+                }
+            } while (update);
+        }
+
+        // Check edge flip
+        for (int tgtId : tgtIds) {
+            bool update = true;
+            do {
+                update = false;
+                Vertex *v = mesh.vertex(tgtId);
+                for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                    const Vec3 v0 = it->src()->pos();
+                    const Vec3 v1 = it->dst()->pos();
+                    const Vec3 vl = it->next()->dst()->pos();
+                    const Vec3 vr = it->rev()->next()->dst()->pos();
+                    const double al = angle(v0, vl, v1);
+                    const double ar = angle(v0, vr, v1);
+                    if (al + ar > Pi) {
+                        if (mesh.flipHE(it.ptr())) {
+                            isRepaired = true;
+                            update = true;
+                            printf("edge flip!\n");
+                            break;
+                        }
+                    }
+                }
+            } while (update);
+        }
+
+        // Check edge collapse
+        for (int tgtId : tgtIds) {
+            bool update = true;
+            do {
+                update = false;
+                Vertex *v = mesh.vertex(tgtId);
+                for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+                    const Vec3 v0 = it->src()->pos();
+                    const Vec3 v1 = it->dst()->pos();
+                    const Vec3 v2 = it->next()->dst()->pos();
+                    const double theta = angle(v0, v2, v1);
+                    if (theta < Pi / 18.0) {
+                        if (mesh.collapseHE(it.ptr())) {
+                            isRepaired = true;
+                            update = true;
+                            printf("edge collapse!\n");
+                            break;
+                        }
+                    }
+                }
+            } while (update);
+        }
+
+        if (isRepaired) {
+            // Update HKS table
+            for (int i = 0; i < mesh.numVertices(); i++) {
+                Vertex *v = mesh.vertex(i);
+                if (hksTable.count(v) == 0) {
+                    EigenVector hksv = EigenVector::Zero(hksDims);
+                    int count = 0;
+                    for (auto it = v->v_begin(); it != v->v_end(); ++it) {
+                        if (hksTable.count(it.ptr()) != 0) {
+                            hksv += hksTable[it.ptr()];
+                            count += 1;
+                        }
+                    }
+                    hksv /= (double)count;
+                    hksTable[v] = hksv;
+                }
+            }
+        }
+
+        if (kIter % 10 == 0 && kIter != 0) {
+            char filename[256];
+            sprintf(filename, "mesh_%03d.ply", kIter);
+            mesh.save(filename);
         }
     }
 }

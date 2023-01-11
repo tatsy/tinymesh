@@ -16,9 +16,23 @@ namespace tinymesh {
 
 namespace {
 
+double secondForm(const EigenMatrix2 &M, const EigenVector2 &u, const EigenVector2 &v) {
+    return ((u.transpose() * M) * v).value();
+}
+
+double thirdForm(const EigenVector4 &C, const EigenVector2 &u, const EigenVector2 &v, const EigenVector2 &w) {
+    double ret = 0.0;
+    ret += C(0) * u(0) * v(0) * w(0);
+    ret += C(1) * (u(1) * v(0) * w(0) + u(0) * v(1) * w(0) + u(0) * v(0) * w(1));
+    ret += C(2) * (u(1) * v(1) * w(0) + u(0) * v(1) * w(1) + u(1) * v(0) * w(1));
+    ret += C(3) * u(1) * v(1) * w(1);
+    return ret;
+}
+
 void getPrincipalCurvaturesFromTensors(std::vector<double> &ks_max, std::vector<double> &ks_min,
                                        std::vector<Vec3> &ts_max, std::vector<Vec3> &ts_min,
-                                       const std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame> &frames) {
+                                       const std::vector<EigenMatrix2> &tensors,
+                                       const std::vector<LocalFrame> &frames) {
     const int Nv = (int)tensors.size();
     ks_max.resize(Nv);
     ks_min.resize(Nv);
@@ -52,7 +66,7 @@ void getPrincipalCurvaturesFromTensors(std::vector<double> &ks_max, std::vector<
         t_min = normalize(cross(np, t_max));
 
         // Ignore umbilical points
-        if (std::abs(k_min - k_max) < 1.0e-2) {
+        if (std::abs(k_min - k_max) < 1.0e-6) {
             t_min = Vec3(0.0);
             t_max = Vec3(0.0);
         }
@@ -114,7 +128,7 @@ void smoothingTensors(std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame
 
 EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTimes) {
     Assertion(K < L.rows(), "Eigenvalues less than matrix size can only be requested!");
-    const int ncv = std::min((int)L.rows(), K * 2);
+    const int ncv = std::min(K * 8, (int)L.rows());
     Spectra::SparseSymMatProd<FloatType> op(L);
     Spectra::SymEigsSolver<Spectra::SparseSymMatProd<FloatType>> eigs(op, K, ncv);
     eigs.init();
@@ -173,9 +187,10 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
     }
 
     // Compute per-triangle tensors
-    std::vector<EigenMatrix2> faceTensors;
-    std::vector<LocalFrame> faceFrames;
-    for (int i = 0; i < mesh.numFaces(); i++) {
+    const int Nf = (int)mesh.numFaces();
+    std::vector<EigenMatrix2> faceTensors(Nf);
+    std::vector<LocalFrame> faceFrames(Nf);
+    for (int i = 0; i < Nf; i++) {
         Face *f = mesh.face(i);
         std::vector<Vertex *> vertices;
         for (auto it = f->v_begin(); it != f->v_end(); ++it) {
@@ -186,59 +201,57 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
         Vertex *v0 = vertices[0];
         Vertex *v1 = vertices[1];
         Vertex *v2 = vertices[2];
-        const Vec3 p0 = v0->pos();
-        const Vec3 p1 = v1->pos();
-        const Vec3 p2 = v2->pos();
-        const Vec3 e0 = p2 - p1;
-        const Vec3 e1 = p0 - p2;
-        const Vec3 e2 = p1 - p0;
-        const Vec3 n0 = smoothNorms[v0->index()];
-        const Vec3 n1 = smoothNorms[v1->index()];
-        const Vec3 n2 = smoothNorms[v2->index()];
-
-        const Vec3 uf = normalize(e0);
-        const Vec3 nf = normalize(cross(e0, e1));
+        std::array<Vec3, 3> ps = {
+            v0->pos(),
+            v1->pos(),
+            v2->pos(),
+        };
+        std::array<Vec3, 3> ns = {
+            v0->normal(),
+            v1->normal(),
+            v2->normal(),
+        };
+        std::array<Vec3, 3> es = {
+            ps[2] - ps[1],
+            ps[0] - ps[2],
+            ps[1] - ps[0],
+        };
+        const Vec3 uf = normalize(es[0]);
+        const Vec3 nf = normalize(cross(es[0], es[1]));
         const Vec3 vf = normalize(cross(nf, uf));
 
-        EigenMatrix A(6, 3);
-        EigenVector b(6);
-        A.setZero();
-        // e0
-        A(0, 0) = dot(e0, uf);
-        A(0, 1) = dot(e0, vf);
-        b(0) = dot(n2 - n1, uf);
-        A(1, 1) = dot(e0, uf);
-        A(1, 2) = dot(e0, vf);
-        b(1) = dot(n2 - n1, vf);
-        // e1
-        A(2, 0) = dot(e1, uf);
-        A(2, 1) = dot(e1, vf);
-        b(2) = dot(n0 - n2, uf);
-        A(3, 1) = dot(e1, uf);
-        A(3, 2) = dot(e1, vf);
-        b(3) = dot(n0 - n2, vf);
-        // e2
-        A(4, 0) = dot(e2, uf);
-        A(4, 1) = dot(e2, vf);
-        b(4) = dot(n1 - n0, uf);
-        A(5, 1) = dot(e2, uf);
-        A(5, 2) = dot(e2, vf);
-        b(5) = dot(n1 - n0, vf);
+        EigenMatrix A = EigenMatrix::Zero(3, 3);
+        EigenVector b = EigenVector::Zero(3);
+        for (int k = 0; k < 3; k++) {
+            const double u = dot(es[k], uf);
+            const double v = dot(es[k], vf);
+            A(0, 0) += u * u;
+            A(0, 1) += u * v;
+            A(2, 2) += v * v;
 
-        EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(4, 4);
-        EigenVector Ab = A.transpose() * b;
-        EigenVector3 efg = AA.ldlt().solve(Ab);
+            const int kp = (k - 1 + 3) % 3;
+            const int kn = (k + 1) % 3;
+            const Vec3 dn = ns[kp] - ns[kn];
+            const double dnu = dot(dn, uf);
+            const double dnv = dot(dn, vf);
+            b(0) += dnu * u;
+            b(1) += dnu * v + dnv * u;
+            b(2) += dnv * v;
+        }
+        A(1, 1) = A(0, 0) + A(2, 2);
+        A(1, 2) = A(0, 1);
 
+        EigenVector efg = A.selfadjointView<Eigen::Upper>().ldlt().solve(b);
         EigenMatrix2 M;
         M << efg(0), efg(1), efg(1), efg(2);
-        faceTensors.push_back(M);
-        faceFrames.emplace_back(uf, vf, nf);
+        faceTensors[i] = M;
+        faceFrames[i] = LocalFrame(uf, vf, nf);
     }
 
     tensors.clear();
     frames.clear();
-    tensors.reserve(mesh.numVertices());
-    frames.reserve(mesh.numVertices());
+    tensors.resize(mesh.numVertices());
+    frames.resize(mesh.numVertices());
     for (int i = 0; i < mesh.numVertices(); i++) {
         Vertex *vertex = mesh.vertex(i);
         const Vec3 np = vertex->normal();
@@ -252,35 +265,35 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
         EigenMatrix2 M = EigenMatrix2::Zero();
         double sumWgt = 0.0;
         for (auto it = vertex->f_begin(); it != vertex->f_end(); ++it) {
-            const LocalFrame F = faceFrames[it->index()];
-            const Vec3 uf = std::get<0>(F);
-            const Vec3 vf = std::get<1>(F);
-            const Vec3 nf = std::get<2>(F);
+            const LocalFrame &F = faceFrames[it->index()];
+            const Vec3 &uf = std::get<0>(F);
+            const Vec3 &vf = std::get<1>(F);
+            const Vec3 &nf = std::get<2>(F);
 
             EigenMatrix3 R = rotationFromTwoVectors(np, nf);
-            const Vec3 rot_up = normalize(R * up);
-            const Vec3 rot_vp = normalize(R * vp);
-            const EigenMatrix2 Mf = faceTensors[it->index()];
+            const Vec3 rot_up = R * up;
+            const Vec3 rot_vp = R * vp;
+            const EigenMatrix2 &Mf = faceTensors[it->index()];
 
             EigenVector2 new_up, new_vp;
             new_up << dot(rot_up, uf), dot(rot_up, vf);
             new_vp << dot(rot_vp, uf), dot(rot_vp, vf);
 
-            const double ep = (new_up.transpose() * (Mf * new_up)).value();
-            const double fp = (new_up.transpose() * (Mf * new_vp)).value();
-            const double gp = (new_vp.transpose() * (Mf * new_vp)).value();
+            const double ep = secondForm(Mf, new_up, new_up);
+            const double fp = secondForm(Mf, new_up, new_vp);
+            const double gp = secondForm(Mf, new_vp, new_vp);
 
-            EigenMatrix2 Mv;
-            Mv << ep, fp, fp, gp;
+            EigenMatrix2 Mp;
+            Mp << ep, fp, fp, gp;
 
             const double weight = vertex->volonoiArea(it.ptr());
-            M += weight * Mv;
+            M += weight * Mp;
             sumWgt += weight;
         }
         M /= sumWgt;
 
-        tensors.push_back(M);
-        frames.emplace_back(up, vp, np);
+        tensors[i] = M;
+        frames[i] = LocalFrame(up, vp, np);
     }
 }
 
@@ -332,9 +345,10 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
     getPrincipalCurvaturesFromTensors(ks_max, ks_min, ts_max, ts_min, tensors, frames);
 
     // Computer per-face curvature derivative tensors
-    std::vector<EigenVector4> faceTensors;
-    std::vector<LocalFrame> faceFrames;
-    for (int i = 0; i < mesh.numFaces(); i++) {
+    const int Nf = (int)mesh.numFaces();
+    std::vector<EigenVector4> faceTensors(Nf);
+    std::vector<LocalFrame> faceFrames(Nf);
+    for (int i = 0; i < Nf; i++) {
         Face *f = mesh.face(i);
         std::vector<Vertex *> vertices;
         for (auto it = f->v_begin(); it != f->v_end(); ++it) {
@@ -346,44 +360,27 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
         Vertex *v1 = vertices[1];
         Vertex *v2 = vertices[2];
         std::array<Vec3, 3> ps = {
-            ps[0] = v0->pos(),
-            ps[1] = v1->pos(),
-            ps[2] = v2->pos(),
-        };
-        std::array<Vec3, 3> ns = {
-            v0->normal(),
-            v1->normal(),
-            v2->normal(),
+            v0->pos(),
+            v1->pos(),
+            v2->pos(),
         };
         std::array<Vec3, 3> es = {
-            es[0] = ps[2] - ps[1],
-            es[1] = ps[0] - ps[2],
-            es[2] = ps[1] - ps[0],
+            ps[2] - ps[1],
+            ps[0] - ps[2],
+            ps[1] - ps[0],
         };
-        std::array<LocalFrame, 3> vfrms = {
-            frames[v0->index()],
-            frames[v1->index()],
-            frames[v2->index()],
-        };
-        std::array<EigenMatrix2, 3> Mps = {
-            tensors[v0->index()],
-            tensors[v1->index()],
-            tensors[v2->index()],
-        };
+        std::array<int, 3> ids = { v0->index(), v1->index(), v2->index() };
 
         const Vec3 uf = normalize(es[0]);
         const Vec3 nf = normalize(cross(es[0], es[1]));
         const Vec3 vf = normalize(cross(nf, uf));
 
-        auto second_form = [](const EigenMatrix2 &M, const EigenVector2 &u, const EigenVector2 &v) -> double {
-            return ((u.transpose() * M) * v).value();
-        };
-
-        std::array<EigenMatrix2, 3> Mfs;
+        std::array<EigenVector3, 3> Mfs;
         for (int k = 0; k < 3; k++) {
-            const EigenMatrix3 rot = rotationFromTwoVectors(ns[k], nf);
-            const Vec3 up = std::get<0>(vfrms[k]);
-            const Vec3 vp = std::get<1>(vfrms[k]);
+            const Vec3 &up = ts_max[ids[k]];
+            const Vec3 &vp = ts_min[ids[k]];
+            const Vec3 &np = std::get<2>(frames[ids[k]]);
+            const EigenMatrix3 rot = rotationFromTwoVectors(nf, np);
 
             EigenVector2 new_uf, new_vf;
             const Vec3 rot_uf = rot * uf;
@@ -391,95 +388,78 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
             new_uf << dot(rot_uf, up), dot(rot_uf, vp);
             new_vf << dot(rot_vf, up), dot(rot_vf, vp);
 
-            const EigenMatrix2 &M = Mps[k];
-            Mfs[k] << second_form(M, new_uf, new_uf),  //
-                second_form(M, new_uf, new_vf),        //
-                second_form(M, new_vf, new_uf),        //
-                second_form(M, new_vf, new_vf);
+            EigenMatrix2 M;
+            M << ks_max[ids[k]], 0.0, 0.0, ks_min[ids[k]];
+            Mfs[k] << secondForm(M, new_uf, new_uf),  //
+                secondForm(M, new_uf, new_vf),        //
+                secondForm(M, new_vf, new_vf);
         }
 
-        std::array<EigenMatrix, 3> As;
-        std::array<EigenVector, 3> bs;
+        EigenMatrix A = EigenMatrix::Zero(4, 4);
+        EigenVector b = EigenVector::Zero(4);
         for (int k = 0; k < 3; k++) {
-            const double dot_e_u = dot(es[k], uf);
-            const double dot_e_v = dot(es[k], vf);
-
-            As[k] = EigenMatrix::Zero(4, 4);
-            As[k].row(0) << dot_e_u, dot_e_v, 0.0, 0.0;
-            As[k].row(1) << 0.0, dot_e_u, dot_e_v, 0.0;
-            As[k].row(2) << 0.0, dot_e_u, dot_e_v, 0.0;
-            As[k].row(3) << 0.0, 0.0, dot_e_u, dot_e_v;
+            const double u = dot(es[k], uf);
+            const double v = dot(es[k], vf);
+            A(0, 0) += u * u;
+            A(0, 1) += u * v;
+            A(3, 3) += v * v;
 
             const int kp = (k - 1 + 3) % 3;
             const int kn = (k + 1) % 3;
-            const EigenMatrix2 dMf = Mfs[kp] - Mfs[kn];
-            bs[k] = EigenVector::Zero(4);
-            bs[k] << dMf(0, 0), dMf(0, 1), dMf(1, 0), dMf(1, 1);
+            const EigenVector3 dfcurv = Mfs[kp] - Mfs[kn];
+            b(0) += u * dfcurv(0);
+            b(1) += v * dfcurv(0) + 2.0 * u * dfcurv(1);
+            b(2) += 2.0 * v * dfcurv(1) + u * dfcurv(2);
+            b(3) += v * dfcurv(2);
         }
+        A(1, 1) = 2.0 * A(0, 0) + A(3, 3);
+        A(1, 2) = 2.0 * A(0, 1);
+        A(2, 2) = A(0, 0) + 2.0 * A(3, 3);
+        A(2, 3) = A(0, 1);
 
-        EigenMatrix A(12, 4);
-        EigenVector b(12);
-        A << As[0], As[1], As[2];
-        b << bs[0], bs[1], bs[2];
+        EigenVector4 abcd = A.selfadjointView<Eigen::Upper>().ldlt().solve(b);
 
-        EigenMatrix AA = A.transpose() * A + 1.0e-6 * EigenMatrix::Identity(4, 4);
-        EigenVector Ab = A.transpose() * b;
-        EigenVector4 abcd = AA.ldlt().solve(Ab);
-        std::cout << abcd << std::endl;
-
-        faceTensors.push_back(abcd);
-        faceFrames.emplace_back(uf, vf, nf);
+        faceTensors[i] = abcd;
+        faceFrames[i] = LocalFrame(uf, vf, nf);
     }
-
-    auto third_form = [](const EigenVector4 &C, const EigenVector2 &u, const EigenVector2 &v,
-                         const EigenVector2 &w) -> double {
-        double ret = 0.0;
-        ret += C(0) * u(0) * v(0) * w(0);
-        ret += C(1) * (u(1) * v(0) * w(0) + u(0) * v(1) * w(0) + u(0) * v(0) * w(1));
-        ret += C(2) * (u(1) * v(1) * w(0) + u(0) * v(1) * w(1) + u(1) * v(0) * w(1));
-        ret += C(3) * u(1) * v(1) * w(1);
-        return ret;
-    };
 
     // Compute per-vertex curvature derivatives
     std::vector<double> es_max(mesh.numVertices(), 0.0);
     std::vector<double> es_min(mesh.numVertices(), 0.0);
     for (size_t i = 0; i < mesh.numVertices(); i++) {
         Vertex *vertex = mesh.vertex(i);
-        const LocalFrame F = frames[i];
-        const Vec3 up = std::get<0>(F);
-        const Vec3 vp = std::get<1>(F);
-        const Vec3 np = std::get<2>(F);
+        const Vec3 &up = std::get<0>(frames[i]);
+        const Vec3 &vp = std::get<1>(frames[i]);
+        const Vec3 &np = std::get<2>(frames[i]);
 
         EigenVector4 M = EigenVector4::Zero();
         double sumWgt = 0.0;
         for (auto it = vertex->f_begin(); it != vertex->f_end(); ++it) {
-            const LocalFrame &F_face = faceFrames[it->index()];
-            const Vec3 uf = std::get<0>(F_face);
-            const Vec3 vf = std::get<1>(F_face);
-            const Vec3 nf = std::get<2>(F_face);
+            const LocalFrame &F = faceFrames[it->index()];
+            const Vec3 &uf = std::get<0>(F);
+            const Vec3 &vf = std::get<1>(F);
+            const Vec3 &nf = std::get<2>(F);
 
             const EigenMatrix3 R = rotationFromTwoVectors(np, nf);
-            const Vec3 rot_up = normalize(R * up);
-            const Vec3 rot_vp = normalize(R * vp);
+            const Vec3 rot_up = R * up;
+            const Vec3 rot_vp = R * vp;
             const EigenVector4 &Mf = faceTensors[it->index()];
 
             EigenVector2 new_up, new_vp;
             new_up << dot(rot_up, uf), dot(rot_up, vf);
             new_vp << dot(rot_vp, uf), dot(rot_vp, vf);
 
-            const double ap = third_form(Mf, new_up, new_up, new_up);
-            const double bp = third_form(Mf, new_up, new_up, new_vp);
-            const double cp = third_form(Mf, new_up, new_vp, new_vp);
-            const double dp = third_form(Mf, new_vp, new_vp, new_vp);
             EigenVector4 Mp;
-            Mp << ap, bp, cp, dp;
+            Mp(0) = thirdForm(Mf, new_up, new_up, new_up);
+            Mp(1) = thirdForm(Mf, new_up, new_up, new_vp);
+            Mp(2) = thirdForm(Mf, new_up, new_vp, new_vp);
+            Mp(3) = thirdForm(Mf, new_vp, new_vp, new_vp);
 
             const double weight = vertex->volonoiArea(it.ptr());
             M += weight * Mp;
             sumWgt += weight;
         }
-        M = M / sumWgt;
+        M /= sumWgt;
 
         const Vec3 t_max = ts_max[i];
         const Vec3 t_min = ts_min[i];
@@ -488,8 +468,8 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
         t_max_2d << dot(t_max, up), dot(t_max, vp);
         t_min_2d << dot(t_min, up), dot(t_min, vp);
 
-        es_max[i] = third_form(M, t_max_2d, t_max_2d, t_max_2d);
-        es_min[i] = third_form(M, t_min_2d, t_min_2d, t_min_2d);
+        es_max[i] = thirdForm(M, t_max_2d, t_max_2d, t_max_2d);
+        es_min[i] = thirdForm(M, t_min_2d, t_min_2d, t_min_2d);
     }
 
     const int Nv = (int)mesh.numVertices();

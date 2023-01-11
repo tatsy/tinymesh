@@ -39,10 +39,12 @@ public:
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
     bool collapseHE(Halfedge *he);
+    bool collapseFace(Face *f);
     void fillHoles();
 
     double getMeanEdgeLength() const;
     double getMeanDihedralAngle() const;
+    double getMeanFaceArea() const;
 
     bool verify() const;
 

@@ -56,8 +56,13 @@ public:
         return index_;
     }
     bool isLocked() const;
+
     bool isBoundary() const {
         return isBoundary_;
+    }
+
+    void setIsBoundary(bool flag) {
+        isBoundary_ = flag;
     }
 
 private:
