@@ -141,4 +141,6 @@ PYBIND11_MODULE(tinymesh, m) {
           py::arg("dihedral_bound") = Pi);
     m.def("hole_fill_advancing_front", &holeFillAdvancingFront, "Advancing front hole filling", py::arg("mesh"),
           py::arg("face"));
+    m.def("hole_fill_context_coherent", &holeFillContextCoherent, "Context-based coherent surface completion",
+          py::arg("mesh"), py::arg("maxiters") = 200);
 }

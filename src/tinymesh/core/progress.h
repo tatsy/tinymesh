@@ -10,6 +10,8 @@
 #include <chrono>
 #include <sstream>
 
+#include "debug.h"
+
 class ProgressBar {
 public:
     ProgressBar() {
@@ -56,18 +58,17 @@ public:
             pbar += std::string(m_width - tick - 1, ' ');
         }
 
-        if (m_step == m_total || m_step % (m_total / 1000) == 0) {
-            printf("\r");
+        if (m_step == m_total || m_step % std::max(1, (m_total / 1000)) == 0) {
+            Print("\r");
             if (!m_description.empty()) {
-                printf("%s", m_description.c_str());
+                Print("%s ", m_description.c_str());
             }
-            printf("[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %sit/s]", (int)percent, pbar.c_str(), m_step, m_total,
-                   n_min, n_sec, r_min, r_sec, it_text.c_str());
-            fflush(stdout);
+            Print("[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %sit/s]", (int)percent, pbar.c_str(), m_step, m_total, n_min,
+                  n_sec, r_min, r_sec, it_text.c_str());
         }
 
         if (m_step == m_total) {
-            printf("\n");
+            Print("\n");
         }
     }
 

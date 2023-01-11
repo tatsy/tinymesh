@@ -173,12 +173,12 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
             }
         }
     }
-    printf("GMM[0]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[0], mus[0], std::sqrt(vars[0]));
-    printf("GMM[1]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[1], mus[1], std::sqrt(vars[1]));
-    printf("GMM[2]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[2], mus[2], std::sqrt(vars[2]));
+    Print("GMM[0]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[0], mus[0], std::sqrt(vars[0]));
+    Print("GMM[1]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[1], mus[1], std::sqrt(vars[1]));
+    Print("GMM[2]: pi=%.3f, mu=%.3f, sigma=%.3f\n", pis[2], mus[2], std::sqrt(vars[2]));
 
     const double patchRadiusReal = (1.0 / (avgLen * mus[1]) + 1.0) * avgLen;
-    printf("R = %f (avgLen = %f)\n", patchRadiusReal, avgLen);
+    Print("R = %f (avgLen = %f)\n", patchRadiusReal, avgLen);
     const int patchRadius = (int)std::ceil(patchRadiusReal / avgLen);
 
     // 2. Compute heat kernel signatures
@@ -197,7 +197,7 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
 
         auto end = std::chrono::system_clock::now();
         const int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        printf("[ HKS ] %f sec\n", elapsed / 1000.0);
+        Print("[ HKS ] %f sec\n", elapsed / 1000.0);
     }
 
     // Iteration

@@ -1,14 +1,13 @@
-v0.2.4
+v0.2.3
 ---
+*   Update some method names (e.g., `isStatic` -> `isLocked`)
 *   Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
 *   Add const version of iterators.
 *   Advancing front method [Zhao et al. 2007] is implemented.
 *   Change dev-env manager to Poetry.
 *   Add a method to compute principal curvatures (and thier directions) [Rusinkiewicz 2004].
-
-v0.2.3
----
-*   Update some method names (e.g., `isStatic` -> `isLocked`)
+*   Add a method of context-based coherent surface completion [Harary et al. 2014].
+*   Add own print function to support both C++/Python standard outputs.
 
 v0.2.2
 ---
