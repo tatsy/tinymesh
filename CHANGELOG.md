@@ -7,6 +7,7 @@ v0.2.3
 *   Change dev-env manager to Poetry.
 *   Add a method to compute principal curvatures (and thier directions) [Rusinkiewicz 2004].
 *   Add a method of context-based coherent surface completion [Harary et al. 2014].
+*   Add own print function to support both C++/Python standard outputs.
 
 v0.2.2
 ---
