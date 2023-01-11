@@ -6,8 +6,14 @@
 #define TINYMESH_DEBUG_H
 
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <stdexcept>
+
+#if defined(TINYMESH_PYTHON_MODULE)
+#include <pybind11/pybind11.h>
+namespace py = pybind11;
+#endif  // TINYMESH_PYTHON_MODULE
 
 // -----------------------------------------------------------------------------
 // ANSI color
@@ -17,6 +23,48 @@
 #define FG_YEL "\033[33m"
 #define FG_BLU "\033[34m"
 #define FG_NC "\033[0m"
+
+// -----------------------------------------------------------------------------
+// Debug output stream
+// -----------------------------------------------------------------------------
+class PrintStream {
+public:
+    PrintStream() {
+    }
+
+    virtual ~PrintStream() {
+        flush();
+    }
+
+    template <typename Type>
+    PrintStream &operator<<(const Type &s) {
+        ss << s;
+        if (ss.str().size() >= bufSize) {
+            flush();
+        }
+        return *this;
+    }
+
+    PrintStream &operator<<(std::ostream &(*f)(std::ostream &)) {
+        ss << f;
+        flush();
+        return *this;
+    }
+
+    void flush() {
+#if !defined(TINYMESH_PYTHON_MODULE)
+        std::cout << ss.str();
+        std::flush(std::cout);
+#else
+        py::print(ss.str(), py::arg("end") = "", py::arg("flush") = true);
+#endif
+        ss.str("");
+    }
+
+private:
+    std::ostringstream ss;
+    static const int bufSize = 128;
+};
 
 // -----------------------------------------------------------------------------
 // Message handlers
@@ -49,26 +97,30 @@ std::string STR_FMT(const char *format, Args... args) {
 }
 
 template <typename... Args>
+void Print(const char *format, Args... args) {
+    PrintStream() << STR_FMT(format, args...);
+}
+
+template <typename... Args>
 void Info(const char *format, Args... args) {
-    std::cout << FG_BLU << "[INFO] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_BLU << "[INFO] " << FG_NC << STR_FMT(format, args...) << std::endl;
 }
 
 template <typename... Args>
 void Debug(const char *format, Args... args) {
-    std::cout << FG_GRN << "[DEBUG] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_GRN << "[DEBUG] " << FG_NC << STR_FMT(format, args...) << std::endl;
 }
 
 template <typename... Args>
 void Warn(const char *format, Args... args) {
-    std::cout << FG_YEL << "[WARNING] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_YEL << "[WARNING] " << FG_NC << STR_FMT(format, args...) << std::endl;
 }
 
 #if !defined(TINYMESH_PYTHON_MODULE)
 template <typename... Args>
 void Error(const char *format, Args... args) {
-    std::cout << FG_RED << "[ERROR] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_RED << "[ERROR] " << FG_NC << STR_FMT(format, args...) << std::endl;
     std::terminate();
-    // throw std::runtime_error(STR_FMT(format, args...));
 }
 #else   // TINYMESH_PYTHON_MODULE
 template <typename... Args>
