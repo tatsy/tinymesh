@@ -6,6 +6,7 @@
 #define PROGRESS_H
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <chrono>
 #include <sstream>
@@ -46,10 +47,23 @@ public:
         const int r_min = (int)(rest_time / 1000.0) / 60;
         const int r_sec = (int)(rest_time / 1000.0) % 60;
 
+        std::string it_text = "";
         const int steps_per_sec = (int)(1000.0 / time_msec_per_step);
-        std::ostringstream oss;
-        oss << steps_per_sec;
-        const std::string it_text = steps_per_sec < 1000 ? oss.str() : "1000+";
+        if (steps_per_sec > 0) {
+            std::ostringstream oss;
+            if (steps_per_sec < 1000) {
+                oss << steps_per_sec;
+            } else {
+                oss << "1000+";
+            }
+            oss << "it/s";
+            it_text = oss.str();
+        } else {
+            std::ostringstream oss;
+            oss << std::setprecision(2);
+            oss << time_msec_per_step / 1000.0 << "s/it";
+            it_text = oss.str();
+        }
 
         const int tick = (int)(m_width * m_step / m_total);
         std::string pbar = std::string(tick, '=');
@@ -63,7 +77,7 @@ public:
             if (!m_description.empty()) {
                 Print("%s ", m_description.c_str());
             }
-            Print("[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %sit/s]", (int)percent, pbar.c_str(), m_step, m_total, n_min,
+            Print("[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %s]", (int)percent, pbar.c_str(), m_step, m_total, n_min,
                   n_sec, r_min, r_sec, it_text.c_str());
         }
 

@@ -6,7 +6,7 @@ v0.2.3
 *   Advancing front method [Zhao et al. 2007] is implemented.
 *   Change dev-env manager to Poetry.
 *   Add a method to compute principal curvatures (and thier directions) [Rusinkiewicz 2004].
-*   Add a method of context-based coherent surface completion [Harary et al. 2014].
+*   Add a method of context-based coherent surface completion [Harary et al. 2016].
 *   Add own print function to support both C++/Python standard outputs.
 
 v0.2.2
