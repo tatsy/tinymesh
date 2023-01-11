@@ -17,7 +17,6 @@ static const double Pi = 4.0 * std::atan(1.0);
 namespace tinymesh {
 
 class Vertex;
-class Edge;
 class Halfedge;
 class Face;
 class Mesh;

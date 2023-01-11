@@ -10,16 +10,26 @@
 #include <chrono>
 #include <sstream>
 
+#include "debug.h"
+
 class ProgressBar {
 public:
     ProgressBar() {
     }
+
     ProgressBar(int total) {
         m_step = 0;
         m_total = total;
+        m_description = "";
         start = std::chrono::system_clock::now();
     }
+
     virtual ~ProgressBar() {
+    }
+
+    template <typename... Args>
+    void set_description(const char *format, Args... args) {
+        m_description = STR_FMT(format, args...);
     }
 
     void step(int n = 1) {
@@ -48,13 +58,17 @@ public:
             pbar += std::string(m_width - tick - 1, ' ');
         }
 
-        if (m_step == m_total || m_step % (m_total / 1000) == 0) {
-            printf("\r[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %sit/s]", (int)percent, pbar.c_str(), m_step, m_total,
-                   n_min, n_sec, r_min, r_sec, it_text.c_str());
+        if (m_step == m_total || m_step % std::max(1, (m_total / 1000)) == 0) {
+            Print("\r");
+            if (!m_description.empty()) {
+                Print("%s ", m_description.c_str());
+            }
+            Print("[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %sit/s]", (int)percent, pbar.c_str(), m_step, m_total, n_min,
+                  n_sec, r_min, r_sec, it_text.c_str());
         }
 
         if (m_step == m_total) {
-            printf("\n");
+            Print("\n");
         }
     }
 
@@ -67,6 +81,7 @@ public:
 private:
     const int m_width = 40;
     int m_step, m_total;
+    std::string m_description = "";
     std::chrono::system_clock::time_point start;
 };
 

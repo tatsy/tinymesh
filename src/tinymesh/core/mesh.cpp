@@ -10,13 +10,14 @@
 #include <tuple>
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <Eigen/Core>
 
 #include "core/debug.h"
+#include "core/utils.h"
 #include "core/vec.h"
 #include "core/vertex.h"
-#include "core/edge.h"
 #include "core/face.h"
 #include "core/halfedge.h"
 #include "core/filesystem.h"
@@ -25,14 +26,6 @@
 #include "tinyply.h"
 
 namespace fs = std::filesystem;
-
-using IndexPair = std::pair<uint32_t, uint32_t>;
-
-struct IndexPairHash : public std::function<size_t(IndexPair)> {
-    std::size_t operator()(const IndexPair &k) const {
-        return std::get<0>(k) ^ std::get<1>(k);
-    }
-};
 
 namespace tinymesh {
 
@@ -51,10 +44,31 @@ Mesh::Mesh(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indic
     construct(vertices, indices);
 }
 
+size_t Mesh::numVertices() const {
+    return vertices_.size();
+}
+
+size_t Mesh::numEdges() const {
+    std::unordered_set<Halfedge *> hes;
+    for (size_t i = 0; i < halfedges_.size(); i++) {
+        Halfedge *he = halfedges_[i].get();
+        if (hes.count(he) != 0 || hes.count(he->rev_) != 0) continue;
+        hes.insert(he);
+    }
+    return hes.size();
+}
+
+size_t Mesh::numHalfedges() const {
+    return halfedges_.size();
+}
+
+size_t Mesh::numFaces() const {
+    return faces_.size();
+}
+
 void Mesh::load(const std::string &filename) {
     // Clear existing elements
     vertices_.clear();
-    edges_.clear();
     halfedges_.clear();
     faces_.clear();
 
@@ -74,7 +88,6 @@ void Mesh::load(const std::string &filename) {
 void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
     // Clear existing elements
     vertices_.clear();
-    edges_.clear();
     halfedges_.clear();
     faces_.clear();
 
@@ -108,7 +121,7 @@ std::vector<Vec3> Mesh::getVertices() const {
 std::vector<uint32_t> Mesh::getVertexIndices() const {
     std::vector<uint32_t> ret;
     for (const auto &f : faces_) {
-        if (f->isBoundary()) {
+        if (f->isHole()) {
             continue;
         }
 
@@ -120,6 +133,53 @@ std::vector<uint32_t> Mesh::getVertexIndices() const {
         ret.push_back(i2);
     }
     return ret;
+}
+
+double Mesh::getMeanEdgeLength() const {
+    std::unordered_set<Halfedge *> visited;
+    double mean = 0.0;
+    for (int i = 0; i < halfedges_.size(); i++) {
+        Halfedge *he = halfedges_[i].get();
+        if (visited.count(he) != 0) continue;
+        if (visited.count(he->rev_) != 0) continue;
+        visited.insert(he);
+
+        mean += halfedges_[i]->length();
+    }
+    return mean / (double)visited.size();
+}
+
+double Mesh::getMeanDihedralAngle() const {
+    std::unordered_set<Halfedge *> visited;
+    double mean = 0.0;
+    for (int i = 0; i < halfedges_.size(); i++) {
+        Halfedge *he = halfedges_[i].get();
+        if (visited.count(he) != 0) continue;
+        if (visited.count(he->rev_) != 0) continue;
+        visited.insert(he);
+
+        Halfedge *rev = he->rev_;
+        Vertex *vh1 = he->src();
+        Vertex *vh2 = he->next()->dst();
+        Vertex *vh3 = rev->src();
+        Vertex *vh4 = rev->next()->dst();
+
+        const Vec3 p1 = vh1->pos();
+        const Vec3 p2 = vh2->pos();
+        const Vec3 p3 = vh3->pos();
+        const Vec3 p4 = vh4->pos();
+        mean += dihedral(p2, p1, p3, p4);
+    }
+    return mean / (double)visited.size();
+}
+
+double Mesh::getMeanFaceArea() const {
+    double mean = 0.0;
+    for (size_t i = 0; i < faces_.size(); i++) {
+        mean += faces_[i]->area();
+    }
+    mean /= (double)faces_.size();
+    return mean;
 }
 
 void Mesh::construct() {
@@ -148,19 +208,20 @@ void Mesh::construct() {
     }
 
     // Setup halfedge structure
-    static const int degree = 3;
+    static const int ngon = 3;
     std::map<IndexPair, Halfedge *> pairToHalfedge;
     std::map<uint32_t, uint32_t> vertexDegree;
-    for (int i = 0; i < (int)indices_.size(); i += degree) {
+    for (int i = 0; i < (int)indices_.size(); i += ngon) {
         // Check polygon duplication
         bool isDuplicated = false;
-        for (int j = 0; j < degree; j++) {
+        for (int j = 0; j < ngon; j++) {
             const uint32_t a = indices_[i + j];
-            const uint32_t b = indices_[i + (j + 1) % degree];
+            const uint32_t b = indices_[i + (j + 1) % ngon];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
                 Warn(
-                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes this "
+                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes "
+                    "this "
                     "edge.",
                     a, b);
                 isDuplicated = true;
@@ -175,8 +236,8 @@ void Mesh::construct() {
         // Traverse face vertices
         auto face = new Face();
         std::vector<Halfedge *> faceHalfedges;
-        for (int j = 0; j < degree; j++) {
-            // Count up vertex degree
+        for (int j = 0; j < ngon; j++) {
+            // Count up #faces around each vertex
             const uint32_t a = indices_[i + j];
             if (vertexDegree.find(a) == vertexDegree.end()) {
                 vertexDegree[a] = 1;
@@ -185,7 +246,7 @@ void Mesh::construct() {
             }
 
             // Check duplicated halfedges
-            const uint32_t b = indices_[i + (j + 1) % degree];
+            const uint32_t b = indices_[i + (j + 1) % ngon];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
                 Error("An edge with vertices #%d and #%d is duplicated\n", a, b);
@@ -210,12 +271,6 @@ void Mesh::construct() {
                 Halfedge *rev = iba->second;
                 he->rev_ = rev;
                 rev->rev_ = he;
-
-                auto edge = new Edge();
-                addEdge(edge);
-                he->edge_ = edge;
-                rev->edge_ = edge;
-                edge->halfedge_ = he;
             } else {
                 he->rev_ = nullptr;
             }
@@ -223,8 +278,8 @@ void Mesh::construct() {
         addFace(face);
 
         // Set next halfedges
-        for (int j = 0; j < degree; j++) {
-            const int k = (j + 1) % degree;
+        for (int j = 0; j < ngon; j++) {
+            const int k = (j + 1) % ngon;
             faceHalfedges[j]->next_ = faceHalfedges[k];
         }
     }
@@ -258,17 +313,14 @@ void Mesh::construct() {
                 addHalfedge(rev);
                 boundaryHalfedges.push_back(rev);
 
-                auto edge = new Edge();
-                addEdge(edge);
-
                 it->rev_ = rev;
                 rev->rev_ = it;
-                edge->halfedge_ = it;
-                it->edge_ = edge;
-                rev->edge_ = edge;
 
                 rev->face_ = face;
                 rev->src_ = it->next_->src_;
+
+                it->isBoundary_ = true;
+                rev->isBoundary_ = true;
 
                 // Advance it to the next halfedge along the current boundary loop
                 it = it->next_;
@@ -283,7 +335,6 @@ void Mesh::construct() {
             const auto degree = static_cast<int>(boundaryHalfedges.size());
             for (int j = 0; j < degree; j++) {
                 const int k = (j - 1 + degree) % degree;
-                boundaryHalfedges[j]->src_->isBoundary_ = true;
                 boundaryHalfedges[j]->next_ = boundaryHalfedges[k];
             }
         }
@@ -440,7 +491,7 @@ void Mesh::saveOBJ(const std::string &filename) const {
 
     const int nv = (int)vertices_.size();
     for (const auto &f : faces_) {
-        if (f->isBoundary()) {
+        if (f->isHole()) {
             continue;
         }
 
@@ -477,7 +528,7 @@ void Mesh::savePLY(const std::string &filename) const {
     std::vector<uint32_t> indexData;
     indexData.reserve(faces_.size() * 3);
     for (const auto &f : faces_) {
-        if (f->isBoundary()) {
+        if (f->isHole()) {
             continue;
         }
 
@@ -521,6 +572,10 @@ bool Mesh::splitHE(Halfedge *he) {
         return false;
     }
 
+    if (he->isBoundary() || he->rev_->isBoundary()) {
+        return false;
+    }
+
     // Prepare halfedge / face
     auto he_new = new Halfedge();
     auto he01 = new Halfedge();
@@ -529,10 +584,6 @@ bool Mesh::splitHE(Halfedge *he) {
     auto he11 = new Halfedge();
     auto he12 = new Halfedge();
 
-    auto e_new = new Edge();
-    auto e0 = new Edge();
-    auto e1 = new Edge();
-
     auto he0 = he->next_;
     auto he1 = he0->next_;
     auto he2 = rev->next_;
@@ -540,9 +591,6 @@ bool Mesh::splitHE(Halfedge *he) {
 
     auto f0 = he->face();
     auto f1 = rev->face();
-    if (f0->isBoundary() || f1->isBoundary()) {
-        return false;
-    }
 
     auto f0_new = new Face();
     auto f1_new = new Face();
@@ -570,19 +618,6 @@ bool Mesh::splitHE(Halfedge *he) {
     rev_new->next_ = he2;
     he2->next_ = he12;
     he12->next_ = rev_new;
-
-    // Set edge-halfedge links
-    e_new->halfedge_ = he_new;
-    he_new->edge_ = e_new;
-    rev_new->edge_ = e_new;
-
-    e0->halfedge_ = he01;
-    he01->edge_ = e0;
-    he02->edge_ = e0;
-
-    e1->halfedge_ = he11;
-    he11->edge_ = e1;
-    he12->edge_ = e1;
 
     // Update rev half-edges
     he->rev_ = rev;
@@ -646,9 +681,6 @@ bool Mesh::splitHE(Halfedge *he) {
     addFace(f0_new);
     addFace(f1_new);
     addVertex(v_new);
-    addEdge(e_new);
-    addEdge(e0);
-    addEdge(e1);
     addHalfedge(he_new);
     addHalfedge(rev_new);
     addHalfedge(he01);
@@ -671,7 +703,6 @@ bool Mesh::collapseHE(Halfedge *he) {
      *        v3
      */
 
-    Edge *e = he->edge_;
     Halfedge *rev = he->rev_;
     Assertion(he->index_ < (int)halfedges_.size(), "Daemon halfedge detected!");
     Assertion(rev->index_ < (int)halfedges_.size(), "Daemon halfedge detected!");
@@ -705,7 +736,7 @@ bool Mesh::collapseHE(Halfedge *he) {
 
     // Collect neighboring vertices of the one to be removed
     std::vector<Vertex *> neighbors;
-    for (auto it = v2->ohe_begin(); it != v2->ohe_end(); ++it) {
+    for (auto it = v2->he_begin(); it != v2->he_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
         neighbors.push_back(it->dst());
     }
@@ -715,7 +746,7 @@ bool Mesh::collapseHE(Halfedge *he) {
     // Check unsafe collapse (# of shared vertices)
     int numUnion = 0;
     std::set<Vertex *> neighborSet(neighbors.begin(), neighbors.end());
-    for (auto it = v0->ohe_begin(); it != v0->ohe_end(); ++it) {
+    for (auto it = v0->he_begin(); it != v0->he_end(); ++it) {
         Assertion(it->dst() != nullptr, "Null vertex is found!");
         if (neighborSet.find(it->dst()) != neighborSet.end()) {
             numUnion += 1;
@@ -759,35 +790,25 @@ bool Mesh::collapseHE(Halfedge *he) {
     Assertion(v_remain->index() < (int)vertices_.size(), "Something is wrong1!");
     Assertion(v_remove->index() < (int)vertices_.size(), "Something is wrong2!");
     Assertion(v_remove != v_remain, "Something is wrong3!");
-    for (auto it = v_remove->ohe_begin(); it != v_remove->ohe_end(); ++it) {
+    for (auto it = v_remove->he_begin(); it != v_remove->he_end(); ++it) {
         Assertion(it->src() == v_remove, "Invalid halfedge origin detected!");
         it->src_ = v_remain;
     }
 
-    for (auto it = v_remain->ohe_begin(); it != v_remain->ohe_end(); ++it) {
+    for (auto it = v_remain->he_begin(); it != v_remain->he_end(); ++it) {
         Assertion(it->src() == v_remain, "Invalid halfedge origin detected!");
     }
 
     // Update edges and opposite halfedges
-    Edge *e0 = he->next()->next()->edge();
-    Edge *e1 = he->next()->edge();
     Halfedge *he0 = he->next()->next()->rev();
     Halfedge *he1 = he->next()->rev();
-    e0->halfedge_ = he0;
     he0->rev_ = he1;
-    he0->edge_ = e0;
     he1->rev_ = he0;
-    he1->edge_ = e0;
 
-    Edge *e2 = rev->next()->next()->edge();
-    Edge *e3 = rev->next()->edge();
     Halfedge *he2 = rev->next()->next()->rev();
     Halfedge *he3 = rev->next()->rev();
-    e2->halfedge_ = he2;
     he2->rev_ = he3;
-    he2->edge_ = e2;
     he3->rev_ = he2;
-    he3->edge_ = e2;
 
     // Update halfedge of the origin vertex (v0)
     v_remain->halfedge_ = he0;
@@ -797,11 +818,6 @@ bool Mesh::collapseHE(Halfedge *he) {
     v1->halfedge_ = he1;
     v2->halfedge_ = he2;
     v3->halfedge_ = he3;
-
-    // Remove edges
-    removeEdge(e);
-    removeEdge(e1);
-    removeEdge(e3);
 
     // Remove halfedges
     Face *f0 = he->face_;
@@ -824,6 +840,29 @@ bool Mesh::collapseHE(Halfedge *he) {
     removeVertex(v_remove);
 
     return true;
+}
+
+bool Mesh::collapseFace(Face *f) {
+    std::vector<Halfedge *> hes;
+    for (auto it = f->he_begin(); it != f->he_end(); ++it) {
+        hes.push_back(it.ptr());
+    }
+    Assertion(hes.size() == 3, "Non-triangle face detected!");
+
+    Halfedge *he1 = hes[0];
+    Halfedge *he2 = he1->next_->rev_;
+    bool ret = collapseHE(he1);
+    Assertion(he2->index() >= 0 && he2->index() < numHalfedges(), "Error!!");
+
+    ret &= collapseHE(he2);
+
+    return ret;
+
+    // if (!collapseHE(he1) || !collapseHE(he2)) {
+    //     return false;
+    // }
+
+    // return true;
 }
 
 bool Mesh::flipHE(Halfedge *he) {
@@ -892,7 +931,7 @@ bool Mesh::flipHE(Halfedge *he) {
     return true;
 }
 
-void Mesh::fillHoles(double dihedralBound) {
+void Mesh::fillHoles() {
     std::vector<int> holeFaces;
     for (int i = 0; i < (int)this->numFaces(); i++) {
         Face *f = this->face(i);
@@ -903,221 +942,12 @@ void Mesh::fillHoles(double dihedralBound) {
 
     for (auto i : holeFaces) {
         Face *f = this->face(i);
-        this->triangulate(f, dihedralBound);
+        this->triangulate(f);
     }
 }
 
-void Mesh::triangulate(Face *face, double dihedralBound) {
-    /*
-     * The triangulation algorithm is based on the following papers.
-     * Barequet and Sharir, "Filling Gaps in the Boundary of a Polyhedron", 1995.
-     * Liepa, "Filling Holes in Meshes", 2003.
-     * 
-     * Different from them, the triangularion is performed when the dihedral
-     * angle in resulting triangularion is less than "dihedralBound".
-     */
-    using E = IndexPair;
-    using T = std::tuple<uint32_t, uint32_t, uint32_t>;
-
-    std::vector<Vertex *> vs;
-    std::unordered_map<E, Halfedge *, IndexPairHash> pair2he;
-    std::unordered_map<Halfedge *, E> he2pair;
-
-    // List all boundary vertices
-    for (auto it = face->v_begin(); it != face->v_end(); ++it) {
-        vs.push_back(it.ptr());
-    }
-    const int n_verts = (int)vs.size();
-
-    int count = 0;
-    for (auto it = face->he_begin(); it != face->he_end(); ++it) {
-        const int next = (count + 1) % n_verts;
-        pair2he.insert(std::make_pair(E(count, next), it.ptr()));
-        he2pair.insert(std::make_pair(it.ptr(), E(count, next)));
-        count += 1;
-    }
-
-    Eigen::MatrixXd Warea(n_verts, n_verts);
-    Eigen::MatrixXd Wangle(n_verts, n_verts);
-    Eigen::MatrixXi O(n_verts, n_verts);
-    Warea.setConstant(1.0e12);
-    Wangle.setConstant(1.0e12);
-    O.setConstant(-1);
-    for (int i = 0; i < n_verts - 1; i++) {
-        Warea(i, i + 1) = 0.0;
-        Wangle(i, i + 1) = 0.0;
-        O(i, i + 1) = -1;
-        if (i < n_verts - 2) {
-            const Vec3 v0 = vs[i]->pos();
-            const Vec3 v1 = vs[i + 1]->pos();
-            const Vec3 v2 = vs[i + 2]->pos();
-            Warea(i, i + 2) = 0.5 * length(cross(v1 - v0, v2 - v0));
-
-            const auto he01 = pair2he[E(i, i + 1)];
-            const auto he12 = pair2he[E(i + 1, i + 2)];
-
-            const Vec3 v01rev = he01->rev()->next()->dst()->pos();
-            const Vec3 v12rev = he12->rev()->next()->dst()->pos();
-            const double a01 = Pi - dihedral(v2, v0, v1, v01rev);
-            const double a12 = Pi - dihedral(v0, v1, v2, v12rev);
-            Wangle(i, i + 2) = std::max(a01, a12);
-
-            O(i, i + 2) = i + 1;
-        }
-    }
-
-    for (int j = 3; j < n_verts; j++) {
-        for (int i = 0; i < n_verts - j; i++) {
-            const int k = i + j;
-            for (int m = i + 1; m < k; m++) {
-                const Vec3 v0 = vs[i]->pos();
-                const Vec3 v1 = vs[m]->pos();
-                const Vec3 v2 = vs[k]->pos();
-                const double F = 0.5 * length(cross(v1 - v0, v2 - v0));
-                const double WareaNew = Warea(i, m) + Warea(m, k) + F;
-
-                Vec3 v01rev;
-                if (abs(m - i) == 1) {
-                    const auto he01 = pair2he[E(i, m)];
-                    v01rev = he01->rev()->next()->dst()->pos();
-                } else {
-                    v01rev = vs[O(i, m)]->pos();
-                }
-
-                Vec3 v12rev;
-                if (abs(k - m) == 1) {
-                    const auto he12 = pair2he[E(m, k)];
-                    v12rev = he12->rev()->next()->dst()->pos();
-                } else {
-                    v12rev = vs[O(m, k)]->pos();
-                }
-
-                const double a01 = Pi - dihedral(v2, v0, v1, v01rev);
-                const double a12 = Pi - dihedral(v0, v1, v2, v12rev);
-                const double D = std::max(a01, a12);
-                const double WangleNew = std::max(D, std::max(Wangle(i, m), Wangle(m, k)));
-
-                if (WangleNew < Wangle(i, k) ||
-                    (abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k))) {
-                    Warea(i, k) = WareaNew;
-                    Wangle(i, k) = WangleNew;
-                    O(i, k) = m;
-                }
-            }
-        }
-    }
-
-    std::queue<E> que;
-    std::vector<T> tris;
-
-    que.push(E(0, n_verts - 1));
-    while (!que.empty()) {
-        const E ik = que.front();
-        que.pop();
-
-        const int i = std::get<0>(ik);
-        const int k = std::get<1>(ik);
-        const int m = O(i, k);
-
-        if (i + 2 == k) {
-            tris.emplace_back(i, m, k);
-        } else {
-            if (i + 1 != m) {
-                que.push(E(i, m));
-            }
-
-            tris.emplace_back(i, m, k);
-
-            if (m != k - 1) {
-                que.push(E(m, k));
-            }
-        }
-    }
-
-    std::vector<Face *> new_faces;
-    for (const auto &t : tris) {
-        const int i0 = std::get<0>(t);
-        const int i1 = std::get<1>(t);
-        const int i2 = std::get<2>(t);
-
-        Halfedge *new_he0 = nullptr;
-        if (pair2he.count(E(i0, i1)) != 0) {
-            new_he0 = pair2he[E(i0, i1)];
-        } else {
-            new_he0 = new Halfedge();
-            pair2he.insert(std::make_pair(E(i0, i1), new_he0));
-            he2pair.insert(std::make_pair(new_he0, E(i0, i1)));
-            addHalfedge(new_he0);
-        }
-
-        Halfedge *new_he1 = nullptr;
-        if (pair2he.count(E(i1, i2)) != 0) {
-            new_he1 = pair2he[E(i1, i2)];
-        } else {
-            new_he1 = new Halfedge();
-            pair2he.insert(std::make_pair(E(i1, i2), new_he1));
-            he2pair.insert(std::make_pair(new_he1, E(i1, i2)));
-            addHalfedge(new_he1);
-        }
-
-        Halfedge *new_he2 = nullptr;
-        if (pair2he.count(E(i2, i0)) != 0) {
-            new_he2 = pair2he[E(i2, i0)];
-        } else {
-            new_he2 = new Halfedge();
-            pair2he.insert(std::make_pair(E(i2, i0), new_he2));
-            he2pair.insert(std::make_pair(new_he2, E(i2, i0)));
-            addHalfedge(new_he2);
-        }
-
-        new_he0->src_ = vs[i0];
-        new_he1->src_ = vs[i1];
-        new_he2->src_ = vs[i2];
-
-        new_he0->next_ = new_he1;
-        new_he1->next_ = new_he2;
-        new_he2->next_ = new_he0;
-
-        auto new_face = new Face();
-        addFace(new_face);
-        new_faces.push_back(new_face);
-
-        new_he0->face_ = new_face;
-        new_he1->face_ = new_face;
-        new_he2->face_ = new_face;
-        new_face->halfedge_ = new_he0;
-    }
-
-    for (auto f : new_faces) {
-        Halfedge *he = f->halfedge_;
-        do {
-            if (he->rev_ == NULL) {
-                auto e = he2pair[he];
-                int i = std::get<0>(e);
-                int j = std::get<1>(e);
-
-                auto r = E(j, i);
-                if (pair2he.count(r) != 0) {
-                    Halfedge *rev = pair2he[r];
-                    he->rev_ = rev;
-                    rev->rev_ = he;
-
-                    Edge *new_edge = new Edge();
-                    he->edge_ = new_edge;
-                    rev->edge_ = new_edge;
-                    new_edge->halfedge_ = he;
-                    addEdge(new_edge);
-                } else {
-                    printf("%d %d %p\n", i, j, he);
-                }
-            }
-
-            he->src_->isBoundary_ = false;
-            he = he->next_;
-        } while (he != f->halfedge_);
-    }
-
-    removeFace(face);
+void Mesh::triangulate(Face *face) {
+    this->holeFillMinDihedral_(face);
 }
 
 bool Mesh::verify() const {
@@ -1131,28 +961,10 @@ bool Mesh::verify() const {
         success &= verifyVertex(v);
     }
 
-    for (int i = 0; i < (int)edges_.size(); i++) {
-        Edge *e = edges_[i].get();
-        if (e->index() != i) {
-            Warn("Edge index does not match array index: e[%d].index = %d", i, e->index());
-            success = false;
-        }
-
-        if (e->halfedge_ == nullptr) {
-            Warn("Edge[%d] is not with non-null halfedge!", e->index());
-            success = false;
-        }
-    }
-
     for (int i = 0; i < (int)halfedges_.size(); i++) {
         auto he = halfedges_[i];
         if (he->index() != i) {
             Warn("Halfedge index does not match array index: he[%d].index = %d", i, he->index());
-            success = false;
-        }
-
-        if (he->edge_ == nullptr) {
-            Warn("Halfedge[%d] is not with non-null edge!", he->index());
             success = false;
         }
     }
@@ -1187,7 +999,7 @@ bool Mesh::verifyVertex(Vertex *v) const {
         success = false;
     }
 
-    for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+    for (auto it = v->he_begin(); it != v->he_end(); ++it) {
         if (it->src() != v) {
             fprintf(stderr, "Origin of an outward halfedge is invalid at v[%d]!\n", v->index());
             success = false;
@@ -1200,11 +1012,6 @@ bool Mesh::verifyVertex(Vertex *v) const {
 void Mesh::addVertex(Vertex *v) {
     v->index_ = static_cast<int>(vertices_.size());
     vertices_.emplace_back(v);
-}
-
-void Mesh::addEdge(Edge *e) {
-    e->index_ = static_cast<int>(edges_.size());
-    edges_.emplace_back(e);
 }
 
 void Mesh::addHalfedge(Halfedge *he) {
@@ -1225,20 +1032,9 @@ void Mesh::removeVertex(Vertex *v) {
     if (v->index_ < nVerts - 1) {
         std::swap(vertices_[v->index_], vertices_[nVerts - 1]);
         std::swap(vertices_[v->index_]->index_, vertices_[nVerts - 1]->index_);
+        vertices_[nVerts - 1]->index_ = -1;
     }
     vertices_.resize(nVerts - 1);
-}
-
-void Mesh::removeEdge(Edge *e) {
-    const int nEdges = (int)edges_.size();
-    Assertion((*e) == (*edges_[e->index_]), "Invalid edge indexing!");
-    Assertion(e->index_ < nEdges, "Edge index out of range!");
-
-    if (e->index_ < nEdges - 1) {
-        std::swap(edges_[e->index_], edges_[nEdges - 1]);
-        std::swap(edges_[e->index_]->index_, edges_[nEdges - 1]->index_);
-    }
-    edges_.resize(nEdges - 1);
 }
 
 void Mesh::removeHalfedge(Halfedge *he) {
@@ -1249,6 +1045,7 @@ void Mesh::removeHalfedge(Halfedge *he) {
     if (he->index_ < nHEs - 1) {
         std::swap(halfedges_[he->index_], halfedges_[nHEs - 1]);
         std::swap(halfedges_[he->index_]->index_, halfedges_[nHEs - 1]->index_);
+        halfedges_[nHEs - 1]->index_ = -1;
     }
     halfedges_.resize(nHEs - 1);
 }
@@ -1261,6 +1058,7 @@ void Mesh::removeFace(Face *f) {
     if (f->index_ < nFaces - 1) {
         std::swap(faces_[f->index_], faces_[nFaces - 1]);
         std::swap(faces_[f->index_]->index_, faces_[nFaces - 1]->index_);
+        faces_[nFaces - 1]->index_ = -1;
     }
     faces_.resize(faces_.size() - 1);
 }

@@ -1,18 +1,28 @@
+v0.2.3
+---
+*   Update some method names (e.g., `isStatic` -> `isLocked`)
+*   Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
+*   Add const version of iterators.
+*   Advancing front method [Zhao et al. 2007] is implemented.
+*   Change dev-env manager to Poetry.
+*   Add a method to compute principal curvatures (and thier directions) [Rusinkiewicz 2004].
+*   Add a method of context-based coherent surface completion [Harary et al. 2014].
+*   Add own print function to support both C++/Python standard outputs.
+
 v0.2.2
 ---
-* Change Python env manager to Pipenv.
-* Add methods computing approximated Laplacian-Beltrami operators (adjacent, cotangent, Belkin+2008).
-* Add IPython notebooks as Pythons examples rather than simple scripts.
-* Change traversal order of elements around a vertex to counter-clockwise order.
-* Add heat kernel signature [Sun et al. 2009].
+*   Change Python env manager to Pipenv.
+*   Add methods computing approximated Laplacian-Beltrami operators (adjacent, cotangent, Belkin+2008).
+*   Add IPython notebooks as Pythons examples rather than simple scripts.
+*   Change traversal order of elements around a vertex to counter-clockwise order.
+*   Add heat kernel signature [Sun et al. 2009].
 
 v0.2.1
 ---
-*  Minor bug fix for GCC v8.
+*   Minor bug fix for GCC v8.
 
 v0.2.0
 ---
-
 *   Add unit test for each functions (just to check run or not).
 *   Add feature preservation in remeshing.
 *   Include Eigen to repo as a submodule.
@@ -26,5 +36,4 @@ v0.2.0
 
 v0.1.0
 ---
-
-* First release
+*   First release

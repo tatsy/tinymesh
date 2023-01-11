@@ -12,7 +12,8 @@
 #define omp_critical __pragma(omp critical)
 #else
 #define omp_pragma _Pragma("omp parallel for")
-#define omp_critical _Pragma("omp parallel for")
+#define omp_critical _Pragma("omp critical")
+#define omp_atomic _Pragma("omp atomic")
 #endif
 #define omp_parallel_for omp_pragma for
 #define omp_lock_t omp_lock_t

@@ -12,12 +12,17 @@
 
 namespace tinymesh {
 
+class Triangle;
+
 class TINYMESH_API Face {
 public:
     // Forward declaration
     class VertexIterator;
+    class ConstVertexIterator;
     class HalfedgeIterator;
+    class ConstHalfedgeIterator;
     class FaceIterator;
+    class ConstFaceIterator;
 
 public:
     Face();
@@ -30,23 +35,34 @@ public:
 
     bool operator==(const Face &other) const;
 
+    Triangle toTriangle() const;
+
     VertexIterator v_begin();
     VertexIterator v_end();
+    ConstVertexIterator v_begin() const;
+    ConstVertexIterator v_end() const;
+
     HalfedgeIterator he_begin();
     HalfedgeIterator he_end();
+    ConstHalfedgeIterator he_begin() const;
+    ConstHalfedgeIterator he_end() const;
+
     FaceIterator f_begin();
     FaceIterator f_end();
+    ConstFaceIterator f_begin() const;
+    ConstFaceIterator f_end() const;
 
     int index() const {
         return index_;
     }
 
-    Vec3 normal();
-    double area();
+    Vec3 normal() const;
+    double area() const;
+    int numCorners() const;
 
-    bool isHole();
-    bool isBoundary();
-    bool isStatic();
+    bool isHole() const;
+    bool isBoundary() const;
+    bool isLocked() const;
 
 private:
     Halfedge *halfedge_ = nullptr;
@@ -69,6 +85,20 @@ private:
     Halfedge *halfedge_, *iter_;
 };
 
+class TINYMESH_API Face::ConstVertexIterator {
+public:
+    explicit ConstVertexIterator(Halfedge *he);
+    bool operator!=(const ConstVertexIterator &it) const;
+    const Vertex &operator*() const;
+    const Vertex *operator->() const;
+    const Vertex *ptr() const;
+    ConstVertexIterator &operator++();
+    ConstVertexIterator operator++(int);
+
+private:
+    Halfedge *halfedge_, *iter_;
+};
+
 class TINYMESH_API Face::HalfedgeIterator {
 public:
     explicit HalfedgeIterator(Halfedge *he);
@@ -83,6 +113,20 @@ private:
     Halfedge *halfedge_, *iter_;
 };
 
+class TINYMESH_API Face::ConstHalfedgeIterator {
+public:
+    explicit ConstHalfedgeIterator(Halfedge *he);
+    bool operator!=(const ConstHalfedgeIterator &it) const;
+    const Halfedge &operator*() const;
+    const Halfedge *operator->() const;
+    const Halfedge *ptr() const;
+    ConstHalfedgeIterator &operator++();
+    ConstHalfedgeIterator operator++(int);
+
+private:
+    Halfedge *halfedge_, *iter_;
+};
+
 class TINYMESH_API Face::FaceIterator {
 public:
     explicit FaceIterator(Halfedge *he);
@@ -92,6 +136,20 @@ public:
     Face *ptr() const;
     FaceIterator &operator++();
     FaceIterator operator++(int);
+
+private:
+    Halfedge *halfedge_, *iter_;
+};
+
+class TINYMESH_API Face::ConstFaceIterator {
+public:
+    explicit ConstFaceIterator(Halfedge *he);
+    bool operator!=(const ConstFaceIterator &it) const;
+    const Face &operator*() const;
+    const Face *operator->() const;
+    const Face *ptr() const;
+    ConstFaceIterator &operator++();
+    ConstFaceIterator operator++(int);
 
 private:
     Halfedge *halfedge_, *iter_;

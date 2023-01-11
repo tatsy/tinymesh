@@ -30,15 +30,8 @@ int main(int argc, char **argv) {
         std::string noiseMeshFile;
         {
             tms::Mesh mesh(argv[1]);
-            mesh.fillHoles(Pi / 6.0);
-
-            double Lavg = 0.0;
-            for (int i = 0; i < (int)mesh.numEdges(); i++) {
-                tms::Edge *e = mesh.edge(i);
-                const double l = e->length();
-                Lavg += l;
-            }
-            Lavg = Lavg / mesh.numEdges();
+            mesh.fillHoles();
+            const double Lavg = mesh.getMeanEdgeLength();
 
             // Add noise
             for (int i = 0; i < (int)mesh.numVertices(); i++) {
@@ -53,7 +46,7 @@ int main(int argc, char **argv) {
         // Denoise (Normal Gaussian filter)
         {
             tms::Mesh mesh(noiseMeshFile);
-            mesh.fillHoles(Pi / 6.0);
+            mesh.fillHoles();
             tms::denoiseNormalGaussian(mesh, sigma, 10);
 
             const std::string outfile =
@@ -65,7 +58,7 @@ int main(int argc, char **argv) {
         // Denoise (Normal bilateral filter)
         {
             tms::Mesh mesh(noiseMeshFile);
-            mesh.fillHoles(Pi / 6.0);
+            mesh.fillHoles();
             tms::denoiseNormalBilateral(mesh, sigma, 0.1, 10);
 
             const std::string outfile =
@@ -77,7 +70,7 @@ int main(int argc, char **argv) {
         // Denoise (L0 smoothing)
         {
             tms::Mesh mesh(noiseMeshFile);
-            mesh.fillHoles(Pi / 6.0);
+            mesh.fillHoles();
             tms::denoiseL0Smooth(mesh);
 
             const std::string outfile = (dirpath / fs::path((basename + "_denoise_l0" + extension).c_str())).string();

@@ -3,8 +3,10 @@
 
 #include <vector>
 
+#include "debug.h"
 #include "vertex.h"
 #include "halfedge.h"
+#include "triangle.h"
 
 namespace tinymesh {
 
@@ -18,7 +20,18 @@ bool Face::operator==(const Face &other) const {
     return ret;
 }
 
-Vec3 Face::normal() {
+Triangle Face::toTriangle() const {
+    std::vector<Vec3> vs;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        vs.push_back(it->pos());
+    }
+
+    Assertion(vs.size() == 3, "Non-triangle face cannot be converted to Triangle!");
+
+    return { vs[0], vs[1], vs[2] };
+}
+
+Vec3 Face::normal() const {
     std::vector<Vec3> vs;
     for (auto it = v_begin(); it != v_end(); ++it) {
         vs.push_back(it->pos());
@@ -28,16 +41,16 @@ Vec3 Face::normal() {
     Vec3 norm(0.0);
     for (int i = 0; i < N; i++) {
         const int prev = (i - 1 + N) % N;
-        const int post = (i + 1) % N;
-        const Vec3 &p0 = vs[i];
-        const Vec3 &p1 = vs[post];
-        const Vec3 &p2 = vs[prev];
-        norm += cross(p1 - p0, p2 - p0);
+        const int next = (i + 1) % N;
+        const Vec3 &p0 = vs[prev];
+        const Vec3 &p1 = vs[i];
+        const Vec3 &p2 = vs[next];
+        norm += cross(p2 - p1, p0 - p1);
     }
     return normalize(norm);
 }
 
-double Face::area() {
+double Face::area() const {
     std::vector<Vec3> vs;
     for (auto it = v_begin(); it != v_end(); ++it) {
         vs.push_back(it->pos());
@@ -54,30 +67,36 @@ double Face::area() {
     return area;
 }
 
-bool Face::isHole() {
-    // Face is hole if all the vertices are at the boundary.
-    bool ret = true;
-    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
-        if (!vit->isBoundary()) {
-            ret = false;
-            break;
-        }
+int Face::numCorners() const {
+    int count = 0;
+    for (auto it = v_begin(); it != v_end(); ++it) {
+        count++;
     }
-    return ret;
+    return count;
 }
 
-bool Face::isBoundary() {
-    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
-        if (vit->isBoundary()) {
+bool Face::isHole() const {
+    // Face is hole if all the vertices are at the boundary.
+    for (auto it = this->he_begin(); it != this->he_end(); ++it) {
+        if (!it->isBoundary()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Face::isBoundary() const {
+    for (auto it = this->he_begin(); it != this->he_end(); ++it) {
+        if (it->isBoundary()) {
             return true;
         }
     }
     return false;
 }
 
-bool Face::isStatic() {
-    for (auto vit = this->v_begin(); vit != this->v_end(); ++vit) {
-        if (vit->isStatic()) {
+bool Face::isLocked() const {
+    for (auto it = this->v_begin(); it != this->v_end(); ++it) {
+        if (it->isLocked()) {
             return true;
         }
     }
@@ -92,6 +111,14 @@ Face::VertexIterator Face::v_end() {
     return Face::VertexIterator(nullptr);
 }
 
+Face::ConstVertexIterator Face::v_begin() const {
+    return Face::ConstVertexIterator(halfedge_);
+}
+
+Face::ConstVertexIterator Face::v_end() const {
+    return Face::ConstVertexIterator(nullptr);
+}
+
 Face::HalfedgeIterator Face::he_begin() {
     return Face::HalfedgeIterator(halfedge_);
 }
@@ -100,12 +127,28 @@ Face::HalfedgeIterator Face::he_end() {
     return Face::HalfedgeIterator(nullptr);
 }
 
+Face::ConstHalfedgeIterator Face::he_begin() const {
+    return Face::ConstHalfedgeIterator(halfedge_);
+}
+
+Face::ConstHalfedgeIterator Face::he_end() const {
+    return Face::ConstHalfedgeIterator(nullptr);
+}
+
 Face::FaceIterator Face::f_begin() {
     return Face::FaceIterator(halfedge_);
 }
 
 Face::FaceIterator Face::f_end() {
     return Face::FaceIterator(nullptr);
+}
+
+Face::ConstFaceIterator Face::f_begin() const {
+    return Face::ConstFaceIterator(halfedge_);
+}
+
+Face::ConstFaceIterator Face::f_end() const {
+    return Face::ConstFaceIterator(nullptr);
 }
 
 // ----------
@@ -151,6 +194,48 @@ Face::VertexIterator Face::VertexIterator::operator++(int) {
 }
 
 // ----------
+// ConstVertexIterator
+// ----------
+
+Face::ConstVertexIterator::ConstVertexIterator(Halfedge *he)
+    : halfedge_{ he }
+    , iter_{ he } {
+}
+
+bool Face::ConstVertexIterator::operator!=(const Face::ConstVertexIterator &it) const {
+    return iter_ != it.iter_;
+}
+
+const Vertex &Face::ConstVertexIterator::operator*() const {
+    return *iter_->src();
+}
+
+const Vertex *Face::ConstVertexIterator::ptr() const {
+    return iter_->src();
+}
+
+const Vertex *Face::ConstVertexIterator::operator->() const {
+    return iter_->src();
+}
+
+Face::ConstVertexIterator &Face::ConstVertexIterator::operator++() {
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return *this;
+}
+
+Face::ConstVertexIterator Face::ConstVertexIterator::operator++(int) {
+    Halfedge *tmp = iter_;
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return Face::ConstVertexIterator(tmp);
+}
+
+// ----------
 // HalfedgeIterator
 // ----------
 
@@ -193,6 +278,48 @@ Face::HalfedgeIterator Face::HalfedgeIterator::operator++(int) {
 }
 
 // ----------
+// ConstHalfedgeIterator
+// ----------
+
+Face::ConstHalfedgeIterator::ConstHalfedgeIterator(Halfedge *he)
+    : halfedge_{ he }
+    , iter_{ he } {
+}
+
+bool Face::ConstHalfedgeIterator::operator!=(const Face::ConstHalfedgeIterator &it) const {
+    return iter_ != it.iter_;
+}
+
+const Halfedge &Face::ConstHalfedgeIterator::operator*() const {
+    return *iter_;
+}
+
+const Halfedge *Face::ConstHalfedgeIterator::ptr() const {
+    return iter_;
+}
+
+const Halfedge *Face::ConstHalfedgeIterator::operator->() const {
+    return iter_;
+}
+
+Face::ConstHalfedgeIterator &Face::ConstHalfedgeIterator::operator++() {
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return *this;
+}
+
+Face::ConstHalfedgeIterator Face::ConstHalfedgeIterator::operator++(int) {
+    Halfedge *tmp = iter_;
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return Face::ConstHalfedgeIterator(tmp);
+}
+
+// ----------
 // FaceIterator
 // ----------
 
@@ -232,6 +359,48 @@ Face::FaceIterator Face::FaceIterator::operator++(int) {
         iter_ = nullptr;
     }
     return Face::FaceIterator(tmp);
+}
+
+// ----------
+// ConstFaceIterator
+// ----------
+
+Face::ConstFaceIterator::ConstFaceIterator(Halfedge *he)
+    : halfedge_{ he }
+    , iter_{ he } {
+}
+
+bool Face::ConstFaceIterator::operator!=(const Face::ConstFaceIterator &it) const {
+    return iter_ != it.iter_;
+}
+
+const Face &Face::ConstFaceIterator::operator*() const {
+    return *iter_->rev()->face();
+}
+
+const Face *Face::ConstFaceIterator::ptr() const {
+    return iter_->rev()->face();
+}
+
+const Face *Face::ConstFaceIterator::operator->() const {
+    return iter_->rev()->face();
+}
+
+Face::ConstFaceIterator &Face::ConstFaceIterator::operator++() {
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return *this;
+}
+
+Face::ConstFaceIterator Face::ConstFaceIterator::operator++(int) {
+    Halfedge *tmp = iter_;
+    iter_ = iter_->next();
+    if (iter_ == halfedge_) {
+        iter_ = nullptr;
+    }
+    return Face::ConstFaceIterator(tmp);
 }
 
 }  // namespace tinymesh

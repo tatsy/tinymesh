@@ -1,14 +1,23 @@
+#ifdef _MSC_VER
 #pragma once
+#endif
+
+#ifndef TINYMESH_VEC_H
+#define TINYMESH_VEC_H
 
 #include <array>
 #include <algorithm>
 #include <functional>
 #include <type_traits>
 
+#include <Eigen/Core>
+
 template <typename Float, int Dims>
 class Vec {
     static_assert(std::is_floating_point<Float>::value, "Vector base type must be floating point number!");
     static_assert(Dims > 1, "Vector dimension must be more than 1!");
+
+    using EigenVectorType = Eigen::Matrix<Float, Dims, 1>;
 
 public:
     Vec() {
@@ -25,6 +34,36 @@ public:
         elems[0] = x;
         if (Dims >= 1) elems[1] = y;
         if (Dims >= 2) elems[2] = z;
+    }
+
+    explicit Vec(const Vec &other) {
+        std::copy(other.elems.begin(), other.elems.end(), elems.begin());
+    }
+
+    Vec &operator=(const Vec other) {
+        std::copy(other.elems.begin(), other.elems.end(), elems.begin());
+        return *this;
+    }
+
+    Vec(const EigenVectorType &v) {
+        for (int d = 0; d < Dims; d++) {
+            elems[d] = v(d);
+        }
+    }
+
+    Vec &operator=(const EigenVectorType &v) {
+        for (int d = 0; d < Dims; d++) {
+            elems[d] = v(d);
+        }
+        return *this;
+    }
+
+    operator EigenVectorType() const {
+        EigenVectorType v;
+        for (int d = 0; d < Dims; d++) {
+            v(d) = elems[d];
+        }
+        return v;
     }
 
     bool operator==(const Vec &other) const {
@@ -152,6 +191,18 @@ private:
 using Vec2 = Vec<double, 2>;
 using Vec3 = Vec<double, 3>;
 
+// standard output
+template <typename Float, int Dims>
+std::ostream &operator<<(std::ostream &os, const Vec<Float, Dims> &v) {
+    os << "[ ";
+    for (int d = 0; d < Dims; d++) {
+        os << v[d];
+        if (d != Dims - 1) os << ", ";
+    }
+    os << " ]";
+    return os;
+}
+
 // Basic arithmetics
 template <typename Float, int Dims>
 Vec<Float, Dims> operator+(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2) {
@@ -215,6 +266,11 @@ Vec<Float, Dims> operator/(const Vec<Float, Dims> &v, Float s) {
     return ret;
 }
 
+template <typename Float, int Rows, int Cols>
+Vec<Float, Rows> operator*(const Eigen::Matrix<Float, Rows, Cols> &m, const Vec<Float, Cols> &v) {
+    return Vec<Float, Rows>(m * Eigen::Matrix<Float, Cols, 1>(v));
+}
+
 // GLSL like vector arithmetics
 template <typename Float, int Dims>
 Float dot(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2) {
@@ -245,6 +301,37 @@ Vec<Float, Dims> normalize(const Vec<Float, Dims> &v) {
 }
 
 // Arithmetics for 3D vectors
+
+//! Angle a-b-c in radian (smaller side)
+template <typename Float, int Dims>
+double angle(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
+             typename std::enable_if<Dims == 3>::type * = 0) {
+    const Vec3 e0 = a - b;
+    const Vec3 e1 = c - b;
+    return std::atan2(length(cross(e0, e1)), dot(e0, e1));
+}
+
+//! check if the triangle is obtuse
+template <typename Float, int Dims>
+bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
+            typename std::enable_if<Dims == 3>::type * = 0) {
+    const Float l0 = length(b - a);
+    const Float l1 = length(c - b);
+    const Float l2 = length(a - c);
+    std::array<Float, 3> ls = { l0, l1, l2 };
+    std::sort(ls.begin(), ls.end(), std::less<Float>());
+    return ls[0] * ls[0] + ls[1] * ls[1] < ls[2] * ls[2];
+}
+
+//! cotangent for angle a-b-c
+template <typename Float, int Dims>
+Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
+          typename std::enable_if<Dims == 3>::type * = 0) {
+    const Vec3 e0 = a - b;
+    const Vec3 e1 = c - b;
+    return dot(e0, e1) / (length(cross(e0, e1)) + (Float)1.0e-20);
+}
+
 template <typename Float, int Dims>
 Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec<Float, Dims> &v3,
                const Vec<Float, Dims> &v1rev, typename std::enable_if<Dims == 3>::type * = 0) {
@@ -265,10 +352,9 @@ Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec
     return std::acos(std::max(-1.0, std::min(cosTheta, 1.0)));
 }
 
-// Hash
 namespace std {
 
-//template <>
+// Hash
 template <typename Float, int Dims>
 struct hash<Vec<Float, Dims>> {
     std::size_t operator()(const Vec<Float, Dims> &v) const {
@@ -280,4 +366,33 @@ struct hash<Vec<Float, Dims>> {
     }
 };
 
+template <typename Float, int Dims>
+Vec<Float, Dims> abs(const Vec<Float, Dims> &v) {
+    Vec<Float, Dims> ret;
+    for (int d = 0; d < Dims; d++) {
+        ret[d] = std::abs(v[d]);
+    }
+    return ret;
+}
+
+template <typename Float, int Dims>
+Vec<Float, Dims> min(const Vec<Float, Dims> &v0, const Vec<Float, Dims> &v1) {
+    Vec<Float, Dims> v;
+    for (int d = 0; d < Dims; d++) {
+        v[d] = std::min(v0[d], v1[d]);
+    }
+    return v;
+}
+
+template <typename Float, int Dims>
+Vec<Float, Dims> max(const Vec<Float, Dims> &v0, const Vec<Float, Dims> &v1) {
+    Vec<Float, Dims> v;
+    for (int d = 0; d < Dims; d++) {
+        v[d] = std::max(v0[d], v1[d]);
+    }
+    return v;
+}
+
 }  // namespace std
+
+#endif  // TINYMESH_VEC_H

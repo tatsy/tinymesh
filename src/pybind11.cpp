@@ -66,7 +66,7 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("num_edges", &Mesh::numEdges)
         .def("num_halfedges", &Mesh::numHalfedges)
         .def("num_faces", &Mesh::numFaces)
-        .def("fill_holes", &Mesh::fillHoles, "Fill all holes", py::arg("dihedral") = Pi)
+        .def("fill_holes", &Mesh::fillHoles, "Fill all holes")
         .def("verify", &Mesh::verify);
 
     py::class_<Vertex, std::shared_ptr<Vertex>>(m, "Vertex")
@@ -77,43 +77,53 @@ PYBIND11_MODULE(tinymesh, m) {
         .def("K", &Vertex::K)
         .def("H", &Vertex::H)
         .def("is_boundary", &Vertex::isBoundary)
-        .def("is_static", &Vertex::isStatic)
-        .def("set_is_static", &Vertex::setIsStatic);
+        .def("is_locked", &Vertex::isLocked)
+        .def("lock", &Vertex::lock)
+        .def("unlock", &Vertex::unlock);
 
     py::class_<Face, std::shared_ptr<Face>>(m, "Face")
         .def(py::init<>())
         .def("area", &Face::area)
         .def("is_boundary", &Face::isBoundary)
-        .def("is_static", &Face::isStatic);
+        .def("is_hole", &Face::isHole)
+        .def("is_locked", &Face::isLocked);
 
-    /*** Utilities */
+    /*** Metrics ***/
+    m.def("get_hausdorff_distance", &getHausdorffDistance, "Hausdorff distance", py::arg("mesh0"), py::arg("mesh1"));
+    m.def("get_per_vertex_shortest_distances", &getPerVertexShortestDistances, "Per-vertex shortest distances",
+          py::arg("src"), py::arg("dst"));
+
+    /*** Utilities ***/
     py::enum_<MeshLaplace>(m, "MeshLaplace")
         .value("ADJACENT", MeshLaplace::Adjacent)
         .value("COTANGENT", MeshLaplace::Cotangent)
         .value("BELKIN08", MeshLaplace::Belkin08);
 
     m.def("get_mesh_laplacian", &getMeshLaplacian, "Laplacian-Beltrami opeartor", py::arg("mesh"), py::arg("type"));
-
     m.def("get_heat_kernel_signatures", &getHeatKernelSignatures, "Heat kernel signatures", py::arg("mesh"),
           py::arg("K") = 300, py::arg("n_times") = 100);
+    m.def("get_principal_curvatures", &getPrincipalCurvatures, "Principal curvatures", py::arg("mesh"),
+          py::arg("smooth_tensors") = false);
+    m.def("get_principal_curvatures_with_derivatives", &getPrincipalCurvaturesWithDerivatives,
+          "Principal curvatures with derivatives", py::arg("mesh"), py::arg("smooth_tensors") = false);
+    m.def("get_feature_line_field", &getFeatureLineField, "Feature line field", py::arg("mesh"),
+          py::arg("smooth_tensors") = false);
+    m.def("get_feature_line_field_with_flags", getFeatureLineFieldWithFlags,
+          "Feature line field with ridge/valley flags", py::arg("mesh"), py::arg("smooth_tensors") = false);
 
     /*** Smoothing ***/
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,
           py::arg("cotangent_weight") = false, py::arg("iterations") = 3);
-
     m.def("smooth_taubin", &smoothTaubin, "Taubin smoothing", py::arg("mesh"), py::arg("shrink") = 0.5,
           py::arg("inflate") = 0.53, py::arg("iterations") = 3);
-
     m.def("implicit_fairing", &implicitFairing, "Implicit fairing", py::arg("mesh"), py::arg("epsilon") = 1.0,
           py::arg("iterations") = 1);
 
     /*** Denoising ***/
     m.def("denoise_normal_gaussian", &denoiseNormalGaussian, "Denoising by normal Gaussian filter", py::arg("mesh"),
           py::arg("sigma") = 0.2, py::arg("iterations") = 3);
-
     m.def("denoise_normal_bilateral", &denoiseNormalBilateral, "Denoising by normal bilateral filter", py::arg("mesh"),
           py::arg("sigma_c") = 0.2, py::arg("sigma_s") = 0.1, py::arg("iterations") = 3);
-
     m.def("denoise_l0_smooth", &denoiseL0Smooth, "Denoising by L0 smoothing", py::arg("mesh"), py::arg("alpha") = 0.1,
           py::arg("beta") = 0.001);
 
@@ -129,4 +139,8 @@ PYBIND11_MODULE(tinymesh, m) {
     /*** Hole filling ***/
     m.def("hole_fill_min_dihedral", &holeFillMinDihedral, "Max-area hole filling", py::arg("mesh"), py::arg("face"),
           py::arg("dihedral_bound") = Pi);
+    m.def("hole_fill_advancing_front", &holeFillAdvancingFront, "Advancing front hole filling", py::arg("mesh"),
+          py::arg("face"));
+    m.def("hole_fill_context_coherent", &holeFillContextCoherent, "Context-based coherent surface completion",
+          py::arg("mesh"), py::arg("maxiters") = 200);
 }

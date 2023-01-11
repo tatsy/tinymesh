@@ -25,6 +25,9 @@ class Viewer(object):
         self.height = height
         self.aspect = width / height
         self.dpi = 100
+        self.set_identity()
+
+    def set_identity(self):
         self.M = np.eye(4)
         self.V = np.eye(4)
         self.P = np.eye(4)
@@ -77,20 +80,39 @@ class Viewer(object):
         M[2, 2] = sz
         self.M = self.M @ M
 
-    def visualization(self, verts, faces, colors=None, title="", save=False, filename="output.png"):
+    def visualization(self,
+                      verts,
+                      faces,
+                      colors=None,
+                      wireframe=False,
+                      shade=True,
+                      title="",
+                      save=False,
+                      filename="output.png"):
         V = verts.copy()
         F = faces.copy()
         if colors is not None:
-            C = colors.copy()
+            C = colors[:, :3].copy()
         else:
             C = 0.7 * np.ones_like(verts)
 
         ## coordinate transformation
-        MVP = self.P @ self.V @ self.M
-        V = np.c_[V, np.ones(len(V))] @ MVP.T
-        V /= V[:, 3].reshape(-1, 1)
+        MV = self.V @ self.M
+        MVP = self.P @ MV
         V = V[F]
         C = C[F]
+
+        N = np.cross(V[:, 1, :] - V[:, 0, :], V[:, 2, :] - V[:, 0, :])
+        N /= np.linalg.norm(N, axis=-1, keepdims=True)
+        N = N @ MV[:3, :3].T
+        N /= np.linalg.norm(N, axis=-1, keepdims=True)
+        L = np.c_[np.zeros(N.shape), np.ones((*N.shape[:-1], 1))] @ MV.T
+        L = -L[:, :3] / L[:, 3:4]
+        L /= np.linalg.norm(L, axis=-1, keepdims=True)
+        NdotL = np.maximum(0.0, np.sum(N * L, axis=-1, keepdims=True))
+
+        V = np.c_[V, np.ones((*V.shape[:-1], 1))] @ MVP.T
+        V /= V[:, :, 3:4]
         T = V[:, :, :2]
 
         ## z-sort
@@ -100,14 +122,28 @@ class Viewer(object):
         l = np.argsort(Z)
 
         C = C.mean(axis=1)
+        if shade:
+            C *= NdotL
         T, C = T[l, :], C[l, :]
+
+        if wireframe:
+            linewidth = 0.1
+            edgecolor = "black"
+        else:
+            linewidth = 1.0
+            edgecolor = C
 
         xsiz = int(self.width / self.dpi)
         ysiz = int(self.height / self.dpi)
         fig = plt.figure(figsize=(xsiz, ysiz), dpi=self.dpi)
         ax = fig.add_axes([0, 0, 1, 1], xlim=[-1, 1], ylim=[-1, 1], aspect=1.0 / self.aspect, frameon=False)
         ax.axis("off")
-        collection = PolyCollection(T, closed=True, linewidth=0.1, facecolor=C, edgecolor="black")
+        collection = PolyCollection(T,
+                                    closed=True,
+                                    linewidth=linewidth,
+                                    facecolor=C,
+                                    edgecolor=edgecolor,
+                                    antialiaseds=True)
         ax.add_collection(collection)
 
         if len(title) != 0:

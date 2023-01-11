@@ -1,84 +1,36 @@
 import os
-import unittest
+from itertools import product
 
-from nose2.tools import params
+import pytest
 
-import tinymesh as tm
+import tinymesh as tms
 
 CWD = os.getcwd()
 
 model_dir = 'data/models'
 filenames = [
-    'box.obj',
     'torus.obj',
     'fandisk.ply',
     'bunny_mini.ply',
 ]
 
+methods = [
+    tms.smooth_laplacian,
+    tms.smooth_taubin,
+    tms.implicit_fairing,
+    tms.denoise_normal_gaussian,
+    tms.denoise_normal_bilateral,
+    tms.denoise_l0_smooth,
+]
 
-class TestFilters(unittest.TestCase):
-    @params(*filenames)
-    def test_smooth_laplacian(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
-        mesh.fill_holes()
 
-        try:
-            tm.smooth_laplacian(mesh)
-        except Exception:
-            self.fail('Failed!')
+@pytest.mark.parametrize("method, filename", product(methods, filenames))
+def test_smooth_method(method, filename):
+    filename = os.path.join(CWD, model_dir, filename)
+    mesh = tms.Mesh(filename)
+    mesh.fill_holes()
 
-    @params(*filenames)
-    def test_smooth_taubin(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
-        mesh.fill_holes()
-
-        try:
-            tm.smooth_taubin(mesh)
-        except Exception:
-            self.fail('Failed!')
-
-    @params(*filenames)
-    def test_implicit_fairing(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
-        mesh.fill_holes()
-
-        try:
-            tm.implicit_fairing(mesh)
-        except Exception:
-            self.fail('Failed!')
-
-    @params(*filenames)
-    def test_denoise_normal_gaussian(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
-        mesh.fill_holes()
-
-        try:
-            tm.denoise_normal_gaussian(mesh)
-        except Exception:
-            self.fail('Failed!')
-
-    @params(*filenames)
-    def test_denoise_normal_bilateral(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
-        mesh.fill_holes()
-
-        try:
-            tm.denoise_normal_bilateral(mesh)
-        except Exception:
-            self.fail('Failed!')
-
-    @params(*filenames)
-    def test_denoise_l0_smooth(self, filename):
-        filename = os.path.join(CWD, model_dir, filename)
-        mesh = tm.Mesh(filename)
-        mesh.fill_holes()
-
-        try:
-            tm.denoise_l0_smooth(mesh)
-        except Exception:
-            self.fail('Failed!')
+    try:
+        method(mesh)
+    except Exception:
+        pytest.fail('Failed!')

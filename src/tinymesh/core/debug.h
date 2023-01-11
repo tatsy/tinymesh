@@ -6,8 +6,14 @@
 #define TINYMESH_DEBUG_H
 
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <stdexcept>
+
+#if defined(TINYMESH_PYTHON_MODULE)
+#include <pybind11/pybind11.h>
+namespace py = pybind11;
+#endif  // TINYMESH_PYTHON_MODULE
 
 // -----------------------------------------------------------------------------
 // ANSI color
@@ -19,46 +25,102 @@
 #define FG_NC "\033[0m"
 
 // -----------------------------------------------------------------------------
+// Debug output stream
+// -----------------------------------------------------------------------------
+class PrintStream {
+public:
+    PrintStream() {
+    }
+
+    virtual ~PrintStream() {
+        flush();
+    }
+
+    template <typename Type>
+    PrintStream &operator<<(const Type &s) {
+        ss << s;
+        if (ss.str().size() >= bufSize) {
+            flush();
+        }
+        return *this;
+    }
+
+    PrintStream &operator<<(std::ostream &(*f)(std::ostream &)) {
+        ss << f;
+        flush();
+        return *this;
+    }
+
+    void flush() {
+#if !defined(TINYMESH_PYTHON_MODULE)
+        std::cout << ss.str();
+        std::flush(std::cout);
+#else
+        py::print(ss.str(), py::arg("end") = "", py::arg("flush") = true);
+#endif
+        ss.str("");
+    }
+
+private:
+    std::ostringstream ss;
+    static const int bufSize = 128;
+};
+
+// -----------------------------------------------------------------------------
 // Message handlers
 // -----------------------------------------------------------------------------
 
 template <typename... Args>
 std::string STR_FMT(const char *format, Args... args) {
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat"
+#endif  // __clang__
     int size_s = std::snprintf(nullptr, 0, format, args...) + 1;
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif  // __clang__
     if (size_s <= 0) {
         throw std::runtime_error("Error during formatting.");
     }
     auto size = static_cast<size_t>(size_s);
     auto buf = std::make_unique<char[]>(size);
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat"
+#endif  // __clang__
     std::snprintf(buf.get(), size, format, args...);
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif  // __clang__
     return std::string(buf.get(), buf.get() + size - 1);
 }
 
 template <typename... Args>
+void Print(const char *format, Args... args) {
+    PrintStream() << STR_FMT(format, args...);
+}
+
+template <typename... Args>
 void Info(const char *format, Args... args) {
-    std::cout << FG_BLU << "[INFO] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_BLU << "[INFO] " << FG_NC << STR_FMT(format, args...) << std::endl;
 }
 
 template <typename... Args>
 void Debug(const char *format, Args... args) {
-    std::cout << FG_GRN << "[DEBUG] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_GRN << "[DEBUG] " << FG_NC << STR_FMT(format, args...) << std::endl;
 }
 
 template <typename... Args>
 void Warn(const char *format, Args... args) {
-    std::cout << FG_YEL << "[WARNING] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_YEL << "[WARNING] " << FG_NC << STR_FMT(format, args...) << std::endl;
 }
 
 #if !defined(TINYMESH_PYTHON_MODULE)
 template <typename... Args>
 void Error(const char *format, Args... args) {
-    std::cout << FG_RED << "[ERRIR] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    PrintStream() << FG_RED << "[ERROR] " << FG_NC << STR_FMT(format, args...) << std::endl;
+    std::terminate();
 }
 #else   // TINYMESH_PYTHON_MODULE
 template <typename... Args>

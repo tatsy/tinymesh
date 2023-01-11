@@ -14,7 +14,6 @@ bool Halfedge::operator==(const Halfedge &other) const {
     ret &= (src_ == other.src_);
     ret &= (next_ == other.next_);
     ret &= (rev_ == other.rev_);
-    ret &= (edge_ == other.edge_);
     ret &= (face_ == other.face_);
     ret &= (index_ == other.index_);
     return ret;
@@ -42,12 +41,8 @@ double Halfedge::cotWeight() const {
     return 0.5 * (cot_a + cot_b);
 }
 
-bool Halfedge::isStatic() const {
-    return this->src()->isStatic() && this->dst()->isStatic();
-}
-
-bool Halfedge::isBoundary() const {
-    return this->src()->isBoundary() && this->dst()->isBoundary();
+bool Halfedge::isLocked() const {
+    return this->src()->isLocked() && this->dst()->isLocked();
 }
 
 }  // namespace tinymesh

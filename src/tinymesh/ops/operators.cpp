@@ -1,16 +1,15 @@
 #define TINYMESH_API_EXPORT
-#include "utils.h"
+#include "ops.h"
 
 #include <vector>
 
 #include "core/debug.h"
 #include "core/vertex.h"
-#include "core/edge.h"
 #include "core/halfedge.h"
 
 namespace tinymesh {
 
-void getMeshLaplacianAdjacent(Mesh &mesh, EigenSparseMatrix &L) {
+void getMeshLaplacianAdjacent(const Mesh &mesh, EigenSparseMatrix &L) {
     const int N = mesh.numVertices();
     std::vector<EigenTriplet> triplets;
     for (int i = 0; i < N; i++) {
@@ -27,13 +26,13 @@ void getMeshLaplacianAdjacent(Mesh &mesh, EigenSparseMatrix &L) {
     L.setFromTriplets(triplets.begin(), triplets.end());
 }
 
-void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
+void getMeshLaplacianCotangent(const Mesh &mesh, EigenSparseMatrix &L) {
     const int N = mesh.numVertices();
     std::vector<EigenTriplet> triplets;
     for (int i = 0; i < N; i++) {
         Vertex *v = mesh.vertex(i);
         double sumWgt = 0.0;
-        for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+        for (auto it = v->he_begin(); it != v->he_end(); ++it) {
             const int j = it->dst()->index();
             const double weight = it->cotWeight();
             triplets.emplace_back(i, j, -weight);
@@ -49,13 +48,9 @@ void getMeshLaplacianCotangent(Mesh &mesh, EigenSparseMatrix &L) {
  * Reference:
  * Belkin et al., "Discrete Laplacian Operator on Meshed Surfaces," 2008.
  */
-void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
+void getMeshLaplacianBelkin08(const Mesh &mesh, EigenSparseMatrix &L) {
     // Compute average edge length
-    double avgEdgeLength = 0.0;
-    for (int i = 0; i < mesh.numEdges(); i++) {
-        avgEdgeLength += mesh.edge(i)->length();
-    }
-    avgEdgeLength /= mesh.numEdges();
+    double avgEdgeLength = mesh.getMeanEdgeLength();
 
     // Construct sparse matrix
     const int N = mesh.numVertices();
@@ -65,7 +60,7 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
         Vertex *v = mesh.vertex(i);
         double sumWgt = 0.0;
         double area = 0.0;
-        for (auto it = v->ohe_begin(); it != v->ohe_end(); ++it) {
+        for (auto it = v->he_begin(); it != v->he_end(); ++it) {
             // Gaussian weight
             Vertex *u = it->dst();
             const double h = avgEdgeLength;
@@ -90,7 +85,7 @@ void getMeshLaplacianBelkin08(Mesh &mesh, EigenSparseMatrix &L) {
     // L = A * W;
 }
 
-EigenSparseMatrix getMeshLaplacian(Mesh &mesh, MeshLaplace type) {
+EigenSparseMatrix getMeshLaplacian(const Mesh &mesh, MeshLaplace type) {
     EigenSparseMatrix L;
     if (type == MeshLaplace::Adjacent) {
         getMeshLaplacianAdjacent(mesh, L);
