@@ -5,7 +5,6 @@
 
 #include "core/debug.h"
 #include "core/vertex.h"
-#include "core/edge.h"
 #include "core/halfedge.h"
 
 namespace tinymesh {
@@ -51,11 +50,7 @@ void getMeshLaplacianCotangent(const Mesh &mesh, EigenSparseMatrix &L) {
  */
 void getMeshLaplacianBelkin08(const Mesh &mesh, EigenSparseMatrix &L) {
     // Compute average edge length
-    double avgEdgeLength = 0.0;
-    for (int i = 0; i < mesh.numEdges(); i++) {
-        avgEdgeLength += mesh.edge(i)->length();
-    }
-    avgEdgeLength /= mesh.numEdges();
+    double avgEdgeLength = mesh.getMeanEdgeLength();
 
     // Construct sparse matrix
     const int N = mesh.numVertices();

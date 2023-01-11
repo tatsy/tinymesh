@@ -8,7 +8,6 @@
 #include "core/mesh.h"
 #include "core/vertex.h"
 #include "core/halfedge.h"
-#include "core/edge.h"
 #include "core/face.h"
 
 #define EIGEN_ENABLE_SPARSE
@@ -38,11 +37,7 @@ namespace tinymesh {
 
 void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
     // Average edge length
-    double avgEdge = 0.0;
-    for (int e = 0; e < (int)mesh.numEdges(); e++) {
-        avgEdge += mesh.edge(e)->length();
-    }
-    avgEdge /= mesh.numEdges();
+    double avgEdge = mesh.getMeanEdgeLength();
 
     for (int it = 0; it < iterations; it++) {
         // Smooth vertex positions
@@ -108,11 +103,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
 
 void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, int iterations) {
     // Average edge length
-    double avgEdge = 0.0;
-    for (int e = 0; e < (int)mesh.numEdges(); e++) {
-        avgEdge += mesh.edge(e)->length();
-    }
-    avgEdge /= mesh.numEdges();
+    double avgEdge = mesh.getMeanEdgeLength();
 
     for (int it = 0; it < iterations; it++) {
         // Smooth vertex positions
@@ -254,9 +245,8 @@ void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
     while (beta < bmax) {
         // Construct sparse matrix D
         std::vector<EigenTriplet> tripD;
-        for (int e = 0; e < ne; e++) {
-            Edge *edge = mesh.edge(e);
-            Halfedge *he = edge->halfedge();
+        for (int e = 0; e < edges.size(); e++) {
+            Halfedge *he = edges[e];
             Halfedge *rev = he->rev();
 
             Vertex *vh1 = he->src();

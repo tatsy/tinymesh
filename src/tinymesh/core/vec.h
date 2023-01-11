@@ -313,7 +313,8 @@ double angle(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Flo
 
 //! check if the triangle is obtuse
 template <typename Float, int Dims>
-bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
+bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
+            typename std::enable_if<Dims == 3>::type * = 0) {
     const Float l0 = length(b - a);
     const Float l1 = length(c - b);
     const Float l2 = length(a - c);
@@ -324,7 +325,8 @@ bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Floa
 
 //! cotangent for angle a-b-c
 template <typename Float, int Dims>
-Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
+Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
+          typename std::enable_if<Dims == 3>::type * = 0) {
     const Vec3 e0 = a - b;
     const Vec3 e1 = c - b;
     return dot(e0, e1) / (length(cross(e0, e1)) + (Float)1.0e-20);

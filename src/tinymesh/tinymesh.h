@@ -14,7 +14,6 @@
 
 #include "core/mesh.h"
 #include "core/vertex.h"
-#include "core/edge.h"
 #include "core/halfedge.h"
 #include "core/face.h"
 

@@ -46,9 +46,6 @@ public:
     Halfedge *rev() const {
         return rev_;
     }
-    Edge *edge() const {
-        return edge_;
-    }
     Face *face() const {
         return face_;
     }
@@ -69,7 +66,6 @@ private:
     Vertex *src_ = nullptr;
     Halfedge *next_ = nullptr;
     Halfedge *rev_ = nullptr;
-    Edge *edge_ = nullptr;
     Face *face_ = nullptr;
     int index_ = -1;
     bool isBoundary_ = false;

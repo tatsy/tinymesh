@@ -4,7 +4,6 @@
 #include <iostream>
 #include <queue>
 #include <functional>
-#include <unordered_set>
 #include <unordered_map>
 
 #include <Eigen/LU>
