@@ -19,6 +19,7 @@ class TinyMeshBuildExt(build_ext):
             raise Exception("File not found. Could not compile C extension")
 
     def build_extension(self, ext):
+        # common settings
         for e in self.extensions:
             e.define_macros.extend(
                 [
@@ -26,6 +27,7 @@ class TinyMeshBuildExt(build_ext):
                 ]
             )
 
+        # OS specific settings
         if platform.system() == "Darwin":
             for e in self.extensions:
                 e.extra_compile_args.extend(
@@ -34,6 +36,21 @@ class TinyMeshBuildExt(build_ext):
                     ]
                 )
 
+        elif platform.system() == "Linux":
+            for e in self.extensions:
+                e.extra_compile_args.extend(
+                    [
+                        "-fopenmp",
+                    ]
+                )
+                e.extra_link_args.extend(
+                    [
+                        "-fopenmp",
+                        "-lstdc++fs",
+                    ]
+                )
+
+        # compiler specific settings
         if self.compiler.compiler_type == "unix":
             for e in self.extensions:
                 e.extra_compile_args.extend(
@@ -41,15 +58,10 @@ class TinyMeshBuildExt(build_ext):
                         "-std=c++17",
                     ]
                 )
-                e.extra_link_args.extend(
-                    [
-                        "-lstdc++fs",
-                    ]
-                )
 
         elif self.compiler.compiler_type == "msvc":
             for e in self.extensions:
-                e.extra_compile_args.extend(["/utf-8"])
+                e.extra_compile_args.extend(["/utf-8", "/openmp"])
                 e.define_macros.extend(
                     [
                         ("_CRT_SECURE_NO_WARNINGS", 1),
@@ -57,6 +69,7 @@ class TinyMeshBuildExt(build_ext):
                     ]
                 )
 
+        # building
         try:
             super(TinyMeshBuildExt, self).build_extension(ext)
         except (CCompilerError, PackageDiscoveryError, ValueError):
