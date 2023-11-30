@@ -34,8 +34,12 @@ isort = "*"
 pytest = "*"
 jupyterlab = "*"
 scipy = "*"
-numpy = "*"
 matplotlib = "*"
+
+numpy = [
+  { version = "~1.26.0", python = "^3.12" },
+  { version = "*", python = ">=3.8,<3.12" },
+]
 
 [tool.isort]
 profile = "black"
