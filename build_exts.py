@@ -1,5 +1,5 @@
 import re
-import glob
+import pathlib
 import platform
 
 from pybind11.setup_helpers import Pybind11Extension
@@ -52,7 +52,7 @@ class TinyMeshBuildExt(build_ext):
 
 
 exclude = ["src/tinymesh/ext"]
-sources = glob.glob("src/**/*.cpp")
+sources = pathlib.Path().glob("src/**/*.cpp")
 sources = [str(path).replace("\\", "/") for path in sources]
 sources = [path for path in sources if all([not re.search(e, path) for e in exclude])]
 

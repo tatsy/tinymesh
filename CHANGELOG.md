@@ -1,3 +1,8 @@
+v0.2.4
+---
+*   Update CI scripts to build wheels for 5 latest Python versions.
+
+
 v0.2.3
 ---
 *   Update some method names (e.g., `isStatic` -> `isLocked`)
