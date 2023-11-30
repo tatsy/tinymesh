@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "poetry_core>=1.0.0", "pybind11~=2.6.1"]
+requires = ["setuptools>=42", "poetry_core>=1.0.0", "pybind11>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -15,23 +15,25 @@ repository = "https://github.com/tatsy/tinymesh"
 homepage = "https://github.com/tatsy/tinymesh"
 
 keywords = ['graphics', 'geometry']
-
-build = "build.py"
 exclude = ["src/*", "tests/*", "cmake/*", "data/*", "figures/*"]
 
+[tool.poetry.build]
+script = "build_exts.py"
+generate-setup-file = false
+
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
-setuptools = "^57.4.0"
-pybind11 = "^2.10.1"
+python = ">=3.6,<=3.12"
+setuptools = "^57"
+pybind11 = "^2"
 
 [tool.poetry.group.dev.dependencies]
-yapf = "^0.32.0"
-flake8 = "^6.0.0"
-mypy = "^0.991"
-isort = "^5.10.1"
-pytest = "^7.2.0"
-jupyterlab = "^3.5.0"
-scipy = "^1.9.3"
-numpy = "^1.23.5"
-matplotlib = "^3.6.2"
-open3d = "0.16.0"
+yapf = "*"
+flake8 = "*"
+mypy = "*"
+isort = "*"
+pytest = "*"
+jupyterlab = "*"
+scipy = "*"
+numpy = "*"
+matplotlib = "*"
+open3d = "^0.15"
