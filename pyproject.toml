@@ -19,7 +19,7 @@ exclude = ["src/*", "tests/*", "cmake/*", "data/*", "figures/*"]
 
 [tool.poetry.build]
 script = "build_exts.py"
-generate-setup-file = true
+generate-setup-file = false
 
 [tool.poetry.dependencies]
 python = ">=3.8,<=3.12"
