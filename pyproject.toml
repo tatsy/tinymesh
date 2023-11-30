@@ -22,12 +22,12 @@ script = "build_exts.py"
 generate-setup-file = false
 
 [tool.poetry.dependencies]
-python = ">=3.6,<=3.12"
+python = ">=3.8,<=3.12"
 setuptools = "^57"
-pybind11 = "^2"
+pybind11 = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
-yapf = "*"
+black = "*"
 flake8 = "*"
 mypy = "*"
 isort = "*"
@@ -36,4 +36,24 @@ jupyterlab = "*"
 scipy = "*"
 numpy = "*"
 matplotlib = "*"
-open3d = "^0.15"
+
+[tool.isort]
+profile = "black"
+length_sort = "True"
+line_length = 120
+
+[tool.mypy]
+python_version = 3.9
+follow_imports = "silent"
+disallow_any_generics = "True"
+strict_optional = "True"
+check_untyped_defs = "True"
+allow_redefinition = "True"
+
+[tool.flake8]
+max-line-length = 120
+ignore = "Q000,E127,E203,E402,W503,W504"
+
+[tool.black]
+target-version = ["py39", "py310", "py311"]
+line-length = 120
