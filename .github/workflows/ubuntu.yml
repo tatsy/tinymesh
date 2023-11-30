@@ -88,12 +88,11 @@ jobs:
       - name: Install Python modules
         if: steps.pipenv-cache.outputs.cache-hit != 'true'
         run: |
-          poetry install --only-root
           poetry build -f wheel
+          poetry install
 
       - name: Python module test
         run: |
-          poetry run pip install pytest
           poetry run pytest -s tests
 
       - name: Create release
