@@ -2,14 +2,19 @@ import re
 import pathlib
 import platform
 
-from pybind11.setup_helpers import Pybind11Extension
+from setuptools.errors import CCompilerError, PackageDiscoveryError
 from setuptools.command.build_ext import build_ext
+
+try:
+    from pybind11.setup_helpers import Pybind11Extension
+except ImportError:
+    from setuptools import Extension as Pybind11Extension
 
 
 class TinyMeshBuildExt(build_ext):
     def run(self):
         try:
-            build_ext.run(self)
+            super(TinyMeshBuildExt, self).run()
         except FileNotFoundError:
             raise Exception("File not found. Could not compile C extension")
 
@@ -41,14 +46,21 @@ class TinyMeshBuildExt(build_ext):
                         "-lstdc++fs",
                     ]
                 )
+
         elif self.compiler.compiler_type == "msvc":
             for e in self.extensions:
+                e.extra_compile_args.extend(["/utf-8"])
                 e.define_macros.extend(
                     [
                         ("_CRT_SECURE_NO_WARNINGS", 1),
                         ("_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING", 1),
                     ]
                 )
+
+        try:
+            super(TinyMeshBuildExt, self).build_extension(ext)
+        except (CCompilerError, PackageDiscoveryError, ValueError):
+            raise Exception("Could not compile C extension")
 
 
 exclude = ["src/tinymesh/ext"]
