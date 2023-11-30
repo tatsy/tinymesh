@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "poetry_core>=1.0.0", "pybind11~=2.6.1"]
+requires = ["setuptools", "poetry_core>=1.5.0", "pybind11>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -15,23 +15,53 @@ repository = "https://github.com/tatsy/tinymesh"
 homepage = "https://github.com/tatsy/tinymesh"
 
 keywords = ['graphics', 'geometry']
-
-build = "build.py"
 exclude = ["src/*", "tests/*", "cmake/*", "data/*", "figures/*"]
 
+[tool.poetry.build]
+script = "build_exts.py"
+generate-setup-file = true
+
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
-setuptools = "^57.4.0"
-pybind11 = "^2.10.1"
+python = ">=3.8,<=3.12"
+setuptools = "^57"
+pybind11 = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
-yapf = "^0.32.0"
-flake8 = "^6.0.0"
-mypy = "^0.991"
-isort = "^5.10.1"
-pytest = "^7.2.0"
-jupyterlab = "^3.5.0"
-scipy = "^1.9.3"
-numpy = "^1.23.5"
-matplotlib = "^3.6.2"
-open3d = "0.16.0"
+black = "*"
+flake8 = "*"
+mypy = "*"
+isort = "*"
+pytest = "*"
+jupyterlab = "*"
+matplotlib = "*"
+
+numpy = [
+  { version = "~1.26.0", python = "^3.12" },
+  { version = "*", python = ">=3.8,<3.12" },
+]
+
+scipy = [
+  { version = "~1.11.2", python = "^3.12" },
+  { version = "*", python = ">=3.8,<3.12" },
+]
+
+[tool.isort]
+profile = "black"
+length_sort = "True"
+line_length = 120
+
+[tool.mypy]
+python_version = 3.9
+follow_imports = "silent"
+disallow_any_generics = "True"
+strict_optional = "True"
+check_untyped_defs = "True"
+allow_redefinition = "True"
+
+[tool.flake8]
+max-line-length = 120
+ignore = "Q000,E127,E203,E402,W503,W504"
+
+[tool.black]
+target-version = ["py39", "py310", "py311"]
+line-length = 120
