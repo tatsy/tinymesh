@@ -94,6 +94,10 @@ void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32
 
     std::unordered_map<Vec3, uint32_t> uniqueVertices;
     for (uint32_t i : indices) {
+        if (i >= vertices.size()) {
+            Error("Vertex index {} is out of range.", i);
+        }
+
         const Vec3 &pos = vertices[i];
 
         if (uniqueVertices.count(pos) == 0) {
@@ -190,15 +194,8 @@ double Mesh::getMeanFaceArea() const {
 }
 
 void Mesh::construct() {
-    for (size_t i = 0; i < indices_.size(); i += 3) {
-        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
-            indices_[i + 2] == indices_[i + 0]) {
-            const int size = (int)indices_.size();
-            std::swap(indices_[i + 0], indices_[size - 3]);
-            std::swap(indices_[i + 1], indices_[size - 2]);
-            std::swap(indices_[i + 2], indices_[size - 1]);
-            indices_.resize(size - 3);
-        }
+    if (indices_.size() % 3 != 0) {
+        Error("Triangle index count must be a multiple of three: {}", indices_.size());
     }
 
     // Put vertex indices
@@ -224,19 +221,14 @@ void Mesh::construct() {
         for (int j = 0; j < ngon; j++) {
             const uint32_t a = indices_[i + j];
             const uint32_t b = indices_[i + (j + 1) % ngon];
-            IndexPair ab(a, b);
-            if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                Warn(
-                    "An edge with vertices #{} and #{} is detected more than twice! Skip the face that includes this "
-                    "edge.",
-                    a, b);
-                isDuplicated = true;
-                break;
-            }
-        }
 
-        if (isDuplicated) {
-            continue;
+            if (pairToHalfedge.contains(IndexPair{ a, b })) {
+                if (pairToHalfedge.contains(IndexPair{ b, a })) {
+                    Error("Non-manifold edge #{}--#{}: more than two incident faces (face #{})", a, b, i / ngon);
+                }
+
+                Error("Inconsistent winding or duplicated face at edge #{}--#{} (face #{})", a, b, i / ngon);
+            }
         }
 
         // Traverse face vertices
@@ -290,31 +282,64 @@ void Mesh::construct() {
         }
     }
 
-    // For convenience, advance halfedge of each boundary vertex to one that is on the boundary
-    for (auto v : vertices_) {
-        Halfedge *he = v->halfedge_;
+    // Find outgoing boundary halfedges.
+    std::vector<Halfedge *> boundaryStart(vertices_.size(), nullptr);
+
+    for (const auto &he : halfedges_) {
+        if (he->rev_ != nullptr) {
+            continue;
+        }
+
+        const auto index = he->src_->index_;
+        if (boundaryStart[index] != nullptr) {
+            Error("Non-manifold vertex #{}: multiple outgoing boundary edges.", index);
+        }
+
+        boundaryStart[index] = he.get();
+    }
+
+    // Check connectivity of incident triangles around each vertex.
+    for (const auto &v : vertices_) {
+        if (v->halfedge_ == nullptr) {
+            Error("Vertex #{} is not referenced by any triangle.", v->index_);
+        }
+
+        Halfedge *start = boundaryStart[v->index_];
+        if (start == nullptr) {
+            start = v->halfedge_;
+        }
+
+        const uint32_t expected = vertexDegree[v->index_];
+        uint32_t count = 0;
+        Halfedge *he = start;
+
         do {
-            if (he->rev_ == nullptr) {
-                v->halfedge_ = he;
-                break;
+            if (++count > expected) {
+                Error("Non-manifold vertex #{}: invalid face fan.", v->index_);
             }
 
-            he = he->rev_->next_;
-        } while (he != v->halfedge_);
+            he = he->next_->next_->rev_;
+        } while (he != nullptr && he != start);
+
+        if (count != expected) {
+            Error("Non-manifold vertex #{}: disconnected face fans ({} of {} faces).", v->index_, count, expected);
+        }
+
+        v->halfedge_ = start;
     }
 
     // Construct new faces (possibly non-triangle) for each boundary components
     const auto numHalfedges = static_cast<int>(halfedges_.size());
     for (int i = 0; i < numHalfedges; i++) {
-        auto &he = halfedges_[i];
-        Assertion(he.get() != nullptr, "Null halfedge detected!");
+        Halfedge *const he = halfedges_[i].get();
+        Assertion(he != nullptr, "Null halfedge detected!");
         if (he->rev_ == nullptr) {
             auto face = new Face();
             face->isHole_ = true;
             addFace(face);
 
             std::vector<Halfedge *> boundaryHalfedges;
-            Halfedge *it = he.get();
+            Halfedge *it = he;
             do {
                 auto rev = new Halfedge();
                 addHalfedge(rev);
@@ -331,11 +356,11 @@ void Mesh::construct() {
 
                 // Advance it to the next halfedge along the current boundary loop
                 it = it->next_;
-                while (it != he.get() && it->rev_ != nullptr) {
+                while (it != he && it->rev_ != nullptr) {
                     it = it->rev_;
                     it = it->next_;
                 }
-            } while (it != he.get());
+            } while (it != he);
 
             face->halfedge_ = boundaryHalfedges.front();
 
@@ -350,24 +375,6 @@ void Mesh::construct() {
     // To make the later traversal easier, update the vertex halfedges to be not on the boundary.
     for (auto v : vertices_) {
         v->halfedge_ = v->halfedge_->rev_->next_;
-    }
-
-    // Check if the mesh is non-manifold
-    for (auto v : vertices_) {
-        if (v->halfedge_ == nullptr) {
-            Error("Some vertices are not referenced by any polygon!");
-        }
-
-        uint32_t count = v->isBoundary() ? -1 : 0;
-        Halfedge *he = v->halfedge_;
-        do {
-            count += 1;
-            he = he->rev()->next();
-        } while (he != v->halfedge_);
-
-        if (count != vertexDegree[v->index()]) {
-            Error("At least one of the vertices is non-manifold: {} vs {}\n", count, vertexDegree[v->index()]);
-        }
     }
 }
 
