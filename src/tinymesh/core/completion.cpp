@@ -253,6 +253,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
                 it->isBoundary_ = false;
                 it->rev_->isBoundary_ = false;
             }
+            face->isHole_ = false;
             break;
         }
 

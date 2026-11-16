@@ -70,6 +70,7 @@ void Mesh::load(const std::string &filename) {
     vertices_.clear();
     halfedges_.clear();
     faces_.clear();
+    indices_.clear();
 
     // Load new mesh
     const std::string ext = fs::path(filename.c_str()).extension().string();
@@ -89,9 +90,9 @@ void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32
     vertices_.clear();
     halfedges_.clear();
     faces_.clear();
+    indices_.clear();
 
     std::unordered_map<Vec3, uint32_t> uniqueVertices;
-    vertices_.clear();
     for (uint32_t i : indices) {
         const Vec3 &pos = vertices[i];
 
@@ -173,12 +174,19 @@ double Mesh::getMeanDihedralAngle() const {
 }
 
 double Mesh::getMeanFaceArea() const {
-    double mean = 0.0;
-    for (size_t i = 0; i < faces_.size(); i++) {
-        mean += faces_[i]->area();
+    double totalArea = 0.0;
+    size_t count = 0;
+    for (const auto &f : faces_) {
+        if (f->isHole()) {
+            continue;
+        }
+        totalArea += f->area();
+        count++;
     }
-    mean /= (double)faces_.size();
-    return mean;
+
+    if (count == 0) return 0.0;
+
+    return totalArea / static_cast<double>(count);
 }
 
 void Mesh::construct() {
@@ -302,6 +310,7 @@ void Mesh::construct() {
         Assertion(he.get() != nullptr, "Null halfedge detected!");
         if (he->rev_ == nullptr) {
             auto face = new Face();
+            face->isHole_ = true;
             addFace(face);
 
             std::vector<Halfedge *> boundaryHalfedges;
