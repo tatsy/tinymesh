@@ -2,12 +2,10 @@
 
 try:
     from .viewer import Viewer
-except ModuleNotFoundError as exc:
-    if exc.name != 'matplotlib':
-        raise
-    raise ModuleNotFoundError(
-        'Visualization requires Matplotlib. Install tinymesh[viz] or run uv sync --extra viz.',
-        name='matplotlib',
+except ImportError as exc:
+    raise ImportError(
+        'Visualization could not be imported. Install the optional dependencies with '
+        '`uv sync --extra viz` or `pip install "tinymesh[viz]"`.'
     ) from exc
 
 

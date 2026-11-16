@@ -3,6 +3,8 @@ import subprocess
 from textwrap import dedent
 from importlib import metadata, resources
 
+import pytest
+
 import tinymesh
 from tinymesh import _core
 
@@ -20,19 +22,23 @@ def test_type_information_is_installed():
     assert package.joinpath('_core.pyi').is_file()
 
 
-def test_core_import_without_visualization_dependencies(tmp_path):
+@pytest.mark.parametrize('import_error', ['ModuleNotFoundError', 'ImportError'])
+def test_core_import_without_visualization_dependencies(tmp_path, import_error):
     result = subprocess.run(
         [
             sys.executable,
             '-c',
             dedent("""\
                 import sys
+                import builtins
                 from importlib.abc import MetaPathFinder
+
+                error_type = getattr(builtins, sys.argv[1])
 
                 class BlockVisualization(MetaPathFinder):
                     def find_spec(self, fullname, path=None, target=None):
                         if fullname.split('.')[0] in {'matplotlib', 'open3d'}:
-                            raise ModuleNotFoundError(fullname, name=fullname)
+                            raise error_type(fullname)
 
                 sys.meta_path.insert(0, BlockVisualization())
                 import tinymesh
@@ -41,11 +47,14 @@ def test_core_import_without_visualization_dependencies(tmp_path):
 
                 try:
                     import tinymesh.visualization
-                except ModuleNotFoundError as exc:
-                    assert 'tinymesh[viz]' in str(exc)
+                except ImportError as exc:
+                    assert 'uv sync --extra viz' in str(exc)
+                    assert 'pip install "tinymesh[viz]"' in str(exc)
+                    assert isinstance(exc.__cause__, error_type)
                 else:
                     raise AssertionError('Expected a missing optional dependency')
             """),
+            import_error,
         ],
         cwd=tmp_path,
         capture_output=True,

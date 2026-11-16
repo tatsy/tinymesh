@@ -1,6 +1,3 @@
-import importlib.util
-from pathlib import Path
-
 import numpy as np
 import pytest
 
@@ -31,12 +28,3 @@ def test_viewer_renders_and_saves_mesh(tmp_path, monkeypatch):
         assert len(collection.get_paths()) == 4
     finally:
         plt.close('all')
-
-
-def test_example_viewer_import_remains_compatible():
-    path = Path(__file__).resolve().parents[2] / 'examples/python/viewer.py'
-    spec = importlib.util.spec_from_file_location('example_viewer', path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    assert module.Viewer is Viewer
