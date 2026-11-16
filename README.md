@@ -33,22 +33,19 @@ Here is the list of modules and reference papers for that.
 
 ## Install
 
-The module is tested its compilation using the following compilers.
-
-* **Windows** - Visual Studio 2022 (Microsoft Windows Server 2022)
-* **MacOS** - Apple Clang 11.0 (MacOS 11.7)
-* **Linux** - LLVM Clang 11.0, GNU C Compiler 9.4.0 (Ubuntu 22.04 LTS)
+The C++ library requires CMake 3.24 or later and a C++20 compiler with `std::format` support.
 
 ### Library and examples (C++)
 
 You can build a static library and all the examples by `CMake` with the following commands.
 Dependencies are pinned and downloaded by CMake during configuration; the first build requires network access.
+Python and visualization libraries are not required for this build.
 
 ```shell
 git clone https://github.com/tatsy/tinymesh.git --depth 1
 cd tinymesh
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DTINYMESH_BUILD_EXAMPLES=ON ..
+cmake -DCMAKE_BUILD_TYPE=Release -DTINYMESH_BUILD_PYTHON=OFF -DTINYMESH_BUILD_EXAMPLES=ON ..
 cmake --build . --config Release --parallel 2
 ```
 
@@ -60,13 +57,17 @@ You can install the Python module using `Pip`.
 pip install git+https://github.com/tatsy/tinymesh.git
 ```
 
-You can also use `poetry` to install from source codes.
+For development, install from source with `uv`. Add the `viz` extra to use the Matplotlib viewer.
 
 ```shell
 git clone https://github.com/tatsy/tinymesh
 cd tinymesh
-poetry install
+uv sync
+uv sync --extra viz
 ```
+
+The Python package exposes the C++ API as `tinymesh` and the optional viewer as
+`from tinymesh.visualization import Viewer`.
 
 ## Run examples
 
@@ -79,8 +80,8 @@ poetry install
 ### Python
 
 ```shell
-# Run "poetry shell" to enable virtualenv if you test with poetry.
-python examples/python/fill_and_fair.py data/models/bunny.ply
+uv sync --extra viz --group examples
+uv run --extra viz --group examples jupyter lab examples/python
 ```
 
 ## Gallery

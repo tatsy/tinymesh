@@ -8,18 +8,13 @@ if(TINYMESH_BUILD_PYTHON)
   )
 
   set_target_properties(tinymesh_python PROPERTIES
-    OUTPUT_NAME tinymesh
+    OUTPUT_NAME _core
     ARCHIVE_OUTPUT_NAME tinymesh_python
     DEBUG_POSTFIX ""
   )
 
   install(TARGETS tinymesh_python
-    LIBRARY DESTINATION .
-    RUNTIME DESTINATION .
-  )
-
-  install(FILES tinymesh/__init__.pyi
-    DESTINATION .
-    RENAME tinymesh.pyi
+    LIBRARY DESTINATION tinymesh
+    RUNTIME DESTINATION tinymesh
   )
 endif()

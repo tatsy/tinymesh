@@ -6,8 +6,11 @@ license = "MPL-2.0"
 authors = [{ name = "Tatsuya Yatagawa", email = "tatsy.mail@gmail.com" }]
 readme = 'README.md'
 keywords = ['graphics', 'geometry']
-dependencies = ["numpy>=2.0.0"]
+dependencies = ["numpy>=2.0.0", "scipy>=1.15.3"]
 requires-python = ">=3.10,<3.14"
+
+[project.optional-dependencies]
+viz = ["matplotlib>=3.10.9"]
 
 [project.urls]
 Repository = "https://github.com/tatsy/tinymesh"
@@ -18,9 +21,9 @@ dev = [
   "ty>=0.0.91",
   "ruff>=0.17.2",
   "pytest>=9.2.0",
+]
+examples = [
   "jupyterlab>=4.6.6",
-  "matplotlib>=3.10.9",
-  "scipy>=1.15.3",
   "open3d>=0.20.0",
 ]
 
@@ -31,12 +34,12 @@ build-backend = "scikit_build_core.build"
 [tool.scikit-build]
 minimum-version = "build-system.requires"
 cmake.build-type = "Release"
-wheel.packages = []
+wheel.packages = ["python/tinymesh"]
 build-dir = "build/python/{wheel_tag}"
 
 [tool.scikit-build.metadata.version]
 provider = "scikit_build_core.metadata.regex"
-input = "src/tinymesh/__init__.py"
+input = "python/tinymesh/__init__.py"
 
 [tool.scikit-build.cmake.define]
 TINYMESH_BUILD_PYTHON = true

@@ -1,0 +1,55 @@
+import sys
+import subprocess
+from textwrap import dedent
+from importlib import metadata, resources
+
+import tinymesh
+from tinymesh import _core
+
+
+def test_existing_api_is_reexported():
+    for name in dir(_core):
+        if not name.startswith('_'):
+            assert getattr(tinymesh, name) is getattr(_core, name)
+    assert tinymesh.__version__ == metadata.version('tinymesh')
+
+
+def test_type_information_is_installed():
+    package = resources.files('tinymesh')
+    assert package.joinpath('py.typed').is_file()
+    assert package.joinpath('_core.pyi').is_file()
+
+
+def test_core_import_without_visualization_dependencies(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            '-c',
+            dedent("""\
+                import sys
+                from importlib.abc import MetaPathFinder
+
+                class BlockVisualization(MetaPathFinder):
+                    def find_spec(self, fullname, path=None, target=None):
+                        if fullname.split('.')[0] in {'matplotlib', 'open3d'}:
+                            raise ModuleNotFoundError(fullname, name=fullname)
+
+                sys.meta_path.insert(0, BlockVisualization())
+                import tinymesh
+                assert tinymesh.Mesh().num_vertices() == 0
+                assert 'tinymesh.visualization' not in sys.modules
+
+                try:
+                    import tinymesh.visualization
+                except ModuleNotFoundError as exc:
+                    assert 'tinymesh[viz]' in str(exc)
+                else:
+                    raise AssertionError('Expected a missing optional dependency')
+            """),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr

@@ -37,6 +37,7 @@ jobs:
         run: >-
           cmake -S . -B build
           -G "Visual Studio 18 2026" -A x64
+          -DTINYMESH_BUILD_PYTHON=OFF
           -DTINYMESH_BUILD_TESTS=ON
           -DTINYMESH_BUILD_EXAMPLES=ON
 
@@ -45,6 +46,7 @@ jobs:
         run: >-
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+          -DTINYMESH_BUILD_PYTHON=OFF
           -DTINYMESH_BUILD_TESTS=ON
           -DTINYMESH_BUILD_EXAMPLES=ON
 
@@ -71,11 +73,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Build wheel
-        run: uv build --wheel
+      - name: Build distributions
+        run: uv build
+
+      - name: Install wheel for testing
+        run: |
+          uv sync --frozen --extra viz --no-install-project
+          uv pip install --no-deps dist/*.whl
 
       - name: Test
-        run: uv run --frozen pytest -s tests/python
+        env:
+          MPLBACKEND: Agg
+        run: uv run --no-sync pytest -s tests/python
 
       - name: Upload wheel
         uses: actions/upload-artifact@v7
