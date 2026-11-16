@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "bvh.h"
 
 #include <stack>

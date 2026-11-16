@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "filters.h"
 
 #include <unordered_set>

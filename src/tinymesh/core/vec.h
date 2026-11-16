@@ -7,16 +7,13 @@
 
 #include <array>
 #include <algorithm>
-#include <functional>
 #include <type_traits>
 
 #include <Eigen/Core>
 
 template <typename Float, int Dims>
+    requires std::is_floating_point<Float>::value && (Dims > 1)
 class Vec {
-    static_assert(std::is_floating_point<Float>::value, "Vector base type must be floating point number!");
-    static_assert(Dims > 1, "Vector dimension must be more than 1!");
-
     using EigenVectorType = Eigen::Matrix<Float, Dims, 1>;
 
 public:

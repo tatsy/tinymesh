@@ -10,6 +10,7 @@ include(Macros)
 option(TINYMESH_WITH_OPENMP "Use OpenMP or not" ON)
 option(TINYMESH_BUILD_TESTS "Build unit tests." OFF)
 option(TINYMESH_BUILD_EXAMPLES "Build examples." OFF)
+option(TINYMESH_BUILD_SHARED "Build shared library." OFF)
 option(TINYMESH_BUILD_PYTHON "Build the Python module." OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
