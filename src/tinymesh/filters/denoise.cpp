@@ -47,7 +47,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
         std::vector<Vec3> normals(nf);
         std::vector<Vec3> centroids(nf);
         std::vector<double> areas(nf);
-        omp_parallel_for(int i = 0; i < nf; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
             std::vector<Vec3> vs;
             for (auto vit = f->v_begin(); vit != f->v_end(); ++vit) {
@@ -66,7 +66,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
 
         // Filter
         std::vector<Vec3> newNormals(nf);
-        omp_parallel_for(int i = 0; i < nf; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
             Vec3 norm(0.0);
             for (auto fit = f->f_begin(); fit != f->f_end(); ++fit) {
@@ -84,7 +84,7 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
 
         // Update vertex positions
         const int nv = (int)mesh.numVertices();
-        omp_parallel_for(int i = 0; i < nv; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
 
             double sumArea = 0.0;
@@ -113,7 +113,7 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
         std::vector<Vec3> normals(nf);
         std::vector<Vec3> centroids(nf);
         std::vector<double> areas(nf);
-        omp_parallel_for(int i = 0; i < nf; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
             std::vector<Vec3> vs;
             for (auto vit = f->v_begin(); vit != f->v_end(); ++vit) {
@@ -132,7 +132,7 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
 
         // Filter
         std::vector<Vec3> newNormals(nf);
-        omp_parallel_for(int i = 0; i < nf; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
             Vec3 norm(0.0);
             for (auto fit = f->f_begin(); fit != f->f_end(); ++fit) {
@@ -154,7 +154,7 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
 
         // Update vertex positions
         const int nv = (int)mesh.numVertices();
-        omp_parallel_for(int i = 0; i < nv; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
 
             double sumArea = 0.0;

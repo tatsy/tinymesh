@@ -26,7 +26,7 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int itera
         std::vector<Vec3> centroids(nv);
 
         // Compute centroids and tangent planes
-        omp_parallel_for(int i = 0; i < nv; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
             std::vector<Vec3> pts;
             Vec3 cent(0.0);
@@ -43,7 +43,7 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int itera
         }
 
         // Update vertex positions
-        omp_parallel_for(int i = 0; i < (int)mesh.numVertices(); i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < (int)mesh.numVertices(); i++) {
             Vertex *v = mesh.vertex(i);
             if (v->isBoundary() || v->isLocked()) {
                 continue;
@@ -64,7 +64,7 @@ void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
         std::vector<Vec3> centroids(nv);
 
         // Compute centroids and tangent planes
-        omp_parallel_for(int i = 0; i < nv; i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
 
             // Collect surrounding vertices
@@ -83,7 +83,7 @@ void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
 
         // Update vertex positions
         const double epsilon = it % 2 == 0 ? shrink : -inflate;
-        omp_parallel_for(int i = 0; i < (int)mesh.numVertices(); i++) {
+        TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < (int)mesh.numVertices(); i++) {
             Vertex *v = mesh.vertex(i);
             if (v->isBoundary() || v->isLocked()) {
                 continue;

@@ -5,6 +5,7 @@ import pytest
 
 import tinymesh as tms
 
+
 CWD = os.getcwd()
 
 model_dir = 'data/models'
@@ -24,7 +25,7 @@ methods = [
 ]
 
 
-@pytest.mark.parametrize("method, filename", product(methods, filenames))
+@pytest.mark.parametrize('method, filename', product(methods, filenames))
 def test_smooth_method(method, filename):
     filename = os.path.join(CWD, model_dir, filename)
     mesh = tms.Mesh(filename)

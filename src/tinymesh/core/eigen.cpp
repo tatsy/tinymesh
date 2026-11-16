@@ -2,9 +2,13 @@
 
 #include <Eigen/SVD>
 
-void eigenSVD(const Eigen::MatrixXd &A, Eigen::MatrixXd &U, Eigen::VectorXd &sigma, Eigen::MatrixXd &V) {
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+namespace tinymesh {
+
+void eigenSVD(const EigenMatrix &A, EigenMatrix &U, EigenVector &sigma, EigenMatrix &V) {
+    Eigen::JacobiSVD<EigenMatrix> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
     U = svd.matrixU();
     sigma = svd.singularValues();
     V = svd.matrixV();
 }
+
+}  // namespace tinymesh

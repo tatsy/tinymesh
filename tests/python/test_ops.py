@@ -6,6 +6,7 @@ import pytest
 
 import tinymesh as tms
 
+
 CWD = os.getcwd()
 
 model_dir = 'data/models'
@@ -25,7 +26,7 @@ methods = [
 ]
 
 
-@pytest.mark.parametrize("filename", filenames)
+@pytest.mark.parametrize('filename', filenames)
 def test_hks(filename):
     filename = os.path.join(CWD, model_dir, filename)
     mesh = tms.Mesh(filename)
@@ -39,10 +40,10 @@ def test_hks(filename):
     except Exception:
         pytest.fail('Failed!')
 
-    assert mesh.verify(), "Mesh verification failed!"
+    assert mesh.verify(), 'Mesh verification failed!'
 
 
-@pytest.mark.parametrize("method, filename", product(methods, filenames))
+@pytest.mark.parametrize('method, filename', product(methods, filenames))
 def test_ops_method(method, filename):
     filename = os.path.join(CWD, model_dir, filename)
     mesh = tms.Mesh(filename)
@@ -53,4 +54,4 @@ def test_ops_method(method, filename):
     except Exception:
         pytest.fail('Failed!')
 
-    assert mesh.verify(), "Mesh verification failed!"
+    assert mesh.verify(), 'Mesh verification failed!'

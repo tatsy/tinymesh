@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
             const std::string outfile =
                 (dirpath / fs::path((basename + "_denoise_Gaussian" + extension).c_str())).string();
             mesh.save(outfile);
-            tms::Info("Save: %s\n", outfile.c_str());
+            tms::Info("Save: {}\n", outfile);
         }
 
         // Denoise (Normal bilateral filter)
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
             const std::string outfile =
                 (dirpath / fs::path((basename + "_denoise_bilateral" + extension).c_str())).string();
             mesh.save(outfile);
-            tms::Info("Save: %s\n", outfile.c_str());
+            tms::Info("Save: {}\n", outfile);
         }
 
         // Denoise (L0 smoothing)
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
             const std::string outfile = (dirpath / fs::path((basename + "_denoise_l0" + extension).c_str())).string();
             mesh.save(outfile);
-            tms::Info("Save: %s\n", outfile.c_str());
+            tms::Info("Save: {}\n", outfile);
         }
     } catch (std::runtime_error &e) {
         std::cerr << e.what() << std::endl;

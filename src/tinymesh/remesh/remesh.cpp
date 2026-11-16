@@ -72,9 +72,9 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
     // Remesh loop
     for (int k = 0; k < iterations; k++) {
         if (verbose) {
-            Info("*** Original #%d ***\n", k + 1);
-            Info("#vert: %d\n", (int)mesh.numVertices());
-            Info("#face: %d\n", (int)mesh.numFaces());
+            Info("*** Original #{} ***\n", k + 1);
+            Info("#vert: {}\n", (int)mesh.numVertices());
+            Info("#face: {}\n", (int)mesh.numFaces());
         }
 
         // Split long edges
@@ -100,8 +100,8 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
 
         if (verbose) {
             Info("*** After split ***\n");
-            Info("#vert: %d\n", (int)mesh.numVertices());
-            Info("#face: %d\n", (int)mesh.numFaces());
+            Info("#vert: {}\n", mesh.numVertices());
+            Info("#face: {}\n", mesh.numFaces());
         }
 
         mesh.verify();
@@ -151,8 +151,8 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
 
         if (verbose) {
             Info("*** After collapse ***\n");
-            Info("#vert: %d\n", (int)mesh.numVertices());
-            Info("#face: %d\n", (int)mesh.numFaces());
+            Info("#vert: {}\n", mesh.numVertices());
+            Info("#face: {}\n", mesh.numFaces());
         }
 
         // Flip edges

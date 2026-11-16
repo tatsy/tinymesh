@@ -78,7 +78,7 @@ void Mesh::load(const std::string &filename) {
     } else if (ext == ".ply") {
         loadPLY(filename);
     } else {
-        Error("Unsupported file extension: %s", ext.c_str());
+        Error("Unsupported file extension: {}", ext.c_str());
     }
 
     construct();
@@ -219,8 +219,7 @@ void Mesh::construct() {
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
                 Warn(
-                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes "
-                    "this "
+                    "An edge with vertices #{} and #{} is detected more than twice! Skip the face that includes this "
                     "edge.",
                     a, b);
                 isDuplicated = true;
@@ -248,7 +247,7 @@ void Mesh::construct() {
             const uint32_t b = indices_[i + (j + 1) % ngon];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                Error("An edge with vertices #%d and #%d is duplicated\n", a, b);
+                Error("An edge with vertices #{} and #{} is duplicated\n", a, b);
             }
 
             auto he = new Halfedge();
@@ -358,7 +357,7 @@ void Mesh::construct() {
         } while (he != v->halfedge_);
 
         if (count != vertexDegree[v->index()]) {
-            Error("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
+            Error("At least one of the vertices is non-manifold: {} vs {}\n", count, vertexDegree[v->index()]);
         }
     }
 }
@@ -372,11 +371,11 @@ void Mesh::loadOBJ(const std::string &filename) {
     std::string errMsg;
     bool success = tinyobj::LoadObj(&attrib, &shapes, &mats, &warnMsg, &errMsg, filename.c_str());
     if (!errMsg.empty()) {
-        Warn("%s", errMsg.c_str());
+        Warn("{}", errMsg);
     }
 
     if (!success) {
-        Error("Failed to load *.obj file: %s", filename.c_str());
+        Error("Failed to load *.obj file: {}", filename);
     }
 
     // Traverse triangles
@@ -409,7 +408,7 @@ void Mesh::loadPLY(const std::string &filename) {
     // Open
     std::ifstream reader(filename.c_str(), std::ios::binary);
     if (reader.fail()) {
-        Error("Failed to open file: %s", filename.c_str());
+        Error("Failed to open file: {}", filename);
     }
 
     // Read header
@@ -474,14 +473,14 @@ void Mesh::save(const std::string &filename) const {
     } else if (ext == ".ply") {
         savePLY(filename);
     } else {
-        Error("Unsupported file extension: %s", ext.c_str());
+        Error("Unsupported file extension: {}", ext);
     }
 }
 
 void Mesh::saveOBJ(const std::string &filename) const {
     std::ofstream writer(filename.c_str(), std::ios::out);
     if (writer.fail()) {
-        Error("Failed to open file: %s", filename.c_str());
+        Error("Failed to open file: {}", filename);
     }
 
     for (const auto &v : vertices_) {
@@ -513,7 +512,7 @@ void Mesh::savePLY(const std::string &filename) const {
 
     std::ostream outstream(&buffer);
     if (outstream.fail()) {
-        Error("Failed to open file: %s", filename.c_str());
+        Error("Failed to open file: {}", filename);
     }
 
     std::vector<float> vertexData(vertices_.size() * 3);
@@ -954,7 +953,7 @@ bool Mesh::verify() const {
     for (int i = 0; i < (int)vertices_.size(); i++) {
         Vertex *v = vertices_[i].get();
         if (v->index() != i) {
-            Warn("Vertex index does not match array index: v[%d].index = %d", i, v->index());
+            Warn("Vertex index does not match array index: v[{}].index = {}", i, v->index());
             success = false;
         }
         success &= verifyVertex(v);
@@ -963,7 +962,7 @@ bool Mesh::verify() const {
     for (int i = 0; i < (int)halfedges_.size(); i++) {
         auto he = halfedges_[i];
         if (he->index() != i) {
-            Warn("Halfedge index does not match array index: he[%d].index = %d", i, he->index());
+            Warn("Halfedge index does not match array index: he[{}].index = {}", i, he->index());
             success = false;
         }
     }
@@ -971,12 +970,12 @@ bool Mesh::verify() const {
     for (int i = 0; i < (int)faces_.size(); i++) {
         auto f = faces_[i];
         if (f->index() != i) {
-            Warn("Face index does not match array index: f[%d].index = %d", i, f->index());
+            Warn("Face index does not match array index: f[{}].index = {}", i, f->index());
             success = false;
         }
 
         if (f->halfedge_ == nullptr) {
-            Warn("Face[%d] is not with non-null halfedge!", f->index());
+            Warn("Face[{}] is not with non-null halfedge!", f->index());
             success = false;
         }
     }
@@ -987,20 +986,20 @@ bool Mesh::verify() const {
 bool Mesh::verifyVertex(Vertex *v) const {
     bool success = true;
     if (v->index() >= (int)vertices_.size()) {
-        fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)vertices_.size());
+        Warn("Vertex index out of range: {} > {}", v->index(), (int)vertices_.size());
         success = false;
     }
 
     Vec3 p = v->pos();
     if (std::isinf(p[0]) || std::isnan(p[0]) || std::isinf(p[1]) || std::isnan(p[1]) || std::isinf(p[2]) ||
         std::isnan(p[2])) {
-        fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p[0], p[1], p[2]);
+        Warn("Inf of NaN found at v[{}]: ({}, {}, {})\n", v->index(), p[0], p[1], p[2]);
         success = false;
     }
 
     for (auto it = v->he_begin(); it != v->he_end(); ++it) {
         if (it->src() != v) {
-            fprintf(stderr, "Origin of an outward halfedge is invalid at v[%d]!\n", v->index());
+            Warn("Origin of an outward halfedge is invalid at v[{}]\n", v->index());
             success = false;
         }
     }
