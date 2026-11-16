@@ -33,6 +33,7 @@ minimum-version = "build-system.requires"
 cmake.build-type = "Release"
 wheel.packages = []
 sdist.include = ["src/tinymesh/ext/**"]
+build-dir = "build/python/{wheel_tag}"
 
 [tool.scikit-build.metadata.version]
 provider = "scikit_build_core.metadata.regex"

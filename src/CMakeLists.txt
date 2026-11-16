@@ -17,4 +17,9 @@ if(TINYMESH_BUILD_PYTHON)
     LIBRARY DESTINATION .
     RUNTIME DESTINATION .
   )
+
+  install(FILES tinymesh/__init__.pyi
+    DESTINATION .
+    RENAME tinymesh.pyi
+  )
 endif()

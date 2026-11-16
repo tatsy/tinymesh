@@ -33,7 +33,7 @@ class Mesh;
 #define TINYMESH_API __declspec(dllimport)
 #endif
 
-#elif defined(__GNUC__) && defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__)
 #define TINYMESH_API __attribute__((visibility("default")))
 #else
 #define TINYMESH_API

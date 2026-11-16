@@ -46,6 +46,10 @@ Vec3 Vertex::normal() const {
     // Reference: Weights for Computing Vertex Normals from Facet Normals
     Vec3 norm = Vec3(0.0);
     for (auto it = he_begin(); it != he_end(); ++it) {
+        if (it->face()->isHole()) {
+            continue;
+        }
+
         const Vec3 p0 = this->pos();
         const Vec3 p1 = it->dst()->pos();
         const Vec3 p2 = it->next()->dst()->pos();
