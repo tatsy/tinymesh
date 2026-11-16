@@ -14,7 +14,7 @@ except ImportError:
 class TinyMeshBuildExt(build_ext):
     def run(self):
         try:
-            super(TinyMeshBuildExt, self).run()
+            build_ext.run(self)
         except FileNotFoundError:
             raise Exception("File not found. Could not compile C extension")
 
@@ -71,7 +71,7 @@ class TinyMeshBuildExt(build_ext):
 
         # building
         try:
-            super(TinyMeshBuildExt, self).build_extension(ext)
+            build_ext.build_extension(self, ext)
         except (CCompilerError, PackageDiscoveryError, ValueError):
             raise Exception("Could not compile C extension")
 
