@@ -77,7 +77,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Build wheel
-        run: uv run --frozen build
+        run: uv build
 
       - name: Test
         run: uv run --frozen pytest -s tests/python

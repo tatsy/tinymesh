@@ -5,6 +5,8 @@
 #ifndef TINYMESH_BOUNDS_H
 #define TINYMESH_BOUNDS_H
 
+#include <limits>
+
 #include "debug.h"
 #include "vec.h"
 
@@ -57,7 +59,7 @@ public:
         return dim;
     }
 
-    double distance(const VecD &p) {
+    double distance(const VecD &p) const {
         const Vec3 vmin = ::abs(posMin_ - p);
         const Vec3 vmax = ::abs(posMax_ - p);
         double dist = 0.0;
@@ -77,10 +79,10 @@ public:
         return ret;
     }
 
-    VecD posMin() const {
+    VecD posMin() const noexcept {
         return posMin_;
     }
-    VecD posMax() const {
+    VecD posMax() const noexcept {
         return posMax_;
     }
 

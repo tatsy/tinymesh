@@ -8,6 +8,7 @@
 #include <cmath>
 #include <array>
 #include <algorithm>
+#include <ostream>
 #include <functional>
 #include <type_traits>
 #include <stdexcept>
@@ -34,14 +35,8 @@ public:
         if constexpr (Dims >= 3) elems[2] = z;
     }
 
-    explicit Vec(const Vec &other) {
-        elems = other.elems;
-    }
-
-    Vec &operator=(const Vec other) {
-        elems = other.elems;
-        return *this;
-    }
+    explicit Vec(const Vec &other) = default;
+    Vec &operator=(const Vec &other) = default;
 
     Vec(const EigenVectorType &v) {
         for (int d = 0; d < Dims; d++) {
@@ -302,8 +297,8 @@ bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Floa
 template <typename Float, int Dims>
 Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
           typename std::enable_if<Dims == 3>::type * = 0) {
-    const Vec3 e0 = a - b;
-    const Vec3 e1 = c - b;
+    const auto e0 = a - b;
+    const auto e1 = c - b;
     return dot(e0, e1) / (length(cross(e0, e1)) + (Float)1.0e-20);
 }
 

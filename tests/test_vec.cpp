@@ -149,7 +149,7 @@ TEST_P(VecUnaryTest, NormAndNormalize) {
         EXPECT_EQ(v1.z() / nrm, w.z());
         EXPECT_DOUBLE_EQ(length(w), 1.0);
     } else {
-        ASSERT_DEATH(normalize(v1), "");
+        ASSERT_THROW(normalize(v1), std::runtime_error);
     }
 }
 

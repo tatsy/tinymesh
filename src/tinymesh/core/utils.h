@@ -6,6 +6,7 @@
 #define TINYMESH_UTILS_H
 
 #include <map>
+#include <tuple>
 #include <functional>
 
 #include "vec.h"
@@ -25,6 +26,8 @@ struct hash<IndexPair> {
 };
 
 }  // namespace std
+
+namespace tinymesh {
 
 //! Local coordinate frame
 using LocalFrame = std::tuple<Vec3, Vec3, Vec3>;
@@ -54,5 +57,7 @@ inline EigenMatrix3 rotationFromTwoVectors(const Vec3 &v0, const Vec3 &v1) {
     const Vec3 axis = normalize(outer);
     return rotationAxisAngle(theta, axis);
 }
+
+}  // namespace tinymesh
 
 #endif  // TINYMESH_UTILS_H
