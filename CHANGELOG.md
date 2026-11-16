@@ -3,6 +3,8 @@
 ## v0.2.4
 
 * Update CI scripts to build wheels for 5 latest Python versions.
+* Update package manager to use UV.
+* Update Python module build to use scikit-build.
 
 ## v0.2.3
 
