@@ -24,10 +24,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2022, macos-15-intel]
+        os: 
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -60,11 +63,11 @@ jobs:
       fail-fast: false
       matrix:
         # Intel runners also support the existing Python 3.8 and 3.9 builds.
-        os: [ubuntu-22.04, windows-2022, macos-15-intel]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
