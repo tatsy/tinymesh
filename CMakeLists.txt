@@ -63,16 +63,15 @@ endif()
 # ----------
 # Traverse subdirectories
 # ----------
-include(Dependencies)
-
 if (TINYMESH_BUILD_PYTHON)
   if (TINYMESH_BUILD_TESTS OR TINYMESH_BUILD_EXAMPLES)
     message(FATAL_ERROR "Build Python bindings separately from C++ tests and examples.")
   endif()
 
   find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-  find_package(pybind11 CONFIG REQUIRED)
 endif()
+
+include(Dependencies)
 
 add_subdirectory(src)
 

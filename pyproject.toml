@@ -25,14 +25,13 @@ dev = [
 ]
 
 [build-system]
-requires = ["scikit-build-core>=0.11.4", "pybind11>=2.13.0"]
+requires = ["scikit-build-core>=0.11.4"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
 cmake.build-type = "Release"
 wheel.packages = []
-sdist.include = ["src/tinymesh/ext/**"]
 build-dir = "build/python/{wheel_tag}"
 
 [tool.scikit-build.metadata.version]

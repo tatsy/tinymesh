@@ -42,11 +42,11 @@ The module is tested its compilation using the following compilers.
 ### Library and examples (C++)
 
 You can build a static library and all the examples by `CMake` with the following commands.
+Dependencies are pinned and downloaded by CMake during configuration; the first build requires network access.
 
 ```shell
 git clone https://github.com/tatsy/tinymesh.git --depth 1
 cd tinymesh
-git submodule update --init --recursive
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release -DTINYMESH_BUILD_EXAMPLES=ON ..
 cmake --build . --config Release --parallel 2

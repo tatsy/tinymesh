@@ -1,14 +1,4 @@
 # ----------
-# Common target names
-# ----------
-set(EIGEN_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/eigen)
-set(SPECTRA_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/spectra/include)
-set(TINYOBJ_LOADER_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/tinyobjloader)
-set(SOURCE_FILES ${SOURCE_FILES};${TINYOBJ_LOADER_INCLUDE_DIR}/tiny_obj_loader.h)
-set(TINYPLY_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/tinyply/source)
-set(SOURCE_FILES ${SOURCE_FILES};${TINYPLY_INCLUDE_DIR}/tinyply.h)
-
-# ----------
 # Components
 # ----------
 set(SOURCE_FILES ${SOURCE_FILES} "tinymesh.h")
@@ -52,13 +42,13 @@ target_include_directories(${TINYMESH_LIBRARY}
     "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_include_directories(${TINYMESH_LIBRARY} SYSTEM
+target_link_libraries(${TINYMESH_LIBRARY}
   PUBLIC
-    "${EIGEN_INCLUDE_DIR}"
+    tinymesh::eigen
   PRIVATE
-    "${SPECTRA_INCLUDE_DIR}"
-    "${TINYOBJ_LOADER_INCLUDE_DIR}"
-    "${TINYPLY_INCLUDE_DIR}"
+    tinymesh::spectra
+    tinymesh::tinyobjloader
+    tinymesh::tinyply
 )
 
 if(OpenMP_CXX_FOUND)
