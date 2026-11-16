@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 
 #include "tinymesh/tinymesh.h"
 

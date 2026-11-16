@@ -34,11 +34,7 @@ if (TINYMESH_BUILD_PYTHON)
 
   if (MSVC)
     target_compile_options(${TINYMESH_LIBRARY} PUBLIC /utf-8)
-    target_compile_definitions(${TINYMESH_LIBRARY}
-      PUBLIC
-        _CRT_SECURE_NO_WARNINGS
-        _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-    )
+    target_compile_definitions(${TINYMESH_LIBRARY} PUBLIC _CRT_SECURE_NO_WARNINGS)
   endif()
 endif()
 

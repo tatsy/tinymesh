@@ -1,5 +1,6 @@
 #include <iostream>
 #include <random>
+#include <filesystem>
 
 #include "tinymesh/tinymesh.h"
 

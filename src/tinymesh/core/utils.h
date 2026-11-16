@@ -9,25 +9,23 @@
 #include <tuple>
 #include <functional>
 
+#include "api.h"
 #include "vec.h"
 #include "eigen.h"
 
+namespace tinymesh {
+
 //! Pair of indices (i.e., unsigned int)
-using IndexPair = std::pair<uint32_t, uint32_t>;
+using IndexPair = std::tuple<uint32_t, uint32_t>;
 
-namespace std {
+struct IndexPairHash {
+    std::size_t operator()(const IndexPair &key) const noexcept {
+        const auto h1 = std::hash<std::uint32_t>{}(std::get<0>(key));
+        const auto h2 = std::hash<std::uint32_t>{}(std::get<1>(key));
 
-//! Hash type for IndexPair
-template <>
-struct hash<IndexPair> {
-    std::size_t operator()(const IndexPair &k) const {
-        return std::get<0>(k) ^ std::get<1>(k);
+        return h1 ^ (h2 + std::size_t{ 0x9e3779b9u } + (h1 << 6) + (h1 >> 2));
     }
 };
-
-}  // namespace std
-
-namespace tinymesh {
 
 //! Local coordinate frame
 using LocalFrame = std::tuple<Vec3, Vec3, Vec3>;
@@ -50,10 +48,27 @@ inline EigenMatrix3 rotationAxisAngle(double theta, const Vec3 &axis) {
 //! Rotate vector v0 to vector v1
 inline EigenMatrix3 rotationFromTwoVectors(const Vec3 &v0, const Vec3 &v1) {
     const Vec3 outer = cross(v0, v1);
-    const double theta = std::atan2(length(outer), dot(v0, v1));
-    if (std::abs(theta) < 1.0e-12) {
-        return EigenMatrix3::Identity();
+    const double inner = dot(v0, v1);
+    const double outerNorm = length(outer);
+    const double scale = length(v0) * length(v1);
+    if (outerNorm < 1.0e-12 * scale) {
+        if (inner > 0.0) {
+            // No rotation needed
+            return EigenMatrix3::Identity();
+        } else {
+            // 180 degree rotation
+            Vec3 axis;
+            if (std::abs(v0.x()) < std::abs(v0.y())) {
+                axis = Vec3{ 0.0, -v0.z(), v0.y() };
+            } else {
+                axis = Vec3{ -v0.z(), 0.0, v0.x() };
+            }
+            axis = normalize(axis);
+            return rotationAxisAngle(Pi, axis);
+        }
     }
+
+    const double theta = std::atan2(outerNorm, inner);
     const Vec3 axis = normalize(outer);
     return rotationAxisAngle(theta, axis);
 }

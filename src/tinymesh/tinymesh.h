@@ -10,7 +10,6 @@
 #include "core/vec.h"
 #include "core/bounds.h"
 #include "core/openmp.h"
-#include "core/filesystem.h"
 
 #include "core/mesh.h"
 #include "core/vertex.h"

@@ -14,13 +14,14 @@
 #include "face.h"
 #include "halfedge.h"
 
-using E = IndexPair;
-using T = std::tuple<uint32_t, uint32_t, uint32_t>;
-
 namespace tinymesh {
 
+using E = IndexPair;
+using EHash = IndexPairHash;
+using T = std::tuple<uint32_t, uint32_t, uint32_t>;
+
 Face *Mesh::addNewTriangle(const std::vector<Vertex *> &boundary, const std::tuple<uint32_t, uint32_t, uint32_t> &tri,
-                           std::unordered_map<IndexPair, Halfedge *> &pair2he,
+                           std::unordered_map<IndexPair, Halfedge *, IndexPairHash> &pair2he,
                            std::unordered_map<Halfedge *, IndexPair> &he2pair) {
     const int i0 = std::get<0>(tri);
     const int i1 = std::get<1>(tri);
@@ -88,7 +89,7 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
     const int n_verts = (int)boundary.size();
 
     // Collect boundary halfedges
-    std::unordered_map<E, Halfedge *> pair2he;
+    std::unordered_map<E, Halfedge *, EHash> pair2he;
     std::unordered_map<Halfedge *, E> he2pair;
     int count = 0;
     for (auto it = face->he_begin(); it != face->he_end(); ++it) {
@@ -315,7 +316,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
         }
 
         // Collect boundary halfedges
-        std::unordered_map<E, Halfedge *> pair2he;
+        std::unordered_map<E, Halfedge *, EHash> pair2he;
         std::unordered_map<Halfedge *, E> he2pair;
         int count = 0;
         for (auto it = face->he_begin(); it != face->he_end(); ++it) {

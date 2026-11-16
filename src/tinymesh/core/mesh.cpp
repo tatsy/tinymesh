@@ -8,6 +8,7 @@
 #include <queue>
 #include <tuple>
 #include <functional>
+#include <filesystem>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -19,7 +20,6 @@
 #include "core/vertex.h"
 #include "core/face.h"
 #include "core/halfedge.h"
-#include "core/filesystem.h"
 #include "restore/restore.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
