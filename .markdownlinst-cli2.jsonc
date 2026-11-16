@@ -1,0 +1,18 @@
+{
+  "config": {
+    "ul-style": {
+      "style": "dash"
+    },
+    "hr-style": {
+      "style": "---"
+    },
+    "code-block-style": {
+      "style": "fenced"
+    },
+    "code-fence-style": {
+      "style": "backtick"
+    },
+    "line-length": false,
+    "no-inline-html": false
+  }
+}

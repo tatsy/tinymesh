@@ -22,7 +22,7 @@ script = "build_exts.py"
 generate-setup-file = true
 
 [tool.poetry.dependencies]
-python = ">=3.8,<=3.12"
+python = ">=3.8,<3.13"
 setuptools = "^57"
 pybind11 = "^2.0"
 
@@ -49,14 +49,6 @@ scipy = [
 profile = "black"
 length_sort = "True"
 line_length = 120
-
-[tool.mypy]
-python_version = 3.9
-follow_imports = "silent"
-disallow_any_generics = "True"
-strict_optional = "True"
-check_untyped_defs = "True"
-allow_redefinition = "True"
 
 [tool.flake8]
 max-line-length = 120

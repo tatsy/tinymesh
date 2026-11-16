@@ -1,44 +1,45 @@
-v0.2.4
----
-*   Update CI scripts to build wheels for 5 latest Python versions.
+# CHANGELOG
 
+## v0.2.4
 
-v0.2.3
----
-*   Update some method names (e.g., `isStatic` -> `isLocked`)
-*   Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
-*   Add const version of iterators.
-*   Advancing front method [Zhao et al. 2007] is implemented.
-*   Change dev-env manager to Poetry.
-*   Add a method to compute principal curvatures (and thier directions) [Rusinkiewicz 2004].
-*   Add a method of context-based coherent surface completion [Harary et al. 2016].
-*   Add own print function to support both C++/Python standard outputs.
+* Update CI scripts to build wheels for 5 latest Python versions.
 
-v0.2.2
----
-*   Change Python env manager to Pipenv.
-*   Add methods computing approximated Laplacian-Beltrami operators (adjacent, cotangent, Belkin+2008).
-*   Add IPython notebooks as Pythons examples rather than simple scripts.
-*   Change traversal order of elements around a vertex to counter-clockwise order.
-*   Add heat kernel signature [Sun et al. 2009].
+## v0.2.3
 
-v0.2.1
----
-*   Minor bug fix for GCC v8.
+* Update some method names (e.g., `isStatic` -> `isLocked`)
+* Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
+* Add const version of iterators.
+* Advancing front method [Zhao et al. 2007] is implemented.
+* Change dev-env manager to Poetry.
+* Add a method to compute principal curvatures (and thier directions) [Rusinkiewicz 2004].
+* Add a method of context-based coherent surface completion [Harary et al. 2016].
+* Add own print function to support both C++/Python standard outputs.
 
-v0.2.0
----
-*   Add unit test for each functions (just to check run or not).
-*   Add feature preservation in remeshing.
-*   Include Eigen to repo as a submodule.
-*   Update Python setup to use Poetry.
-*   Add mesh denoising via bilateral filter [Zheng et al. 2011] and L0 smoothing [He and Schaefer 2013].
-*   Update Python module build to use Python-side `pybind11` installation.
-*   Add mesh denoising via normal Gaussian filter [Ohtake et al. 2001].
-*   Implicit fairing `implicit_fair` is updated to its normalized version.
-*   Hole filling `hole_fill` is updated to take the upper bound of allowed dihedral angle.
-*   Update `setup.py` to support the operation `install`.
+## v0.2.2
 
-v0.1.0
----
-*   First release
+* Change Python env manager to Pipenv.
+* Add methods computing approximated Laplacian-Beltrami operators (adjacent, cotangent, Belkin+2008).
+* Add IPython notebooks as Pythons examples rather than simple scripts.
+* Change traversal order of elements around a vertex to counter-clockwise order.
+* Add heat kernel signature [Sun et al. 2009].
+
+## v0.2.1
+
+* Minor bug fix for GCC v8.
+
+## v0.2.0
+
+* Add unit test for each functions (just to check run or not).
+* Add feature preservation in remeshing.
+* Include Eigen to repo as a submodule.
+* Update Python setup to use Poetry.
+* Add mesh denoising via bilateral filter [Zheng et al. 2011] and L0 smoothing [He and Schaefer 2013].
+* Update Python module build to use Python-side `pybind11` installation.
+* Add mesh denoising via normal Gaussian filter [Ohtake et al. 2001].
+* Implicit fairing `implicit_fair` is updated to its normalized version.
+* Hole filling `hole_fill` is updated to take the upper bound of allowed dihedral angle.
+* Update `setup.py` to support the operation `install`.
+
+## v0.1.0
+
+* First release
