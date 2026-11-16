@@ -25,6 +25,13 @@ public:
         , posMax_(posMax) {
     }
 
+    bool empty() const noexcept {
+        for (int d = 0; d < Dims; d++) {
+            if (posMin_[d] > posMax_[d]) return true;
+        }
+        return false;
+    }
+
     void merge(const VecD &p) {
         posMin_ = ::min(posMin_, p);
         posMax_ = ::max(posMax_, p);
@@ -33,6 +40,8 @@ public:
     double area() const
         requires(Dims == 3)
     {
+        if (empty()) return 0.0;
+
         const VecD d = ::abs(posMax_ - posMin_);
         return (2.0 * (d[0] * d[1] + d[1] * d[2] + d[2] * d[0]));
     }
@@ -60,8 +69,8 @@ public:
     }
 
     double distance(const VecD &p) const {
-        const Vec3 vmin = ::abs(posMin_ - p);
-        const Vec3 vmax = ::abs(posMax_ - p);
+        const VecD vmin = ::abs(posMin_ - p);
+        const VecD vmax = ::abs(posMax_ - p);
         double dist = 0.0;
         for (int d = 0; d < Dims; d++) {
             if (p[d] < posMin_[d] || posMax_[d] < p[d]) {

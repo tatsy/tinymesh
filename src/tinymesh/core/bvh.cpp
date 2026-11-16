@@ -165,6 +165,8 @@ BVHNode *BVH::constructRec(std::vector<BVHPrimitiveInfo> &buildData, int start, 
                     b1 = Bounds3::merge(b1, buckets[j].bounds);
                     cnt1 += buckets[j].count;
                 }
+
+                // Surface area heuristics
                 bucketCost[i] += 0.125 + (cnt0 * b0.area() + cnt1 * b1.area()) / bounds.area();
             }
 

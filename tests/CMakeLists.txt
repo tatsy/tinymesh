@@ -12,6 +12,7 @@ add_unit_test(DEPS TEST_DEPS NAME "test_mesh" SOURCES test_mesh.cpp ${TEST_HEADE
 add_unit_test(DEPS TEST_DEPS NAME "test_ops" SOURCES test_ops.cpp ${TEST_HEADERS})
 add_unit_test(DEPS TEST_DEPS NAME "test_remesh" SOURCES test_remesh.cpp ${TEST_HEADERS})
 add_unit_test(DEPS TEST_DEPS NAME "test_vec" SOURCES test_vec.cpp ${TEST_HEADERS})
+add_unit_test(DEPS TEST_DEPS NAME "test_triangle" SOURCES test_triangle.cpp ${TEST_HEADERS})
 
 add_custom_target(check
   COMMAND "${CMAKE_CTEST_COMMAND}"
