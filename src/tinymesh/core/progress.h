@@ -29,8 +29,8 @@ public:
     }
 
     template <typename... Args>
-    void set_description(const char *format, Args... args) {
-        m_description = STR_FMT(format, args...);
+    void set_description(std::format_string<Args...> fmt, Args &&...args) {
+        m_description = STR_FMT(fmt, std::forward<Args>(args)...);
     }
 
     void step(int n = 1) {
@@ -73,12 +73,9 @@ public:
         }
 
         if (m_step == m_total || m_step % std::max(1, (m_total / 1000)) == 0) {
-            Print("\r");
-            if (!m_description.empty()) {
-                Print("%s ", m_description.c_str());
-            }
-            Print("[%3d%%]|%s| %d/%d [%02d:%02d<%02d:%02d, %s]", (int)percent, pbar.c_str(), m_step, m_total, n_min,
-                  n_sec, r_min, r_sec, it_text.c_str());
+            const std::string description = m_description.empty() ? "" : m_description + " ";
+            Print("\r{}[{:3d}%]|{}| {}/{} [{:02d}:{:02d}<{:02d}:{:02d}, {}]", description, static_cast<int>(percent),
+                  pbar, m_step, m_total, n_min, n_sec, r_min, r_sec, it_text);
         }
 
         if (m_step == m_total) {

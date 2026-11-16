@@ -349,7 +349,7 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
             newError += minEps;
         }
         newError /= nTgt;
-        pbar.set_description("error=%7.5f", newError);
+        pbar.set_description("error={:7.5f}", newError);
 
         // Compute patch dissimilarities
         std::unordered_map<int, double> dissimilarities;

@@ -5,10 +5,13 @@
 #ifndef TINYMESH_DEBUG_H
 #define TINYMESH_DEBUG_H
 
+#include <cstdlib>
+#include <exception>
+#include <format>
 #include <iostream>
 #include <sstream>
-#include <memory>
-#include <stdexcept>
+#include <utility>
+#include <source_location>
 
 #if defined(TINYMESH_PYTHON_MODULE)
 #include <pybind11/pybind11.h>
@@ -71,94 +74,63 @@ private:
 // -----------------------------------------------------------------------------
 
 template <typename... Args>
-std::string STR_FMT(const char *format, Args... args) {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat"
-#endif  // __clang__
-    int size_s = std::snprintf(nullptr, 0, format, args...) + 1;
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif  // __clang__
-    if (size_s <= 0) {
-        throw std::runtime_error("Error during formatting.");
-    }
-    auto size = static_cast<size_t>(size_s);
-    auto buf = std::make_unique<char[]>(size);
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat"
-#endif  // __clang__
-    std::snprintf(buf.get(), size, format, args...);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif  // __clang__
-    return std::string(buf.get(), buf.get() + size - 1);
+std::string STR_FMT(std::format_string<Args...> fmt, Args &&...args) {
+    return std::format(fmt, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-void Print(const char *format, Args... args) {
-    PrintStream() << STR_FMT(format, args...);
+void Print(std::format_string<Args...> fmt, Args &&...args) {
+    PrintStream() << STR_FMT(fmt, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-void Info(const char *format, Args... args) {
-    PrintStream() << FG_BLU << "[INFO] " << FG_NC << STR_FMT(format, args...) << std::endl;
+void Info(std::format_string<Args...> fmt, Args &&...args) {
+    PrintStream() << FG_BLU << "[INFO] " << FG_NC << STR_FMT(fmt, std::forward<Args>(args)...) << std::endl;
 }
 
 template <typename... Args>
-void Debug(const char *format, Args... args) {
-    PrintStream() << FG_GRN << "[DEBUG] " << FG_NC << STR_FMT(format, args...) << std::endl;
+void Debug(std::format_string<Args...> fmt, Args &&...args) {
+    PrintStream() << FG_GRN << "[DEBUG] " << FG_NC << STR_FMT(fmt, std::forward<Args>(args)...) << std::endl;
 }
 
 template <typename... Args>
-void Warn(const char *format, Args... args) {
-    PrintStream() << FG_YEL << "[WARNING] " << FG_NC << STR_FMT(format, args...) << std::endl;
+void Warn(std::format_string<Args...> fmt, Args &&...args) {
+    PrintStream() << FG_YEL << "[WARNING] " << FG_NC << STR_FMT(fmt, std::forward<Args>(args)...) << std::endl;
 }
 
-#if !defined(TINYMESH_PYTHON_MODULE)
 template <typename... Args>
-void Error(const char *format, Args... args) {
-    PrintStream() << FG_RED << "[ERROR] " << FG_NC << STR_FMT(format, args...) << std::endl;
+[[noreturn]] void Error(std::format_string<Args...> fmt, Args &&...args) {
+#if defined(TINYMESH_PYTHON_MODULE)
+    throw std::runtime_error(STR_FMT(fmt, std::forward<Args>(args)...));
+#else
+    PrintStream() << FG_RED << "[ERROR] " << FG_NC << STR_FMT(fmt, std::forward<Args>(args)...) << std::endl;
     std::terminate();
+#endif
 }
-#else   // TINYMESH_PYTHON_MODULE
-template <typename... Args>
-void Error(const char *format, Args... args) {
-    throw std::runtime_error(STR_FMT(format, args...));
-}
-#endif  // TINYMESH_PYTHON_MODULE
 
 // -----------------------------------------------------------------------------
 // Assertion with message
 // -----------------------------------------------------------------------------
 
-#ifndef __FUNCTION_NAME__
-#if defined(_WIN32) || defined(__WIN32__)
-#define __FUNCTION_NAME__ __FUNCTION__
-#else
-#define __FUNCTION_NAME__ __func__
-#endif
-#endif
-
-inline std::string ASRT_LABEL(const char *predicate, const char *file, int line, const char *funcname) {
-    return STR_FMT("Assertion \"%s\" failed in %s L-%d (%s)", predicate, file, line, funcname);
+inline std::string ASRT_LABEL(const char *predicate, std::source_location location = std::source_location::current()) {
+    return std::format("Assertion \"{}\" failed in {}:{} ({})", predicate, location.file_name(), location.line(),
+                       location.function_name());
 }
 
 #if defined(TINYMESH_PYTHON_MODULE)
-#define Assertion(PREDICATE, ...)                                                                    \
-    do {                                                                                             \
-        if (!(PREDICATE)) {                                                                          \
-            throw std::runtime_error(ASRT_LABEL(#PREDICATE, __FILE__, __LINE__, __FUNCTION_NAME__)); \
-        }                                                                                            \
+#define Assertion(PREDICATE, ...)                             \
+    do {                                                      \
+        if (!(PREDICATE)) {                                   \
+            throw std::runtime_error(ASRT_LABEL(#PREDICATE)); \
+        }                                                     \
     } while (false)
 #elif !defined(TINYMESH_DISABLE_ASSERT)
-#define Assertion(PREDICATE, ...)                                                                    \
-    do {                                                                                             \
-        if (!(PREDICATE)) {                                                                          \
-            std::cerr << ASRT_LABEL(#PREDICATE, __FILE__, __LINE__, __FUNCTION_NAME__) << std::endl; \
-            std::abort();                                                                            \
-        }                                                                                            \
+#define Assertion(PREDICATE, ...)                             \
+    do {                                                      \
+        if (!(PREDICATE)) {                                   \
+            std::cerr << ASRT_LABEL(#PREDICATE) << std::endl; \
+            std::abort();                                     \
+        }                                                     \
     } while (false)
 #else  // TINYMESH_DISABLE_ASSERT
 #define Assertion(PREDICATE, ...) \
