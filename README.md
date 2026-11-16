@@ -1,6 +1,5 @@
 # TinyMesh
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/2fd9a7f621e44654ad8b81bc38138662)](https://www.codacy.com/manual/tatsy/tinymesh?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tatsy/tinymesh&amp;utm_campaign=Badge_Grade)
 [![CI](https://github.com/tatsy/tinymesh/actions/workflows/ci.yml/badge.svg)](https://github.com/tatsy/tinymesh/actions/workflows/ci.yml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
