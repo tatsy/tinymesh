@@ -27,6 +27,8 @@ namespace py = pybind11;
 #define FG_BLU "\033[34m"
 #define FG_NC "\033[0m"
 
+namespace tinymesh {
+
 // -----------------------------------------------------------------------------
 // Debug output stream
 // -----------------------------------------------------------------------------
@@ -137,5 +139,7 @@ inline std::string ASRT_LABEL(const char *predicate, std::source_location locati
     do {                          \
     } while (false)
 #endif  // TINYMESH_DISABLE_ASSERT
+
+}  // namespace tinymesh
 
 #endif  // TINYMESH_DEBUG_H

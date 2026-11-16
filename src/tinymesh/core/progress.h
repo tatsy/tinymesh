@@ -13,6 +13,8 @@
 
 #include "debug.h"
 
+namespace tinymesh {
+
 class ProgressBar {
 public:
     ProgressBar() {
@@ -95,5 +97,7 @@ private:
     std::string m_description = "";
     std::chrono::system_clock::time_point start;
 };
+
+}  // namespace tinymesh
 
 #endif  // PROGRESS_H

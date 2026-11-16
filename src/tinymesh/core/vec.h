@@ -5,21 +5,22 @@
 #ifndef TINYMESH_VEC_H
 #define TINYMESH_VEC_H
 
+#include <cmath>
 #include <array>
 #include <algorithm>
+#include <functional>
 #include <type_traits>
+#include <stdexcept>
 
 #include <Eigen/Core>
 
 template <typename Float, int Dims>
-    requires std::is_floating_point<Float>::value && (Dims > 1)
+    requires std::is_floating_point<Float>::value && (Dims >= 2)
 class Vec {
     using EigenVectorType = Eigen::Matrix<Float, Dims, 1>;
 
 public:
-    Vec() {
-        std::fill(elems.begin(), elems.end(), Float(0.0));
-    }
+    Vec() = default;
 
     explicit Vec(Float x) {
         std::fill(elems.begin(), elems.end(), x);
@@ -29,16 +30,16 @@ public:
         std::fill(elems.begin(), elems.end(), w);
 
         elems[0] = x;
-        if (Dims >= 1) elems[1] = y;
-        if (Dims >= 2) elems[2] = z;
+        elems[1] = y;
+        if constexpr (Dims >= 3) elems[2] = z;
     }
 
     explicit Vec(const Vec &other) {
-        std::copy(other.elems.begin(), other.elems.end(), elems.begin());
+        elems = other.elems;
     }
 
     Vec &operator=(const Vec other) {
-        std::copy(other.elems.begin(), other.elems.end(), elems.begin());
+        elems = other.elems;
         return *this;
     }
 
@@ -63,29 +64,13 @@ public:
         return v;
     }
 
-    bool operator==(const Vec &other) const {
-        if (elems.size() != other.elems.size()) {
-            return false;
-        }
-
-        for (int i = 0; i < Dims; i++) {
-            if (elems[i] != other.elems[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    bool operator==(const Vec &other) const = default;
 
     bool operator!=(const Vec &other) const {
         return !this->operator==(other);
     }
 
     Vec &operator+=(const Vec &other) {
-        if (elems.size() != other.elems.size()) {
-            throw std::runtime_error("Dimensions do not match!");
-        }
-
         for (size_t i = 0; i < Dims; i++) {
             elems[i] += other.elems[i];
         }
@@ -126,10 +111,6 @@ public:
     }
 
     Vec &operator/=(const Vec &other) {
-        if (elems.size() != other.elems.size()) {
-            throw std::runtime_error("Dimensions do not match!");
-        }
-
         for (int i = 0; i < Dims; i++) {
             if (other.elems[i] == 0.0) {
                 throw std::runtime_error("Zero division!");
@@ -140,7 +121,7 @@ public:
         return *this;
     }
 
-    Vec &operator/=(double s) {
+    Vec &operator/=(Float s) {
         if (s == 0.0) {
             throw std::runtime_error("Zero division");
         }
@@ -160,28 +141,28 @@ public:
         return elems[i];
     }
 
-    template <typename Dummy = Float>
-    typename std::enable_if<Dims >= 1, Dummy>::type x() const {
+    Float x() const noexcept {
         return elems[0];
     }
 
-    template <typename Dummy = Float>
-    typename std::enable_if<Dims >= 2, Dummy>::type y() const {
+    Float y() const noexcept {
         return elems[1];
     }
 
-    template <typename Dummy = Float>
-    typename std::enable_if<Dims >= 3, Dummy>::type z() const {
+    Float z() const noexcept
+        requires(Dims >= 3)
+    {
         return elems[2];
     }
 
-    template <typename Dummy = Float>
-    typename std::enable_if<Dims >= 4, Dummy>::type w() const {
+    Float w() const noexcept
+        requires(Dims >= 4)
+    {
         return elems[3];
     }
 
 private:
-    std::array<Float, Dims> elems;
+    std::array<Float, Dims> elems{};
 };
 
 // Type definition
@@ -217,17 +198,14 @@ Vec<Float, Dims> operator-(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v
 
 template <typename Float, int Dims>
 Vec<Float, Dims> operator-(const Vec<Float, Dims> &v, Float s) {
-    auto ret = v;
-    ret *= s;
-    return ret;
+    return v - Vec<Float, Dims>(s);
 }
 
 template <typename Float, int Dims>
 Vec<Float, Dims> operator-(Float s, const Vec<Float, Dims> &v) {
-    auto ret = v;
-    ret *= s;
-    return ret;
+    return Vec<Float, Dims>(s) - v;
 }
+
 template <typename Float, int Dims>
 Vec<Float, Dims> operator*(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2) {
     auto ret = v1;
@@ -303,8 +281,8 @@ Vec<Float, Dims> normalize(const Vec<Float, Dims> &v) {
 template <typename Float, int Dims>
 double angle(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
              typename std::enable_if<Dims == 3>::type * = 0) {
-    const Vec3 e0 = a - b;
-    const Vec3 e1 = c - b;
+    const auto e0 = a - b;
+    const auto e1 = c - b;
     return std::atan2(length(cross(e0, e1)), dot(e0, e1));
 }
 
@@ -363,6 +341,8 @@ struct hash<Vec<Float, Dims>> {
     }
 };
 
+}  // namespace std
+
 template <typename Float, int Dims>
 Vec<Float, Dims> abs(const Vec<Float, Dims> &v) {
     Vec<Float, Dims> ret;
@@ -389,7 +369,5 @@ Vec<Float, Dims> max(const Vec<Float, Dims> &v0, const Vec<Float, Dims> &v1) {
     }
     return v;
 }
-
-}  // namespace std
 
 #endif  // TINYMESH_VEC_H
