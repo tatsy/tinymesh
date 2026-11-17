@@ -1,5 +1,3 @@
-"""Optional mesh visualization. Install tinymesh[viz] to use it."""
-
 try:
     from .viewer import Viewer
 except ImportError as exc:
