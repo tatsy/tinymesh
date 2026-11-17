@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version-major: [3]
+        python-version-major: 3
         python-version-minor: [8, 9, 10, 11, 12]
 
     env:
@@ -81,6 +81,7 @@ jobs:
         run: |
           poetry build -f wheel
           poetry install
+          poetry build -f wheel
 
       - name: Python module test
         run: |
