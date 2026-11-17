@@ -158,6 +158,10 @@ double Mesh::getMeanDihedralAngle() const {
     double mean = 0.0;
     for (int i = 0; i < halfedges_.size(); i++) {
         Halfedge *he = halfedges_[i].get();
+        if (he->face()->isHole() || he->rev()->face()->isHole()) {
+            continue;
+        }
+
         if (visited.count(he) != 0) continue;
         if (visited.count(he->rev_) != 0) continue;
         visited.insert(he);
@@ -174,7 +178,8 @@ double Mesh::getMeanDihedralAngle() const {
         const Vec3 p4 = vh4->pos();
         mean += dihedral(p2, p1, p3, p4);
     }
-    return mean / (double)visited.size();
+
+    return visited.empty() ? 0.0 : mean / (double)visited.size();
 }
 
 double Mesh::getMeanFaceArea() const {
@@ -573,11 +578,8 @@ void Mesh::saveOBJ(const std::string &filename) const {
 void Mesh::savePLY(const std::string &filename) const {
     using namespace tinyply;
 
-    std::filebuf buffer;
-    buffer.open(filename.c_str(), std::ios::out | std::ios::binary);
-
-    std::ostream outstream(&buffer);
-    if (outstream.fail()) {
+    std::ofstream outstream(filename.c_str(), std::ios::out | std::ios::binary);
+    if (!outstream) {
         Error("Failed to open file: {}", filename);
     }
 

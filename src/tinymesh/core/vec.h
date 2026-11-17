@@ -252,8 +252,8 @@ Float dot(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2) {
 }
 
 template <typename Float, int Dims>
-Vec<Float, Dims> cross(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2,
-                       typename std::enable_if<Dims == 3>::type * = 0) {
+    requires(Dims == 3)
+Vec<Float, Dims> cross(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2) {
     const Float x = v1[1] * v2[2] - v1[2] * v2[1];
     const Float y = v1[2] * v2[0] - v1[0] * v2[2];
     const Float z = v1[0] * v2[1] - v1[1] * v2[0];
@@ -274,8 +274,8 @@ Vec<Float, Dims> normalize(const Vec<Float, Dims> &v) {
 
 //! Angle a-b-c in radian (smaller side)
 template <typename Float, int Dims>
-double angle(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
-             typename std::enable_if<Dims == 3>::type * = 0) {
+    requires(Dims == 3)
+double angle(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
     const auto e0 = a - b;
     const auto e1 = c - b;
     return std::atan2(length(cross(e0, e1)), dot(e0, e1));
@@ -283,28 +283,24 @@ double angle(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Flo
 
 //! check if the triangle is obtuse
 template <typename Float, int Dims>
-bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
-            typename std::enable_if<Dims == 3>::type * = 0) {
-    const Float l0 = length(b - a);
-    const Float l1 = length(c - b);
-    const Float l2 = length(a - c);
-    std::array<Float, 3> ls = { l0, l1, l2 };
-    std::sort(ls.begin(), ls.end(), std::less<Float>());
-    return ls[0] * ls[0] + ls[1] * ls[1] < ls[2] * ls[2];
+    requires(Dims == 3)
+bool obtuse(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
+    return dot(b - a, c - a) < 0.0 || dot(a - b, c - b) < 0.0 || dot(a - c, b - c) < 0.0;
 }
 
 //! cotangent for angle a-b-c
 template <typename Float, int Dims>
-Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c,
-          typename std::enable_if<Dims == 3>::type * = 0) {
+    requires(Dims == 3)
+Float cot(const Vec<Float, Dims> &a, const Vec<Float, Dims> &b, const Vec<Float, Dims> &c) {
     const auto e0 = a - b;
     const auto e1 = c - b;
     return dot(e0, e1) / (length(cross(e0, e1)) + (Float)1.0e-20);
 }
 
 template <typename Float, int Dims>
+    requires(Dims == 3)
 Float dihedral(const Vec<Float, Dims> &v1, const Vec<Float, Dims> &v2, const Vec<Float, Dims> &v3,
-               const Vec<Float, Dims> &v1rev, typename std::enable_if<Dims == 3>::type * = 0) {
+               const Vec<Float, Dims> &v1rev) {
     using V = Vec<Float, Dims>;
     const V e12 = v2 - v1;
     const V e13 = v3 - v1;
