@@ -9,7 +9,7 @@
 ## v0.2.3
 
 * Update some method names (e.g., `isStatic` -> `isLocked`)
-* Delete `InHalfedgeIterator', and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
+* Delete `InHalfedgeIterator`, and rename `OutHalfedgeIterator` as `HalfedgeIterator`.
 * Add const version of iterators.
 * Advancing front method [Zhao et al. 2007] is implemented.
 * Change dev-env manager to Poetry.

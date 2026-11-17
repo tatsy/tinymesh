@@ -8,9 +8,11 @@ add_folder(SOURCE_FILES "ops")
 add_folder(SOURCE_FILES "remesh")
 add_folder(SOURCE_FILES "restore")
 
-add_library(${TINYMESH_LIBRARY} STATIC ${SOURCE_FILES})
 if (TINYMESH_BUILD_SHARED)
+  add_library(${TINYMESH_LIBRARY} SHARED ${SOURCE_FILES})
   target_compile_definitions(${TINYMESH_LIBRARY} PUBLIC TINYMESH_SHARED PRIVATE TINYMESH_API_EXPORT)
+else()
+  add_library(${TINYMESH_LIBRARY} STATIC ${SOURCE_FILES})
 endif()
 
 target_compile_features(${TINYMESH_LIBRARY} PUBLIC cxx_std_20)

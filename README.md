@@ -3,7 +3,7 @@
 [![CI](https://github.com/tatsy/tinymesh/actions/workflows/ci.yml/badge.svg)](https://github.com/tatsy/tinymesh/actions/workflows/ci.yml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-> TinyMesh is a light-weight mesh processing library in C/C++.
+> TinyMesh is a light-weight mesh processing library in C/C++ and Python.
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/tatsy425)
 
@@ -57,13 +57,12 @@ You can install the Python module using `Pip`.
 pip install git+https://github.com/tatsy/tinymesh.git
 ```
 
-For development, install from source with `uv`. Add the `viz` extra to use the Matplotlib viewer.
+For development, install from source with `uv`.
 
 ```shell
 git clone https://github.com/tatsy/tinymesh
 cd tinymesh
 uv sync
-uv sync --extra viz
 ```
 
 The Python package exposes the C++ API as `tinymesh` and the optional viewer as
@@ -80,8 +79,8 @@ The Python package exposes the C++ API as `tinymesh` and the optional viewer as
 ### Python
 
 ```shell
-uv sync --extra viz --group examples
-uv run --extra viz --group examples jupyter lab examples/python
+uv sync --group examples
+uv run --group examples jupyter lab examples/python
 ```
 
 ## Gallery
