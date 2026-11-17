@@ -1,10 +1,40 @@
 # CHANGELOG
 
+## v0.2.5
+
+### Added
+
+* Add an opt-in C++ mesh construction benchmark and a Python runner with generated/file inputs, validation, memory reporting, and CSV/JSON output.
+* Ship Python type stubs and `py.typed`, and expose the packaged viewer through `tinymesh.visualization.Viewer`.
+
+### Changed
+
+* Replace native dependency submodules with pinned, SHA256-verified CMake FetchContent dependencies.
+* Require CMake 3.24 or later and a C++20 compiler with `std::format` support. Preserve standalone C++ library and example builds without Python.
+* Move Python builds to scikit-build-core and development environment management to uv. Install the native extension as `tinymesh._core` while preserving the top-level Python API.
+* Support Python 3.10–3.13, with NumPy, SciPy, and Matplotlib as runtime dependencies. Keep notebook tooling in the `examples` dependency group.
+* Move the example-local viewer into the Python package and update notebooks to import it.
+* Use reserved hash tables for halfedge construction lookups.
+* Consolidate CI for C++ builds, examples, and tests, and Python distribution builds and installed-wheel tests on Linux, macOS, and Windows.
+
+### Fixed
+
+* Validate triangle index counts, index ranges, duplicated edges, inconsistent winding, non-manifold edges, and disconnected vertex fans during mesh construction.
+* Clear stored indices when loading or reconstructing a mesh, and explicitly identify boundary faces.
+* Correct boundary handling in vertex normals, Voronoi areas, cotangent weights, and mean face area. Return zero curvature at boundary vertices and correct the mean curvature scaling.
+* Read PLY float32/float64 coordinates and uint8/uint16/int32/uint32 triangle indices, validate their ranges, and report unsupported data types and file errors.
+* Correct vector-scalar subtraction, component-wise bounds operations, triangle closest-point queries, and rotation between antiparallel vectors.
+* Build a shared library when `TINYMESH_BUILD_SHARED=ON`, with the appropriate Windows export/import definitions.
+* Handle absent source extensions and filenames containing whitespace in the formatting script.
+
+### C++ API compatibility
+
+* Rename `Vertex::volonoiArea()` to `Vertex::voronoiArea()` (including the face overload).
+* Disable `Mesh` copy construction and copy assignment. Use `clone()` for an independent copy or move the mesh.
+
 ## v0.2.4
 
 * Update CI scripts to build wheels for 5 latest Python versions.
-* Update package manager to use UV.
-* Update Python module build to use scikit-build.
 
 ## v0.2.3
 
