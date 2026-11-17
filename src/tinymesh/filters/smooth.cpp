@@ -103,6 +103,7 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
      * This method is based on the following paper. The normalized version in Sec.5.5 is used.
      * Desbrun et al. "Implicit Fairing of Irregular Meshes using Diffusion and Curvature Flow", 1999.
      */
+    using MatrixNx3 = Eigen::Matrix<double, Eigen::Dynamic, 3>;
 
     for (int it = 0; it < iterations; it++) {
         // Indexing vertices
@@ -113,7 +114,7 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
         }
 
         // Compute diffusion matrix
-        Eigen::MatrixXd X(n_verts, 3);
+        MatrixNx3 X(n_verts, 3);
         std::vector<Triplet> triplets;
 
         for (int i = 0; i < n_verts; i++) {
@@ -160,7 +161,7 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
         cg.setMaxIterations(50);
         cg.compute(A);
 
-        Eigen::MatrixXd Xnext(n_verts, 3);
+        MatrixNx3 Xnext(n_verts, 3);
         Xnext = cg.solve(X);
 
         for (int i = 0; i < n_verts; i++) {

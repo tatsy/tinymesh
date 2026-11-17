@@ -45,7 +45,7 @@ TINYMESH_API EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int
  * Compute per-vertex curvature tensor (i.e., the 2nd fundamental form)
  */
 TINYMESH_API void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors,
-                                      const std::vector<LocalFrame> &frames);
+                                      std::vector<LocalFrame> &frames);
 
 /**
  * Compute principal curvatures and their directions [Rusinkiewicz 2004]

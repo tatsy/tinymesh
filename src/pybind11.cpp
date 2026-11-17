@@ -8,8 +8,7 @@ namespace py = pybind11;
 using namespace tinymesh;
 
 // type caster: Matrix <-> NumPy-array
-namespace pybind11 {
-namespace detail {
+namespace pybind11::detail {
 
 template <typename Float, int Dims>
 struct type_caster<Vec<Float, Dims>> {
@@ -47,8 +46,7 @@ public:
     }
 };
 
-}  // namespace detail
-}  // namespace pybind11
+}  // namespace pybind11::detail
 
 PYBIND11_MODULE(_core, m) {
     py::class_<Mesh>(m, "Mesh")
@@ -88,12 +86,16 @@ PYBIND11_MODULE(_core, m) {
         .def("is_hole", &Face::isHole)
         .def("is_locked", &Face::isLocked);
 
-    /*** Metrics ***/
+    /*
+     * Metrics 
+     */
     m.def("get_hausdorff_distance", &getHausdorffDistance, "Hausdorff distance", py::arg("mesh0"), py::arg("mesh1"));
     m.def("get_per_vertex_shortest_distances", &getPerVertexShortestDistances, "Per-vertex shortest distances",
           py::arg("src"), py::arg("dst"));
 
-    /*** Utilities ***/
+    /*
+     * Utilities 
+     */
     py::enum_<MeshLaplace>(m, "MeshLaplace")
         .value("ADJACENT", MeshLaplace::Adjacent)
         .value("COTANGENT", MeshLaplace::Cotangent)
@@ -111,7 +113,9 @@ PYBIND11_MODULE(_core, m) {
     m.def("get_feature_line_field_with_flags", getFeatureLineFieldWithFlags,
           "Feature line field with ridge/valley flags", py::arg("mesh"), py::arg("smooth_tensors") = false);
 
-    /*** Smoothing ***/
+    /*
+     * Smoothing 
+     */
     m.def("smooth_laplacian", &smoothLaplacian, "Laplacian smoothing", py::arg("mesh"), py::arg("epsilon") = 1.0,
           py::arg("cotangent_weight") = false, py::arg("iterations") = 3);
     m.def("smooth_taubin", &smoothTaubin, "Taubin smoothing", py::arg("mesh"), py::arg("shrink") = 0.5,
@@ -119,7 +123,9 @@ PYBIND11_MODULE(_core, m) {
     m.def("implicit_fairing", &implicitFairing, "Implicit fairing", py::arg("mesh"), py::arg("epsilon") = 1.0,
           py::arg("iterations") = 1);
 
-    /*** Denoising ***/
+    /*
+     * Denoising 
+     */
     m.def("denoise_normal_gaussian", &denoiseNormalGaussian, "Denoising by normal Gaussian filter", py::arg("mesh"),
           py::arg("sigma") = 0.2, py::arg("iterations") = 3);
     m.def("denoise_normal_bilateral", &denoiseNormalBilateral, "Denoising by normal bilateral filter", py::arg("mesh"),
@@ -127,16 +133,22 @@ PYBIND11_MODULE(_core, m) {
     m.def("denoise_l0_smooth", &denoiseL0Smooth, "Denoising by L0 smoothing", py::arg("mesh"), py::arg("alpha") = 0.1,
           py::arg("beta") = 0.001);
 
-    /*** Remesh ***/
+    /*
+     * Remeshing
+     */
     m.def("remesh_triangular", &remeshTriangular, "Triangle remeshing", py::arg("mesh"), py::arg("short_length") = 0.8,
           py::arg("long_length") = 1.333, py::arg("angle_keep_less_than") = 0.0, py::arg("iterations") = 5,
           py::arg("verbose") = false);
 
-    /*** Simplification ***/
+    /*
+     * Simplification 
+     */
     m.def("simplify_qem", &simplifyQEM, "QEM-based simplification", py::arg("mesh"), py::arg("n_triangles"),
           py::arg("n_trials") = 10, py::arg("verbose") = false);
 
-    /*** Hole filling ***/
+    /*
+     * Hole filling 
+     */
     m.def("hole_fill_min_dihedral", &holeFillMinDihedral, "Max-area hole filling", py::arg("mesh"), py::arg("face"),
           py::arg("dihedral_bound") = Pi);
     m.def("hole_fill_advancing_front", &holeFillAdvancingFront, "Advancing front hole filling", py::arg("mesh"),

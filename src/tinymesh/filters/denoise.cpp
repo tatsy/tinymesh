@@ -9,17 +9,17 @@
 #include "core/halfedge.h"
 #include "core/face.h"
 
-#define EIGEN_ENABLE_SPARSE
 #include "core/eigen.h"
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/SparseCholesky>
 
 namespace {
 
-inline double K(double x, double sigma) {
+inline double gaussKernel(double x, double sigma) {
     const double sigma2 = sigma * sigma;
     const double coef = 1.0 / (std::sqrt(2.0 * Pi) * sigma);
     if (x < 2.0 * sigma) {
-        return coef * std::exp(-x * x / sigma2);
+        return coef * std::exp(-0.5 * x * x / sigma2);
     }
 
     if (x < 4.0 * sigma) {
@@ -30,11 +30,24 @@ inline double K(double x, double sigma) {
     return 0.0;
 }
 
+void validateFaces(const tinymesh::Mesh &mesh) {
+    const int nf = static_cast<int>(mesh.numFaces());
+    for (int i = 0; i < nf; ++i) {
+        const auto *f = mesh.face(i);
+        if (!f->isHole() && f->numCorners() != 3) {
+            tinymesh::Error("Non-triangular face detected!");
+        }
+    }
+}
+
 }  // anonymous namespace
 
 namespace tinymesh {
 
 void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
+    // Check triangularity
+    validateFaces(mesh);
+
     // Average edge length
     double avgEdge = mesh.getMeanEdgeLength();
 
@@ -49,13 +62,13 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
         std::vector<double> areas(nf);
         TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
+            if (f->isHole()) {
+                continue;
+            }
+
             std::vector<Vec3> vs;
             for (auto vit = f->v_begin(); vit != f->v_end(); ++vit) {
                 vs.push_back(vit->pos());
-            }
-
-            if (vs.size() != 3) {
-                Error("Mesh is not triangular! Call \"mesh.triangulate()\" first!");
             }
 
             const Vec3 outer = cross(vs[1] - vs[0], vs[2] - vs[0]);
@@ -68,17 +81,28 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
         std::vector<Vec3> newNormals(nf);
         TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
-            Vec3 norm(0.0);
+            if (f->isHole()) {
+                continue;
+            }
+
+            const double selfWeight = gaussKernel(0.0, sigma * avgEdge) * areas[i];
+            Vec3 norm = selfWeight * normals[i];
             for (auto fit = f->f_begin(); fit != f->f_end(); ++fit) {
+                if (fit->isHole()) {
+                    continue;
+                }
+
                 const int j = fit->index();
                 const double d = length(centroids[i] - centroids[j]);
-                const double weight = K(d, sigma * avgEdge) * areas[j];
+                const double weight = gaussKernel(d, sigma * avgEdge) * areas[j];
                 norm += normals[j] * weight;
             }
 
             const double l = length(norm);
             if (l != 0.0) {
                 newNormals[i] = norm / l;
+            } else {
+                newNormals[i] = normals[i];
             }
         }
 
@@ -86,10 +110,17 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
         const int nv = (int)mesh.numVertices();
         TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
+            if (v->isBoundary() || v->isLocked()) {
+                continue;
+            }
 
             double sumArea = 0.0;
             Vec3 incr(0.0);
             for (auto fit = v->f_begin(); fit != v->f_end(); ++fit) {
+                if (fit->isHole()) {
+                    continue;
+                }
+
                 const int j = fit->index();
                 sumArea += areas[j];
                 incr += (areas[j] * dot(newNormals[j], centroids[j] - v->pos())) * newNormals[j];
@@ -101,6 +132,9 @@ void denoiseNormalGaussian(Mesh &mesh, double sigma, int iterations) {
 }
 
 void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, int iterations) {
+    // Check triangularity
+    validateFaces(mesh);
+
     // Average edge length
     double avgEdge = mesh.getMeanEdgeLength();
 
@@ -115,13 +149,13 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
         std::vector<double> areas(nf);
         TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
+            if (f->isHole()) {
+                continue;
+            }
+
             std::vector<Vec3> vs;
             for (auto vit = f->v_begin(); vit != f->v_end(); ++vit) {
                 vs.push_back(vit->pos());
-            }
-
-            if (vs.size() != 3) {
-                Error("Mesh is not triangular! Call \"mesh.triangulate()\" first!");
             }
 
             const Vec3 outer = cross(vs[1] - vs[0], vs[2] - vs[0]);
@@ -134,14 +168,24 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
         std::vector<Vec3> newNormals(nf);
         TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nf; i++) {
             Face *f = mesh.face(i);
-            Vec3 norm(0.0);
+            if (f->isHole()) {
+                continue;
+            }
+
+            const double selfWeight =
+                gaussKernel(0.0, sigmaCenter * avgEdge) * gaussKernel(0.0, sigmaNormal) * areas[i];
+            Vec3 norm = selfWeight * normals[i];
             for (auto fit = f->f_begin(); fit != f->f_end(); ++fit) {
+                if (fit->isHole()) {
+                    continue;
+                }
+
                 const int j = fit->index();
                 const double d = length(centroids[i] - centroids[j]);
                 const double eta = areas[j];
-                const double Wc = K(d, sigmaCenter * avgEdge);
+                const double Wc = gaussKernel(d, sigmaCenter * avgEdge);
                 const double nd = length(normals[i] - normals[j]);
-                const double Ws = K(nd, sigmaNormal);
+                const double Ws = gaussKernel(nd, sigmaNormal);
                 const double weight = eta * Wc * Ws;
                 norm += normals[j] * weight;
             }
@@ -149,6 +193,8 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
             const double l = length(norm);
             if (l != 0.0) {
                 newNormals[i] = norm / l;
+            } else {
+                newNormals[i] = normals[i];
             }
         }
 
@@ -156,10 +202,17 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
         const int nv = (int)mesh.numVertices();
         TINYMESH_OMP_PARALLEL_FOR(int i = 0; i < nv; i++) {
             Vertex *v = mesh.vertex(i);
+            if (v->isBoundary() || v->isLocked()) {
+                continue;
+            }
 
             double sumArea = 0.0;
             Vec3 incr(0.0);
             for (auto fit = v->f_begin(); fit != v->f_end(); ++fit) {
+                if (fit->isHole()) {
+                    continue;
+                }
+
                 const int j = fit->index();
                 sumArea += areas[j];
                 incr += (areas[j] * dot(newNormals[j], centroids[j] - v->pos())) * newNormals[j];
@@ -171,21 +224,33 @@ void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter, double sigmaNormal, 
 }
 
 void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
-    const int ne = (int)mesh.numEdges();
-    const int nv = (int)mesh.numVertices();
+    const int nv = static_cast<int>(mesh.numVertices());
+    std::vector<uint8_t> fixed(nv, 0);
+    for (int i = 0; i < nv; ++i) {
+        const Vertex *v = mesh.vertex(i);
+        fixed[i] = v->isBoundary() || v->isLocked();
+    }
+
     const double avgEdge = mesh.getMeanEdgeLength();
     const double avgDihed = mesh.getMeanDihedralAngle();
 
-    // List unique halfedges
-    std::unordered_set<Halfedge *> uniqueHEs;
-    for (int i = 0; i < mesh.numHalfedges(); i++) {
+    // Collect one halfedge per interior edge
+    std::vector<Halfedge *> edges;
+    for (size_t i = 0; i < mesh.numHalfedges(); ++i) {
         Halfedge *he = mesh.halfedge(i);
-        if (uniqueHEs.count(he) != 0) continue;
-        if (uniqueHEs.count(he->rev()) != 0) continue;
-        uniqueHEs.insert(he);
+        Halfedge *rev = he->rev();
+
+        if (he->face()->isHole() || rev->face()->isHole()) {
+            continue;
+        }
+
+        if (he->index() > rev->index()) {
+            continue;
+        }
+
+        edges.push_back(he);
     }
-    std::vector<Halfedge *> edges(uniqueHEs.begin(), uniqueHEs.end());
-    Assertion(edges.size() == ne, "Collecting unique edges inconsistent!");
+    const int ne = static_cast<int>(edges.size());
 
     std::vector<EigenTriplet> tripR;
     for (size_t e = 0; e < edges.size(); e++) {
@@ -293,11 +358,38 @@ void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
         EigenSparseMatrix A = I + alpha * R.transpose() * R + beta * D.transpose() * D;
         EigenMatrix bb = pVecInit + beta * D.transpose() * delta;
 
-        Eigen::BiCGSTAB<EigenSparseMatrix> cg;
-        cg.compute(A);
-        pVec = cg.solve(bb);
-        if (cg.info() != Eigen::Success) {
-            Warn("Solve linear system failed\n");
+        // Eliminate fixed vertices from the system
+        for (int k = 0; k < A.outerSize(); ++k) {
+            for (EigenSparseMatrix::InnerIterator it(A, k); it; ++it) {
+                const int row = it.row();
+                const int col = it.col();
+                if (!fixed[row] && fixed[col]) {
+                    bb.row(row) -= it.value() * pVecInit.row(col);
+                }
+
+                if (fixed[row] || fixed[col]) {
+                    it.valueRef() = 0.0;
+                }
+            }
+        }
+
+        for (int i = 0; i < nv; ++i) {
+            if (fixed[i]) {
+                A.coeffRef(i, i) = 1.0;
+                bb.row(i) = pVecInit.row(i);
+            }
+        }
+        A.prune(0.0);
+
+        Eigen::SimplicialLDLT<EigenSparseMatrix> solver;
+        solver.compute(A);
+        if (solver.info() != Eigen::Success) {
+            Error("L0 smoothing factorization failed!");
+        }
+
+        pVec = solver.solve(bb);
+        if (solver.info() != Eigen::Success) {
+            Error("L0 smoothing solve failed");
         }
 
         // Update
@@ -307,6 +399,10 @@ void denoiseL0Smooth(Mesh &mesh, double alpha, double beta) {
 
     // Update vertex in a mesh
     for (int i = 0; i < nv; i++) {
+        if (fixed[i]) {
+            continue;
+        }
+
         const Vec3 newPos(pVec(i, 0), pVec(i, 1), pVec(i, 2));
         mesh.vertex(i)->setPos(newPos);
     }

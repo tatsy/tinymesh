@@ -47,24 +47,17 @@ void getPrincipalCurvaturesFromTensors(std::vector<double> &ks_max, std::vector<
         const Vec3 vp = std::get<1>(F);
         const Vec3 np = std::get<2>(F);
 
-        double c = 1.0, s = 0.0, tt = 0.0;
-        if (M(0, 1) != 0.0) {
-            const double h = 0.5 * (M(1, 1) - M(0, 0)) / M(0, 1);
-            tt = (h < 0.0) ? 1.0 / (h - std::sqrt(1.0 + h * h)) : 1.0 / (h + std::sqrt(1.0 + h * h));
-            c = 1.0 / std::sqrt(1.0 + tt * tt);
-            s = tt * c;
+        Eigen::SelfAdjointEigenSolver<EigenMatrix2> solver(M);
+        if (solver.info() != Eigen::Success) {
+            Error("Curvature eigendecomposition failed!");
         }
 
-        double k_min = M(0, 0) - tt * M(0, 1);
-        double k_max = M(1, 1) + tt * M(0, 1);
-        Vec3 t_min, t_max;
-        if (k_max > k_min) {
-            t_max = c * up - s * vp;
-        } else {
-            std::swap(k_min, k_max);
-            t_max = s * up + c * vp;
-        }
-        t_min = normalize(cross(np, t_max));
+        const double k_min = solver.eigenvalues()(0);
+        const double k_max = solver.eigenvalues()(1);
+        const EigenVector2 direction = solver.eigenvectors().col(1);
+
+        Vec3 t_max = normalize(direction(0) * up + direction(1) * vp);
+        Vec3 t_min = normalize(cross(np, t_max));
 
         // Ignore umbilical points
         if (std::abs(k_min - k_max) < 1.0e-6) {
@@ -175,25 +168,9 @@ EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTime
 }
 
 void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame> &frames) {
-    // Smoothing vertex normals
     std::vector<Vec3> normals(mesh.numVertices());
     for (size_t i = 0; i < mesh.numVertices(); i++) {
         normals[i] = mesh.vertex(i)->normal();
-    }
-
-    const double avgLen = mesh.getMeanEdgeLength();
-    std::vector<Vec3> smoothNorms(mesh.numVertices());
-    for (size_t i = 0; i < mesh.numVertices(); i++) {
-        Vertex *vertex = mesh.vertex(i);
-        Vec3 norm = normals[i];
-        double sumWgt = 1.0;
-        for (auto it = vertex->v_begin(); it != vertex->v_end(); ++it) {
-            const double dist = length(vertex->pos() - it->pos()) / avgLen;
-            const double weight = std::exp(-0.5 * dist * dist);
-            norm += normals[it->index()] * weight;
-            sumWgt += weight;
-        }
-        smoothNorms[i] = normalize(norm / sumWgt);
     }
 
     // Compute per-triangle tensors
@@ -202,6 +179,10 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
     std::vector<LocalFrame> faceFrames(Nf);
     for (int i = 0; i < Nf; i++) {
         Face *f = mesh.face(i);
+        if (f->isHole()) {
+            continue;
+        }
+
         std::vector<Vertex *> vertices;
         for (auto it = f->v_begin(); it != f->v_end(); ++it) {
             vertices.push_back(it.ptr());
@@ -217,9 +198,9 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
             v2->pos(),
         };
         std::array<Vec3, 3> ns = {
-            v0->normal(),
-            v1->normal(),
-            v2->normal(),
+            normals[v0->index()],
+            normals[v1->index()],
+            normals[v2->index()],
         };
         std::array<Vec3, 3> es = {
             ps[2] - ps[1],
@@ -264,17 +245,22 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
     frames.resize(mesh.numVertices());
     for (int i = 0; i < mesh.numVertices(); i++) {
         Vertex *vertex = mesh.vertex(i);
-        const Vec3 np = vertex->normal();
-        Vec3 up, vp;
-        for (auto it = vertex->v_begin(); it != vertex->v_end(); ++it) {
-            up = normalize(it->pos() - vertex->pos());
-            break;
+        const Vec3 np = normals[i];
+        Vec3 up;
+        if (std::abs(np.x()) > std::abs(np.z())) {
+            up = normalize(Vec3(-np.y(), np.x(), 0.0));
+        } else {
+            up = normalize(Vec3(0.0, -np.z(), np.y()));
         }
-        vp = normalize(cross(np, up));
+        const Vec3 vp = normalize(cross(np, up));
 
         EigenMatrix2 M = EigenMatrix2::Zero();
         double sumWgt = 0.0;
         for (auto it = vertex->f_begin(); it != vertex->f_end(); ++it) {
+            if (it->isHole()) {
+                continue;
+            }
+
             const LocalFrame &F = faceFrames[it->index()];
             const Vec3 &uf = std::get<0>(F);
             const Vec3 &vf = std::get<1>(F);
@@ -360,6 +346,10 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
     std::vector<LocalFrame> faceFrames(Nf);
     for (int i = 0; i < Nf; i++) {
         Face *f = mesh.face(i);
+        if (f->isHole()) {
+            continue;
+        }
+
         std::vector<Vertex *> vertices;
         for (auto it = f->v_begin(); it != f->v_end(); ++it) {
             vertices.push_back(it.ptr());
@@ -445,6 +435,10 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
         EigenVector4 M = EigenVector4::Zero();
         double sumWgt = 0.0;
         for (auto it = vertex->f_begin(); it != vertex->f_end(); ++it) {
+            if (it->isHole()) {
+                continue;
+            }
+
             const LocalFrame &F = faceFrames[it->index()];
             const Vec3 &uf = std::get<0>(F);
             const Vec3 &vf = std::get<1>(F);
