@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "triangle.h"
 
 namespace tinymesh {
@@ -16,7 +15,7 @@ Vec3 Triangle::closestPoint(const Vec3 &p) const {
     const double d2 = dot(ac, ap);
     if (d1 <= 0.0 && d2 <= 0.0) return p0;  //#1
 
-    const Vec3 bp = p - p2;
+    const Vec3 bp = p - p1;
     const double d3 = dot(ab, bp);
     const double d4 = dot(ac, bp);
     if (d3 >= 0.0 && d4 <= d3) return p1;  //#2

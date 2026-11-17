@@ -5,6 +5,7 @@ import pytest
 
 from tinymesh import Mesh
 
+
 CWD = os.getcwd()
 
 model_dir = 'data/models'
@@ -15,7 +16,7 @@ filenames = [
 ]
 
 
-@pytest.mark.parametrize("filename", filenames)
+@pytest.mark.parametrize('filename', filenames)
 def test_mesh_io(filename):
     filename = os.path.join(CWD, model_dir, filename)
     base, ext = os.path.splitext(filename)
@@ -36,7 +37,7 @@ def test_mesh_io(filename):
         pytest.fail('Failed to save mesh!')
 
 
-@pytest.mark.parametrize("filename", ["not_exist.ply", "invalid_ext.obj"])
+@pytest.mark.parametrize('filename', ['not_exist.ply', 'invalid_ext.obj'])
 def test_mesh_invalid_io(filename):
     with pytest.raises(RuntimeError):
         _ = Mesh(filename)

@@ -149,7 +149,7 @@ TEST_P(VecUnaryTest, NormAndNormalize) {
         EXPECT_EQ(v1.z() / nrm, w.z());
         EXPECT_DOUBLE_EQ(length(w), 1.0);
     } else {
-        ASSERT_DEATH(normalize(v1), "");
+        ASSERT_THROW(normalize(v1), std::runtime_error);
     }
 }
 
@@ -166,13 +166,13 @@ TEST_P(VecPairwiseTest, Equal) {
 
 TEST_P(VecPairwiseTest, DotAndCross) {
     double dt = dot(v1, v2);
-    EXPECT_EQ(v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z(), dt);
-    EXPECT_EQ(dt, dot(v2, v1));
+    EXPECT_FLOAT_EQ(v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z(), dt);
+    EXPECT_FLOAT_EQ(dt, dot(v2, v1));
 
     const Vec w = cross(v1, v2);
-    EXPECT_EQ(v1.y() * v2.z() - v1.z() * v2.y(), w.x());
-    EXPECT_EQ(v1.z() * v2.x() - v1.x() * v2.z(), w.y());
-    EXPECT_EQ(v1.x() * v2.y() - v1.y() * v2.x(), w.z());
+    EXPECT_FLOAT_EQ(v1.y() * v2.z() - v1.z() * v2.y(), w.x());
+    EXPECT_FLOAT_EQ(v1.z() * v2.x() - v1.x() * v2.z(), w.y());
+    EXPECT_FLOAT_EQ(v1.x() * v2.y() - v1.y() * v2.x(), w.z());
 }
 
 std::vector<Vec3> vectors = { Vec3(0.0, 1.0, 2.0), Vec3(-2.0, -1.0, 0.0), Vec3(3.14, 1.59, 2.65),

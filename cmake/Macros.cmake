@@ -22,18 +22,15 @@ function(ADD_EXAMPLE)
     message(STATUS "Example: ${ADD_EXAMPLE_NAME}")
     set(EXP_EXE_NAME "example_${ADD_EXAMPLE_NAME}")
     add_executable(${EXP_EXE_NAME} ${ADD_EXAMPLE_SOURCES})
-    add_dependencies(${EXP_EXE_NAME} ${TINYMESH_LIBRARY})
 
-    target_include_directories(${EXP_EXE_NAME} PRIVATE ${TINYMESH_INCLUDE_DIR})
     target_link_libraries(${EXP_EXE_NAME} PRIVATE ${TINYMESH_LIBRARY})
 
     set_target_properties(${EXP_EXE_NAME} PROPERTIES FOLDER "Examples")
     set_target_properties(${EXP_EXE_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-    source_group("Source Files" FILES ${SOURCE_FILES})
+    source_group("Source Files" FILES ${ADD_EXAMPLE_SOURCES})
 
     if (MSVC)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
-        set_property(TARGET ${EXP_EXE_NAME} APPEND PROPERTY LINK_FLAGS "/DEBUG /PROFILE")
+        set_property(TARGET ${EXP_EXE_NAME} APPEND PROPERTY LINK_FLAGS "/DEBUG /PROFILE /INCREMENTAL:NO")
     endif()
 endfunction(ADD_EXAMPLE)
 
@@ -48,15 +45,14 @@ function(ADD_UNIT_TEST)
 
     message(STATUS "Test: ${ADD_UNIT_TEST_NAME}")
     add_executable(${ADD_UNIT_TEST_NAME})
-    add_dependencies(${ADD_UNIT_TEST_NAME} ${TINYMESH_LIBRARY})
 
     target_sources(${ADD_UNIT_TEST_NAME} PRIVATE ${ADD_UNIT_TEST_SOURCES})
-    target_include_directories(${ADD_UNIT_TEST_NAME} PRIVATE ${TINYMESH_INCLUDE_DIR} ${GTEST_INCLUDE_DIRS})
-    target_link_libraries(${ADD_UNIT_TEST_NAME} PRIVATE ${TINYMESH_LIBRARY} ${GTEST_LIBRARIES})
+    target_include_directories(${ADD_UNIT_TEST_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    target_link_libraries(${ADD_UNIT_TEST_NAME} PRIVATE ${TINYMESH_LIBRARY} GTest::gtest_main)
 
     set_target_properties(${ADD_UNIT_TEST_NAME} PROPERTIES FOLDER "Tests")
-    set_target_properties(${ADD_UNIT_TEST_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-    source_group("Source Files" FILES ${SOURCE_FILES})
+    set_target_properties(${ADD_UNIT_TEST_NAME} PROPERTIES DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
+    source_group("Source Files" FILES ${ADD_UNIT_TEST_SOURCES})
 
     set(${ADD_UNIT_TEST_DEPS} ${${ADD_UNIT_TEST_DEPS}} ${ADD_UNIT_TEST_NAME} PARENT_SCOPE)
 

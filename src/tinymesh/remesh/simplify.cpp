@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "remesh.h"
 
 #include <vector>
@@ -120,7 +119,7 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
     }
 
     if (numTargetRemove <= 0) {
-        Warn("#vertices is already less than #target: %d < %d", (int)mesh.numFaces(), numTarget);
+        Warn("#vertices is already less than #target: {} < {}", (int)mesh.numFaces(), numTarget);
         return;
     }
 
@@ -152,7 +151,7 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
             }
 
             if (vs.size() != 3) {
-                Warn("Non trianglar mesh is detected: #vertex = %d", (int)vs.size());
+                Warn("Non trianglar mesh is detected: #vertex = {}", (int)vs.size());
                 return;
             }
 
@@ -366,7 +365,7 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
     if (verbose) pbar.finish();
 
     if (verbose) {
-        Info("%d faces removed (%6.2f%% achievement)", numRemoved, 100.0 * numRemoved / numTargetRemove);
+        Info("{} faces removed ({:6.2f}% achievement)", numRemoved, 100.0 * numRemoved / numTargetRemove);
     }
 }
 

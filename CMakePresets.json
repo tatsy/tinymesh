@@ -1,0 +1,87 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 2,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/build/install/${presetName}",
+      "cacheVariables": {
+        "TINYMESH_WITH_OPENMP": "OFF",
+        "TINYMESH_BUILD_TESTS": "ON",
+        "TINYMESH_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "msvc2026",
+      "displayName": "MSVC 2026",
+      "inherits": "base",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "TINYMESH_WITH_OPENMP": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-base",
+      "hidden": true,
+      "jobs": 4
+    },
+    {
+      "name": "build-macos",
+      "hidden": true,
+      "inherits": "build-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "build-windows",
+      "hidden": true,
+      "inherits": "build-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "Debug",
+      "inherits": "build-windows",
+      "configurePreset": "msvc2026",
+      "configuration": "Debug"
+    },
+    {
+      "name": "Release",
+      "inherits": "build-windows",
+      "configurePreset": "msvc2026",
+      "configuration": "Release"
+    },
+    {
+      "name": "RelWithDebInfo",
+      "inherits": "build-windows",
+      "configurePreset": "msvc2026",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "MinSizeRel",
+      "inherits": "build-windows",
+      "configurePreset": "msvc2026",
+      "configuration": "MinSizeRel"
+    }
+  ]
+}

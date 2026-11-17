@@ -1,10 +1,10 @@
-from __future__ import print_function
-
 import os
-import requests
-import zipfile
 import tarfile
+import zipfile
 from collections import OrderedDict
+
+import requests
+
 
 class Item:
     def __init__(self, url, name):
@@ -14,13 +14,17 @@ class Item:
     def __repr__(self):
         return self.url
 
+
 target_folder = 'large_meshes'
 
-url_list = OrderedDict([
-    ('happy_budda', Item('http://graphics.stanford.edu/pub/3Dscanrep/happy/happy_recon.tar.gz', 'happy_vrip.ply')),
-    ('dragon', Item('http://graphics.stanford.edu/pub/3Dscanrep/dragon/dragon_recon.tar.gz', 'dragon_vrip.ply')),
-    ('lucy', Item('http://graphics.stanford.edu/data/3Dscanrep/lucy.tar.gz', 'lucy.ply'))
-])
+url_list = OrderedDict(
+    [
+        ('happy_budda', Item('http://graphics.stanford.edu/pub/3Dscanrep/happy/happy_recon.tar.gz', 'happy_vrip.ply')),
+        ('dragon', Item('http://graphics.stanford.edu/pub/3Dscanrep/dragon/dragon_recon.tar.gz', 'dragon_vrip.ply')),
+        ('lucy', Item('http://graphics.stanford.edu/data/3Dscanrep/lucy.tar.gz', 'lucy.ply')),
+    ]
+)
+
 
 def get_file_from_url(url):
     temp = url.split('/')[-1]
@@ -30,6 +34,7 @@ def get_file_from_url(url):
     else:
         return temp[:length]
 
+
 def bar_string(rate):
     length = 40
     if rate == 100.0:
@@ -38,8 +43,9 @@ def bar_string(rate):
         num = int(rate / (100.0 / length))
         return ('=' * num) + '>' + (' ' * (length - num - 1))
 
+
 def download(url):
-    print('Download: {:s}'.format(url))
+    print(f'Download: {url:s}')
 
     filename = get_file_from_url(url)
     r = requests.get(url, stream=True)
@@ -62,6 +68,7 @@ def download(url):
 
     return None
 
+
 def unarchive(filename, target, extract_to):
     _, ext = os.path.splitext(filename)
     try:
@@ -69,7 +76,7 @@ def unarchive(filename, target, extract_to):
             tar = tarfile.open(filename)
             members = list(filter(lambda mem: target in mem.name, tar.getmembers()))
             if len(members) != 1:
-                raise Exception('Multiple files with name "{:s}" are detected!'.format(target))
+                raise Exception(f'Multiple files with name "{target:s}" are detected!')
 
             with open(extract_to, 'wb') as f:
                 f.write(tar.extractfile(members[0]).read())
@@ -79,7 +86,7 @@ def unarchive(filename, target, extract_to):
             zip_file = zipfile.ZipFile(filename)
             members = list(filter(lambda mem: target in mem.filename, zip_file.infolist()))
             if len(members) != 1:
-                raise Exception('Multiple files with name "{:s}" are detected!'.format(target))
+                raise Exception(f'Multiple files with name "{target:s}" are detected!')
 
             with open(extract_to, 'wb') as f:
                 f.write(zip_file.open(members[0].filename).read())
@@ -91,7 +98,7 @@ def unarchive(filename, target, extract_to):
     except Exception as e:
         raise e
 
-    print('File is unarchived: {:s}'.format(extract_to))
+    print(f'File is unarchived: {extract_to:s}')
 
 
 def process(name, item):
@@ -104,12 +111,14 @@ def process(name, item):
     # Remove urchive file
     os.remove(filename)
 
+
 def main():
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
 
     for name, item in url_list.items():
         process(name, item)
+
 
 if __name__ == '__main__':
     main()

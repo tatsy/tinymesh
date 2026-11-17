@@ -1,14 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-EXTS=".cpp .hpp .c .h"
-FILES=""
-for e in $EXTS; do
-    NEW=`git ls-files | grep $e\$`
-    FILES="${FILES} ${NEW}"
-done
-
-for f in $FILES; do
-    echo $f
-    clang-format -i $f
-done
-
+while IFS= read -r -d '' file; do
+    printf '%s\n' "$file"
+    clang-format -i "$file"
+done < <(git ls-files -z -- '*.cpp' '*.hpp' '*.c' '*.h')

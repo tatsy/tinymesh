@@ -66,6 +66,7 @@ public:
 
 private:
     Halfedge *halfedge_ = nullptr;
+    bool isHole_ = false;
     int index_ = -1;
 
     friend class Mesh;

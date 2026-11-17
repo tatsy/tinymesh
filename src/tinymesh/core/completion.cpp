@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "mesh.h"
 
 #include <iostream>
@@ -15,13 +14,14 @@
 #include "face.h"
 #include "halfedge.h"
 
-using E = IndexPair;
-using T = std::tuple<uint32_t, uint32_t, uint32_t>;
-
 namespace tinymesh {
 
+using E = IndexPair;
+using EHash = IndexPairHash;
+using T = std::tuple<uint32_t, uint32_t, uint32_t>;
+
 Face *Mesh::addNewTriangle(const std::vector<Vertex *> &boundary, const std::tuple<uint32_t, uint32_t, uint32_t> &tri,
-                           std::unordered_map<IndexPair, Halfedge *> &pair2he,
+                           std::unordered_map<IndexPair, Halfedge *, IndexPairHash> &pair2he,
                            std::unordered_map<Halfedge *, IndexPair> &he2pair) {
     const int i0 = std::get<0>(tri);
     const int i1 = std::get<1>(tri);
@@ -89,7 +89,7 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
     const int n_verts = (int)boundary.size();
 
     // Collect boundary halfedges
-    std::unordered_map<E, Halfedge *> pair2he;
+    std::unordered_map<E, Halfedge *, EHash> pair2he;
     std::unordered_map<Halfedge *, E> he2pair;
     int count = 0;
     for (auto it = face->he_begin(); it != face->he_end(); ++it) {
@@ -218,7 +218,7 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
                     it->isBoundary_ = false;
                     rev->isBoundary_ = false;
                 } else {
-                    printf("%d %d %p\n", i, j, it.ptr());
+                    Debug("{} {} {}\n", i, j, (void *)it.ptr());
                 }
             }
         }
@@ -253,6 +253,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
                 it->isBoundary_ = false;
                 it->rev_->isBoundary_ = false;
             }
+            face->isHole_ = false;
             break;
         }
 
@@ -316,7 +317,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
         }
 
         // Collect boundary halfedges
-        std::unordered_map<E, Halfedge *> pair2he;
+        std::unordered_map<E, Halfedge *, EHash> pair2he;
         std::unordered_map<Halfedge *, E> he2pair;
         int count = 0;
         for (auto it = face->he_begin(); it != face->he_end(); ++it) {
@@ -513,7 +514,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
                         rev->rev_ = it.ptr();
                         it->isBoundary_ = rev->isBoundary_;
                     } else {
-                        printf("%d %d %p\n", i, j, it.ptr());
+                        Debug("{} {} {}\n", i, j, (void *)it.ptr());
                     }
                 }
             }

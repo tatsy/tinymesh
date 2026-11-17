@@ -2,6 +2,7 @@
 .idea/*
 .vscode/*
 build/*
+benchmarks/results/
 Debug/*
 Release/*
 cmake-build-debug/*
@@ -10,6 +11,9 @@ Testing/*
 
 *.TMP
 .DS_Store
+.mypy_cache
+.ruff_cache
+.pytest_cache
 
 test_config.h
 

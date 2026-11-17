@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "ops.h"
 
 #include <vector>
@@ -94,7 +93,7 @@ EigenSparseMatrix getMeshLaplacian(const Mesh &mesh, MeshLaplace type) {
     } else if (type == MeshLaplace::Belkin08) {
         getMeshLaplacianBelkin08(mesh, L);
     } else {
-        Error("Unknown mesh Laplacian type specified: %d", (int)type);
+        Error("Unknown mesh Laplacian type specified: {}", (int)type);
     }
     return L;
 }

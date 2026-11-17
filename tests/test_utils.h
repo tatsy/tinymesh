@@ -5,6 +5,8 @@
 #ifndef TINYMESH_TEST_UTILS_H
 #define TINYMESH_TEST_UTILS_H
 
+#include <filesystem>
+
 #include "gtest/gtest.h"
 #include "test_config.h"
 

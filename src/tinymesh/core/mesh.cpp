@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "mesh.h"
 
 #include <cstring>
@@ -9,6 +8,7 @@
 #include <queue>
 #include <tuple>
 #include <functional>
+#include <filesystem>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -20,7 +20,6 @@
 #include "core/vertex.h"
 #include "core/face.h"
 #include "core/halfedge.h"
-#include "core/filesystem.h"
 #include "restore/restore.h"
 #include "tiny_obj_loader.h"
 #include "tinyply.h"
@@ -71,6 +70,7 @@ void Mesh::load(const std::string &filename) {
     vertices_.clear();
     halfedges_.clear();
     faces_.clear();
+    indices_.clear();
 
     // Load new mesh
     const std::string ext = fs::path(filename.c_str()).extension().string();
@@ -79,7 +79,7 @@ void Mesh::load(const std::string &filename) {
     } else if (ext == ".ply") {
         loadPLY(filename);
     } else {
-        Error("Unsupported file extension: %s", ext.c_str());
+        Error("Unsupported file extension: {}", ext.c_str());
     }
 
     construct();
@@ -90,10 +90,14 @@ void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32
     vertices_.clear();
     halfedges_.clear();
     faces_.clear();
+    indices_.clear();
 
     std::unordered_map<Vec3, uint32_t> uniqueVertices;
-    vertices_.clear();
     for (uint32_t i : indices) {
+        if (i >= vertices.size()) {
+            Error("Vertex index {} is out of range.", i);
+        }
+
         const Vec3 &pos = vertices[i];
 
         if (uniqueVertices.count(pos) == 0) {
@@ -154,6 +158,10 @@ double Mesh::getMeanDihedralAngle() const {
     double mean = 0.0;
     for (int i = 0; i < halfedges_.size(); i++) {
         Halfedge *he = halfedges_[i].get();
+        if (he->face()->isHole() || he->rev()->face()->isHole()) {
+            continue;
+        }
+
         if (visited.count(he) != 0) continue;
         if (visited.count(he->rev_) != 0) continue;
         visited.insert(he);
@@ -170,28 +178,29 @@ double Mesh::getMeanDihedralAngle() const {
         const Vec3 p4 = vh4->pos();
         mean += dihedral(p2, p1, p3, p4);
     }
-    return mean / (double)visited.size();
+
+    return visited.empty() ? 0.0 : mean / (double)visited.size();
 }
 
 double Mesh::getMeanFaceArea() const {
-    double mean = 0.0;
-    for (size_t i = 0; i < faces_.size(); i++) {
-        mean += faces_[i]->area();
+    double totalArea = 0.0;
+    size_t count = 0;
+    for (const auto &f : faces_) {
+        if (f->isHole()) {
+            continue;
+        }
+        totalArea += f->area();
+        count++;
     }
-    mean /= (double)faces_.size();
-    return mean;
+
+    if (count == 0) return 0.0;
+
+    return totalArea / static_cast<double>(count);
 }
 
 void Mesh::construct() {
-    for (size_t i = 0; i < indices_.size(); i += 3) {
-        if (indices_[i + 0] == indices_[i + 1] || indices_[i + 1] == indices_[i + 2] ||
-            indices_[i + 2] == indices_[i + 0]) {
-            const int size = (int)indices_.size();
-            std::swap(indices_[i + 0], indices_[size - 3]);
-            std::swap(indices_[i + 1], indices_[size - 2]);
-            std::swap(indices_[i + 2], indices_[size - 1]);
-            indices_.resize(size - 3);
-        }
+    if (indices_.size() % 3 != 0) {
+        Error("Triangle index count must be a multiple of three: {}", indices_.size());
     }
 
     // Put vertex indices
@@ -209,28 +218,24 @@ void Mesh::construct() {
 
     // Setup halfedge structure
     static const int ngon = 3;
-    std::map<IndexPair, Halfedge *> pairToHalfedge;
-    std::map<uint32_t, uint32_t> vertexDegree;
+    std::unordered_map<IndexPair, Halfedge *, IndexPairHash> pairToHalfedge;
+    std::unordered_map<uint32_t, uint32_t> vertexDegree;
+    pairToHalfedge.reserve(indices_.size());
+    vertexDegree.reserve(vertices_.size());
     for (int i = 0; i < (int)indices_.size(); i += ngon) {
         // Check polygon duplication
         bool isDuplicated = false;
         for (int j = 0; j < ngon; j++) {
             const uint32_t a = indices_[i + j];
             const uint32_t b = indices_[i + (j + 1) % ngon];
-            IndexPair ab(a, b);
-            if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                Warn(
-                    "An edge with vertices #%d and #%d is detected more than twice! Skip the face that includes "
-                    "this "
-                    "edge.",
-                    a, b);
-                isDuplicated = true;
-                break;
-            }
-        }
 
-        if (isDuplicated) {
-            continue;
+            if (pairToHalfedge.contains(IndexPair{ a, b })) {
+                if (pairToHalfedge.contains(IndexPair{ b, a })) {
+                    Error("Non-manifold edge #{}--#{}: more than two incident faces (face #{})", a, b, i / ngon);
+                }
+
+                Error("Inconsistent winding or duplicated face at edge #{}--#{} (face #{})", a, b, i / ngon);
+            }
         }
 
         // Traverse face vertices
@@ -249,7 +254,7 @@ void Mesh::construct() {
             const uint32_t b = indices_[i + (j + 1) % ngon];
             IndexPair ab(a, b);
             if (pairToHalfedge.find(ab) != pairToHalfedge.end()) {
-                Error("An edge with vertices #%d and #%d is duplicated\n", a, b);
+                Error("An edge with vertices #{} and #{} is duplicated\n", a, b);
             }
 
             auto he = new Halfedge();
@@ -284,30 +289,64 @@ void Mesh::construct() {
         }
     }
 
-    // For convenience, advance halfedge of each boundary vertex to one that is on the boundary
-    for (auto v : vertices_) {
-        Halfedge *he = v->halfedge_;
+    // Find outgoing boundary halfedges.
+    std::vector<Halfedge *> boundaryStart(vertices_.size(), nullptr);
+
+    for (const auto &he : halfedges_) {
+        if (he->rev_ != nullptr) {
+            continue;
+        }
+
+        const auto index = he->src_->index_;
+        if (boundaryStart[index] != nullptr) {
+            Error("Non-manifold vertex #{}: multiple outgoing boundary edges.", index);
+        }
+
+        boundaryStart[index] = he.get();
+    }
+
+    // Check connectivity of incident triangles around each vertex.
+    for (const auto &v : vertices_) {
+        if (v->halfedge_ == nullptr) {
+            Error("Vertex #{} is not referenced by any triangle.", v->index_);
+        }
+
+        Halfedge *start = boundaryStart[v->index_];
+        if (start == nullptr) {
+            start = v->halfedge_;
+        }
+
+        const uint32_t expected = vertexDegree[v->index_];
+        uint32_t count = 0;
+        Halfedge *he = start;
+
         do {
-            if (he->rev_ == nullptr) {
-                v->halfedge_ = he;
-                break;
+            if (++count > expected) {
+                Error("Non-manifold vertex #{}: invalid face fan.", v->index_);
             }
 
-            he = he->rev_->next_;
-        } while (he != v->halfedge_);
+            he = he->next_->next_->rev_;
+        } while (he != nullptr && he != start);
+
+        if (count != expected) {
+            Error("Non-manifold vertex #{}: disconnected face fans ({} of {} faces).", v->index_, count, expected);
+        }
+
+        v->halfedge_ = start;
     }
 
     // Construct new faces (possibly non-triangle) for each boundary components
     const auto numHalfedges = static_cast<int>(halfedges_.size());
     for (int i = 0; i < numHalfedges; i++) {
-        auto &he = halfedges_[i];
-        Assertion(he.get() != nullptr, "Null halfedge detected!");
+        Halfedge *const he = halfedges_[i].get();
+        Assertion(he != nullptr, "Null halfedge detected!");
         if (he->rev_ == nullptr) {
             auto face = new Face();
+            face->isHole_ = true;
             addFace(face);
 
             std::vector<Halfedge *> boundaryHalfedges;
-            Halfedge *it = he.get();
+            Halfedge *it = he;
             do {
                 auto rev = new Halfedge();
                 addHalfedge(rev);
@@ -324,11 +363,11 @@ void Mesh::construct() {
 
                 // Advance it to the next halfedge along the current boundary loop
                 it = it->next_;
-                while (it != he.get() && it->rev_ != nullptr) {
+                while (it != he && it->rev_ != nullptr) {
                     it = it->rev_;
                     it = it->next_;
                 }
-            } while (it != he.get());
+            } while (it != he);
 
             face->halfedge_ = boundaryHalfedges.front();
 
@@ -344,24 +383,6 @@ void Mesh::construct() {
     for (auto v : vertices_) {
         v->halfedge_ = v->halfedge_->rev_->next_;
     }
-
-    // Check if the mesh is non-manifold
-    for (auto v : vertices_) {
-        if (v->halfedge_ == nullptr) {
-            Error("Some vertices are not referenced by any polygon!");
-        }
-
-        uint32_t count = v->isBoundary() ? -1 : 0;
-        Halfedge *he = v->halfedge_;
-        do {
-            count += 1;
-            he = he->rev()->next();
-        } while (he != v->halfedge_);
-
-        if (count != vertexDegree[v->index()]) {
-            Error("At least one of the vertices is non-manifold: %d vs %d\n", count, vertexDegree[v->index()]);
-        }
-    }
 }
 
 void Mesh::loadOBJ(const std::string &filename) {
@@ -373,11 +394,11 @@ void Mesh::loadOBJ(const std::string &filename) {
     std::string errMsg;
     bool success = tinyobj::LoadObj(&attrib, &shapes, &mats, &warnMsg, &errMsg, filename.c_str());
     if (!errMsg.empty()) {
-        Warn("%s", errMsg.c_str());
+        Warn("{}", errMsg);
     }
 
     if (!success) {
-        Error("Failed to load *.obj file: %s", filename.c_str());
+        Error("Failed to load *.obj file: {}", filename);
     }
 
     // Traverse triangles
@@ -410,7 +431,7 @@ void Mesh::loadPLY(const std::string &filename) {
     // Open
     std::ifstream reader(filename.c_str(), std::ios::binary);
     if (reader.fail()) {
-        Error("Failed to open file: %s", filename.c_str());
+        Error("Failed to open file: {}", filename);
     }
 
     // Read header
@@ -422,7 +443,7 @@ void Mesh::loadPLY(const std::string &filename) {
     try {
         vert_data = file.request_properties_from_element("vertex", { "x", "y", "z" });
     } catch (std::exception &e) {
-        std::cerr << "tinyply exception: " << e.what() << std::endl;
+        Error("Failed to read PLY vertex data: {}", e.what());
     }
 
     try {
@@ -440,7 +461,7 @@ void Mesh::loadPLY(const std::string &filename) {
     try {
         face_data = file.request_properties_from_element("face", { "vertex_indices" }, 3);
     } catch (std::exception &e) {
-        std::cerr << "tinyply exception: " << e.what() << std::endl;
+        Error("Failed to read PLY face data: {}", e.what());
     }
 
     // Read vertex data
@@ -448,17 +469,65 @@ void Mesh::loadPLY(const std::string &filename) {
 
     // Copy vertex data
     const size_t numVerts = vert_data->count;
-    std::vector<float> raw_vertices(numVerts * 3);
-    std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
+    std::vector<uint8_t> raw_vertices;
+
+    if (vert_data->t == tinyply::Type::FLOAT32) {
+        raw_vertices.resize(numVerts * 3 * sizeof(float));
+    } else if (vert_data->t == tinyply::Type::FLOAT64) {
+        raw_vertices.resize(numVerts * 3 * sizeof(double));
+    } else {
+        Error("Unsupported vertex data type: {}", (int)vert_data->t);
+    }
+    std::memcpy(raw_vertices.data(), vert_data->buffer.get(), raw_vertices.size());
 
     const size_t numFaces = face_data->count;
-    std::vector<uint32_t> raw_indices(numFaces * 3);
-    std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
+    std::vector<uint8_t> raw_indices;
+    if (face_data->t == tinyply::Type::UINT8) {
+        raw_indices.resize(numFaces * 3 * sizeof(uint8_t));
+    } else if (face_data->t == tinyply::Type::UINT16) {
+        raw_indices.resize(numFaces * 3 * sizeof(uint16_t));
+    } else if (face_data->t == tinyply::Type::INT32 || face_data->t == tinyply::Type::UINT32) {
+        raw_indices.resize(numFaces * 3 * sizeof(uint32_t));
+    } else {
+        Error("Unsupported face data type: {}", (int)face_data->t);
+    }
+    std::memcpy(raw_indices.data(), face_data->buffer.get(), raw_indices.size());
 
     std::unordered_map<Vec3, uint32_t> uniqueVertices;
     vertices_.clear();
-    for (uint32_t i : raw_indices) {
-        const Vec3 pos = Vec3(raw_vertices[i * 3 + 0], raw_vertices[i * 3 + 1], raw_vertices[i * 3 + 2]);
+    for (size_t i = 0; i < numFaces * 3; i++) {
+        uint32_t j = 0;
+        if (face_data->t == tinyply::Type::UINT8) {
+            j = reinterpret_cast<uint8_t *>(raw_indices.data())[i];
+        } else if (face_data->t == tinyply::Type::UINT16) {
+            j = reinterpret_cast<uint16_t *>(raw_indices.data())[i];
+        } else if (face_data->t == tinyply::Type::INT32) {
+            j = reinterpret_cast<int32_t *>(raw_indices.data())[i];
+        } else if (face_data->t == tinyply::Type::UINT32) {
+            j = reinterpret_cast<uint32_t *>(raw_indices.data())[i];
+        } else {
+            Error("Unsupported face data type: {}", (int)face_data->t);
+        }
+
+        if (j >= numVerts) {
+            Error("Vertex index {} is out of range.", j);
+        }
+
+        Vec3 pos;
+        if (vert_data->t == tinyply::Type::FLOAT32) {
+            const float x = reinterpret_cast<float *>(raw_vertices.data())[j * 3 + 0];
+            const float y = reinterpret_cast<float *>(raw_vertices.data())[j * 3 + 1];
+            const float z = reinterpret_cast<float *>(raw_vertices.data())[j * 3 + 2];
+            pos = Vec3(x, y, z);
+        } else if (vert_data->t == tinyply::Type::FLOAT64) {
+            const double x = reinterpret_cast<double *>(raw_vertices.data())[j * 3 + 0];
+            const double y = reinterpret_cast<double *>(raw_vertices.data())[j * 3 + 1];
+            const double z = reinterpret_cast<double *>(raw_vertices.data())[j * 3 + 2];
+            pos = Vec3(x, y, z);
+        } else {
+            Error("Unsupported vertex data type: {}", (int)vert_data->t);
+        }
+
         if (uniqueVertices.count(pos) == 0) {
             uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
             vertices_.push_back(std::make_shared<Vertex>(pos));
@@ -475,14 +544,14 @@ void Mesh::save(const std::string &filename) const {
     } else if (ext == ".ply") {
         savePLY(filename);
     } else {
-        Error("Unsupported file extension: %s", ext.c_str());
+        Error("Unsupported file extension: {}", ext);
     }
 }
 
 void Mesh::saveOBJ(const std::string &filename) const {
     std::ofstream writer(filename.c_str(), std::ios::out);
     if (writer.fail()) {
-        Error("Failed to open file: %s", filename.c_str());
+        Error("Failed to open file: {}", filename);
     }
 
     for (const auto &v : vertices_) {
@@ -509,12 +578,9 @@ void Mesh::saveOBJ(const std::string &filename) const {
 void Mesh::savePLY(const std::string &filename) const {
     using namespace tinyply;
 
-    std::filebuf buffer;
-    buffer.open(filename.c_str(), std::ios::out | std::ios::binary);
-
-    std::ostream outstream(&buffer);
-    if (outstream.fail()) {
-        Error("Failed to open file: %s", filename.c_str());
+    std::ofstream outstream(filename.c_str(), std::ios::out | std::ios::binary);
+    if (!outstream) {
+        Error("Failed to open file: {}", filename);
     }
 
     std::vector<float> vertexData(vertices_.size() * 3);
@@ -955,7 +1021,7 @@ bool Mesh::verify() const {
     for (int i = 0; i < (int)vertices_.size(); i++) {
         Vertex *v = vertices_[i].get();
         if (v->index() != i) {
-            Warn("Vertex index does not match array index: v[%d].index = %d", i, v->index());
+            Warn("Vertex index does not match array index: v[{}].index = {}", i, v->index());
             success = false;
         }
         success &= verifyVertex(v);
@@ -964,7 +1030,7 @@ bool Mesh::verify() const {
     for (int i = 0; i < (int)halfedges_.size(); i++) {
         auto he = halfedges_[i];
         if (he->index() != i) {
-            Warn("Halfedge index does not match array index: he[%d].index = %d", i, he->index());
+            Warn("Halfedge index does not match array index: he[{}].index = {}", i, he->index());
             success = false;
         }
     }
@@ -972,12 +1038,12 @@ bool Mesh::verify() const {
     for (int i = 0; i < (int)faces_.size(); i++) {
         auto f = faces_[i];
         if (f->index() != i) {
-            Warn("Face index does not match array index: f[%d].index = %d", i, f->index());
+            Warn("Face index does not match array index: f[{}].index = {}", i, f->index());
             success = false;
         }
 
         if (f->halfedge_ == nullptr) {
-            Warn("Face[%d] is not with non-null halfedge!", f->index());
+            Warn("Face[{}] is not with non-null halfedge!", f->index());
             success = false;
         }
     }
@@ -988,20 +1054,20 @@ bool Mesh::verify() const {
 bool Mesh::verifyVertex(Vertex *v) const {
     bool success = true;
     if (v->index() >= (int)vertices_.size()) {
-        fprintf(stderr, "Vertex index out of range: %d > %d\n", v->index(), (int)vertices_.size());
+        Warn("Vertex index out of range: {} > {}", v->index(), (int)vertices_.size());
         success = false;
     }
 
     Vec3 p = v->pos();
     if (std::isinf(p[0]) || std::isnan(p[0]) || std::isinf(p[1]) || std::isnan(p[1]) || std::isinf(p[2]) ||
         std::isnan(p[2])) {
-        fprintf(stderr, "Inf of NaN found at v[%d]: (%f, %f, %f)\n", v->index(), p[0], p[1], p[2]);
+        Warn("Inf of NaN found at v[{}]: ({}, {}, {})\n", v->index(), p[0], p[1], p[2]);
         success = false;
     }
 
     for (auto it = v->he_begin(); it != v->he_end(); ++it) {
         if (it->src() != v) {
-            fprintf(stderr, "Origin of an outward halfedge is invalid at v[%d]!\n", v->index());
+            Warn("Origin of an outward halfedge is invalid at v[{}]\n", v->index());
             success = false;
         }
     }

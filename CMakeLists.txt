@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.18.0 FATAL_ERROR)
-project(TinyMesh)
+cmake_minimum_required(VERSION 3.24.0 FATAL_ERROR)
+project(TinyMesh LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(Macros)
@@ -7,20 +7,13 @@ include(Macros)
 # ----------
 # Options
 # ----------
-option(WITH_OPENMP "Use OpenMP or not" ON)
-option(BUILD_EXAMPLES "Build examples." OFF)
-option(BUILD_TESTS "Build unit tests." OFF)
+option(TINYMESH_WITH_OPENMP "Use OpenMP or not" ON)
+option(TINYMESH_BUILD_TESTS "Build unit tests." OFF)
+option(TINYMESH_BUILD_EXAMPLES "Build examples." OFF)
+option(TINYMESH_BUILD_BENCHMARKS "Build native benchmarks." OFF)
+option(TINYMESH_BUILD_SHARED "Build shared library." OFF)
+option(TINYMESH_BUILD_PYTHON "Build the Python module." OFF)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if (UNIX)
-    set(CMAKE_CXX_FLAGS "-pthread -fPIC -Wall")
-    set(CMAKE_CXX_FLAGS_RELEASE "-g -O2")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        set(CXX_FS_LIBRARY "stdc++fs")
-    endif()
-endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ----------
@@ -32,36 +25,29 @@ set(TINYMESH_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
 # ----------
 # OpenMP
 # ----------
-if (WITH_OPENMP)
-    find_package(OpenMP)
-    if (OPENMP_FOUND)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-        set(OpenMP_INCLUDE_DIRS "${OpenMP_C_INCLUDE_DIRS}")
-        set(OpenMP_LIBRARIES "${OpenMP_C_LIBRARIES}")
-    endif()
+if(TINYMESH_WITH_OPENMP)
+  find_package(OpenMP COMPONENTS CXX)
 endif()
 
 # ----------
 # Output paths
 # ----------
-
-if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
 endif()
 
-if (NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
 endif()
 
-if (NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lib)
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lib)
 endif()
 
 set(CMAKE_DEBUG_POSTFIX "-debug")
@@ -71,25 +57,34 @@ set(CMAKE_DEBUG_POSTFIX "-debug")
 # ----------
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-if (MSVC)
-    add_compile_options("/wd4251" "/wd4819")
-endif()
-
-if (APPLE)
-    set(CMAKE_MACOSX_RPATH 1)
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH 1)
 endif()
 
 # ----------
 # Traverse subdirectories
 # ----------
-add_subdirectory(src)
+if (TINYMESH_BUILD_PYTHON)
+  if (TINYMESH_BUILD_TESTS OR TINYMESH_BUILD_EXAMPLES OR TINYMESH_BUILD_BENCHMARKS)
+    message(FATAL_ERROR "Build Python bindings separately from C++ tests, examples, and benchmarks.")
+  endif()
 
-if (BUILD_EXAMPLES)
-    add_subdirectory(examples)
+  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 endif()
 
-if (BUILD_TESTS)
-    find_package(GoogleTest REQUIRED)
-    enable_testing()
-    add_subdirectory(tests)
+include(Dependencies)
+
+add_subdirectory(src)
+
+if(TINYMESH_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
+if(TINYMESH_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
+
+if(TINYMESH_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()

@@ -1,7 +1,7 @@
-#define TINYMESH_API_EXPORT
 #include "bvh.h"
 
 #include <stack>
+#include <limits>
 
 #include "mesh.h"
 
@@ -59,6 +59,8 @@ BVH::BVH(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices
 }
 
 void BVH::construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
+    root = nullptr;
+    nodes.clear();
     tris.clear();
     std::vector<BVHPrimitiveInfo> buildData;
     for (size_t i = 0; i < indices.size(); i += 3) {
@@ -82,7 +84,7 @@ Vec3 BVH::closestPoint(const Vec3 &query) const {
     std::stack<BVHNode *> stk;
     stk.push(root);
 
-    double dist = 1.0e20;
+    double dist = std::numeric_limits<double>::infinity();
     Vec3 ret;
     while (!stk.empty()) {
         BVHNode *node = stk.top();
@@ -96,10 +98,9 @@ Vec3 BVH::closestPoint(const Vec3 &query) const {
                 ret = pc;
             }
         } else {
-            // distance to furthest corner
-            const bool isInside = node->bounds.inside(query);
-            const double dc = node->bounds.distance(query);
-            if (isInside || dc <= dist) {
+            // Minimum distance from the query to the bounding box
+            const double lowerBound = node->bounds.distance(query);
+            if (lowerBound <= dist) {
                 if (node->left) stk.push(node->left);
                 if (node->right) stk.push(node->right);
             }
@@ -166,6 +167,8 @@ BVHNode *BVH::constructRec(std::vector<BVHPrimitiveInfo> &buildData, int start, 
                     b1 = Bounds3::merge(b1, buckets[j].bounds);
                     cnt1 += buckets[j].count;
                 }
+
+                // Surface area heuristics
                 bucketCost[i] += 0.125 + (cnt0 * b0.area() + cnt1 * b1.area()) / bounds.area();
             }
 

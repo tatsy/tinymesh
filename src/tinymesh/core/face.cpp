@@ -1,4 +1,3 @@
-#define TINYMESH_API_EXPORT
 #include "face.h"
 
 #include <vector>
@@ -57,14 +56,13 @@ double Face::area() const {
     }
 
     const int N = static_cast<int>(vs.size());
-    double area = 0.0;
+    Vec3 areaVec(0.0);
     for (int i = 1; i < N - 1; i++) {
-        const Vec3 &p0 = vs[i];
-        const Vec3 &p1 = vs[i - 1];
-        const Vec3 &p2 = vs[i + 1];
-        area += 0.5 * length(cross(p1 - p0, p2 - p0));
+        const Vec3 e1 = vs[i] - vs[0];
+        const Vec3 e2 = vs[i + 1] - vs[0];
+        areaVec += cross(e1, e2);
     }
-    return area;
+    return 0.5 * length(areaVec);
 }
 
 int Face::numCorners() const {
@@ -76,13 +74,7 @@ int Face::numCorners() const {
 }
 
 bool Face::isHole() const {
-    // Face is hole if all the vertices are at the boundary.
-    for (auto it = this->he_begin(); it != this->he_end(); ++it) {
-        if (!it->isBoundary()) {
-            return false;
-        }
-    }
-    return true;
+    return isHole_;
 }
 
 bool Face::isBoundary() const {

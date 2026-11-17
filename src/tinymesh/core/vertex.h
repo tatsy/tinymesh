@@ -40,18 +40,23 @@ public:
     //! Compute vertex normal with those of surrounding faces
     Vec3 normal() const;
 
-    //! Obtuse-safe Volonoi area calculation [Meyer et al. 2003]
-    double volonoiArea() const;
+    //! Obtuse-safe Voronoi area calculation [Meyer et al. 2003]
+    double voronoiArea() const;
 
-    //! Volonoi area in specified face [Meyer et al. 2003]
-    double volonoiArea(const Face *const f) const;
+    //! Voronoi area in specified face [Meyer et al. 2003]
+    double voronoiArea(const Face *const f) const;
 
     /**
-     * Gaussian curvature for vertex [Meyer et al. 2003]
+     * Gaussian curvature for vertex [Meyer et al. 2003],
+     * which is estimated by the area-normalized angle defect.
+     * Boundary vertices return 0.0 and are not evaluated.
      */
     double K() const;
+
     /**
-     * Mean curvature for vertex [Meyer et al. 2003] 
+     * Mean curvature for vertex [Meyer et al. 2003],
+     * which calculates a signed mean curvature H = (k1 + k2) / 2.
+     * Boundary vertices return 0.0 and are not evaluated.
      */
     double H() const;
 

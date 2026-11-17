@@ -50,7 +50,7 @@ public:
 }  // namespace detail
 }  // namespace pybind11
 
-PYBIND11_MODULE(tinymesh, m) {
+PYBIND11_MODULE(_core, m) {
     py::class_<Mesh>(m, "Mesh")
         .def(py::init<>())
         .def(py::init<const std::string &>())

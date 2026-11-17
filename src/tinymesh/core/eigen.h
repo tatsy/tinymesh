@@ -7,10 +7,16 @@
 
 #include <cstdint>
 
-using FloatType = double;
-using IndexType = int64_t;
-
 #include <Eigen/Core>
+#include <Eigen/SparseCore>
+
+#include "api.h"
+
+namespace tinymesh {
+
+using FloatType = double;
+using IndexType = std::int64_t;
+
 using EigenVector2 = Eigen::Matrix<FloatType, 2, 1>;
 using EigenVector3 = Eigen::Matrix<FloatType, 3, 1>;
 using EigenVector4 = Eigen::Matrix<FloatType, 4, 1>;
@@ -20,14 +26,13 @@ using EigenMatrix3 = Eigen::Matrix<FloatType, 3, 3>;
 using EigenMatrix4 = Eigen::Matrix<FloatType, 4, 4>;
 using EigenMatrix = Eigen::Matrix<FloatType, Eigen::Dynamic, Eigen::Dynamic>;
 
-//! SVD using Eigen
-void eigenSVD(const EigenMatrix &A, EigenMatrix &U, EigenVector &Sigma, EigenMatrix &V);
-
-// #ifdef EIGEN_ENABLE_SPARSE
-#include <Eigen/SparseCore>
 using EigenTriplet = Eigen::Triplet<FloatType, IndexType>;
 using EigenSparseVector = Eigen::SparseVector<FloatType>;
 using EigenSparseMatrix = Eigen::SparseMatrix<FloatType>;
-// #endif  // EIGEN_ENABLE_SPARSE
+
+//! SVD using Eigen
+TINYMESH_API void eigenSVD(const EigenMatrix &A, EigenMatrix &U, EigenVector &Sigma, EigenMatrix &V);
+
+}  // namespace tinymesh
 
 #endif  // TINYMESH_EIGEN_H

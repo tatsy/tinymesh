@@ -1,0 +1,56 @@
+"""Mesh processing with a C++ core and optional Python visualization."""
+
+from ._core import (
+    Face,
+    Mesh,
+    Vertex,
+    MeshLaplace,
+    simplify_qem,
+    smooth_taubin,
+    implicit_fairing,
+    smooth_laplacian,
+    denoise_l0_smooth,
+    remesh_triangular,
+    get_mesh_laplacian,
+    get_feature_line_field,
+    get_hausdorff_distance,
+    hole_fill_min_dihedral,
+    denoise_normal_gaussian,
+    denoise_normal_bilateral,
+    get_principal_curvatures,
+    hole_fill_advancing_front,
+    get_heat_kernel_signatures,
+    hole_fill_context_coherent,
+    get_feature_line_field_with_flags,
+    get_per_vertex_shortest_distances,
+    get_principal_curvatures_with_derivatives,
+)
+
+
+__version__ = '0.2.5'
+
+__all__ = [
+    'Mesh',
+    'Vertex',
+    'Face',
+    'MeshLaplace',
+    'get_hausdorff_distance',
+    'get_per_vertex_shortest_distances',
+    'get_mesh_laplacian',
+    'get_heat_kernel_signatures',
+    'get_principal_curvatures',
+    'get_principal_curvatures_with_derivatives',
+    'get_feature_line_field',
+    'get_feature_line_field_with_flags',
+    'smooth_laplacian',
+    'smooth_taubin',
+    'implicit_fairing',
+    'denoise_normal_gaussian',
+    'denoise_normal_bilateral',
+    'denoise_l0_smooth',
+    'remesh_triangular',
+    'simplify_qem',
+    'hole_fill_min_dihedral',
+    'hole_fill_advancing_front',
+    'hole_fill_context_coherent',
+]

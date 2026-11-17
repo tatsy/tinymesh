@@ -19,7 +19,7 @@ def frustum(left, right, bottom, top, znear, zfar):
     return M
 
 
-class Viewer(object):
+class Viewer:
     def __init__(self, width=500, height=500, dpi=100):
         self.width = width
         self.height = height
@@ -55,12 +55,14 @@ class Viewer(object):
         self.V = self.V @ V
 
     def translate(self, x, y, z):
-        M = np.array([
-            [1.0, 0.0, 0.0, x],
-            [0.0, 1.0, 0.0, y],
-            [0.0, 0.0, 1.0, z],
-            [0.0, 0.0, 0.0, 1.0],
-        ])
+        M = np.array(
+            [
+                [1.0, 0.0, 0.0, x],
+                [0.0, 1.0, 0.0, y],
+                [0.0, 0.0, 1.0, z],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
         self.M = self.M @ M
 
     def rotate(self, theta, wx, wy, wz):
@@ -80,15 +82,9 @@ class Viewer(object):
         M[2, 2] = sz
         self.M = self.M @ M
 
-    def visualization(self,
-                      verts,
-                      faces,
-                      colors=None,
-                      wireframe=False,
-                      shade=True,
-                      title="",
-                      save=False,
-                      filename="output.png"):
+    def visualization(
+        self, verts, faces, colors=None, wireframe=False, shade=True, title='', save=False, filename='output.png'
+    ):
         V = verts.copy()
         F = faces.copy()
         if colors is not None:
@@ -128,7 +124,7 @@ class Viewer(object):
 
         if wireframe:
             linewidth = 0.1
-            edgecolor = "black"
+            edgecolor = 'black'
         else:
             linewidth = 1.0
             edgecolor = C
@@ -137,26 +133,23 @@ class Viewer(object):
         ysiz = int(self.height / self.dpi)
         fig = plt.figure(figsize=(xsiz, ysiz), dpi=self.dpi)
         ax = fig.add_axes([0, 0, 1, 1], xlim=[-1, 1], ylim=[-1, 1], aspect=1.0 / self.aspect, frameon=False)
-        ax.axis("off")
-        collection = PolyCollection(T,
-                                    closed=True,
-                                    linewidth=linewidth,
-                                    facecolor=C,
-                                    edgecolor=edgecolor,
-                                    antialiaseds=True)
+        ax.axis('off')
+        collection = PolyCollection(
+            T, closed=True, linewidth=linewidth, facecolor=C, edgecolor=edgecolor, antialiaseds=True
+        )
         ax.add_collection(collection)
 
         if len(title) != 0:
             plt.title(title)
 
         if save:
-            plt.savefig(filename, bbox_inches="tight")
+            plt.savefig(filename, bbox_inches='tight')
 
         plt.show()
 
     def mesh_visualization(self, mesh, *args, **kwargs):
         verts = mesh.get_vertices()
         faces = mesh.get_vertex_indices()
-        verts = np.asarray(verts, dtype="float32")
-        faces = np.asarray(faces, dtype="uint32").reshape((-1, 3))
+        verts = np.asarray(verts, dtype='float32')
+        faces = np.asarray(faces, dtype='uint32').reshape((-1, 3))
         self.visualization(verts, faces, *args, **kwargs)

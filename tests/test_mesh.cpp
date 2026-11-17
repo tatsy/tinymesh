@@ -63,8 +63,98 @@ TEST_P(MeshBasicTest, MeshClosetPoint) {
     EXPECT_NEAR(bvh.distance(query), answer, 1.0e-5);
 }
 
-static std::vector<std::string> filenames = {
+namespace {
+
+static const std::vector<std::string> filenames = {
     "box.obj", "sphere.obj", "torus.obj", "plane.obj", "fandisk.ply", "bunny.ply",
 };
 
+}  // anonymous namespace
+
 INSTANTIATE_TEST_SUITE_P(, MeshBasicTest, ::testing::ValuesIn(filenames));
+
+namespace {
+
+static const std::vector<Vec3> validationVertices = {
+    Vec3{ 0, 0, 0 },  Vec3{ 1, 0, 0 },  Vec3{ 0, 1, 0 },  Vec3{ 0, 0, 1 },
+    Vec3{ -1, 0, 0 }, Vec3{ 0, -1, 0 }, Vec3{ 0, 0, -1 },
+};
+
+}  // anonymous namespace
+
+TEST(MeshValidationTest, AcceptsManifoldMeshes) {
+    struct Case {
+        const char *name;
+        std::vector<uint32_t> indices;
+        size_t holes;
+    };
+
+    const Case cases[] = {
+        { "single triangle", { 0, 1, 2 }, 1 },
+        { "two adjacent triangles", { 0, 1, 2, 0, 2, 3 }, 1 },
+        { "tetrahedron", { 0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3 }, 0 },
+    };
+
+    for (const auto &c : cases) {
+        SCOPED_TRACE(c.name);
+
+        Mesh mesh(validationVertices, c.indices);
+        EXPECT_TRUE(mesh.verify());
+        EXPECT_EQ(mesh.getVertexIndices().size(), c.indices.size());
+
+        size_t holes = 0;
+        for (size_t i = 0; i < mesh.numFaces(); ++i) {
+            if (mesh.face(static_cast<int>(i))->isHole()) {
+                ++holes;
+            }
+        }
+
+        EXPECT_EQ(holes, c.holes);
+        EXPECT_EQ(mesh.numFaces(), c.indices.size() / 3 + c.holes);
+    }
+}
+
+TEST(MeshValidationDeathTest, RejectsInvalidMeshes) {
+    struct Case {
+        const char *name;
+        std::vector<uint32_t> indices;
+        const char *message;
+    };
+
+    const Case cases[] = {
+        { "three faces on one edge", { 0, 1, 2, 1, 0, 3, 0, 1, 5 }, "Non-manifold edge" },
+        { "inconsistent winding", { 0, 1, 2, 0, 1, 3 }, "Inconsistent winding" },
+        { "open bow-tie vertex", { 0, 1, 2, 0, 4, 5 }, "multiple outgoing boundary edges" },
+        { "closed bow-tie vertex",
+          { 0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3, 0, 5, 4, 0, 4, 6, 4, 5, 6, 5, 0, 6 },
+          "disconnected face fans" },
+        { "incomplete triangle", { 0, 1 }, "multiple of three" },
+        { "invalid vertex index", { 0, 1, 7 }, "out of range" },
+        { "repeated vertex", { 0, 1, 1 }, "three distinct vertices" },
+    };
+
+    for (const auto &c : cases) {
+        SCOPED_TRACE(c.name);
+
+        EXPECT_DEATH(
+            {
+                std::cout.rdbuf(std::cerr.rdbuf());
+                Mesh mesh(validationVertices, c.indices);
+            },
+            c.message);
+    }
+}
+
+TEST(MeshGeometryTest, BoundaryCotangentWeight) {
+    const std::vector<Vec3> vertices = {
+        Vec3{ 0.0, 0.0, 0.0 },
+        Vec3{ 2.0, 0.0, 0.0 },
+        Vec3{ 1.0, 2.0, 0.0 },
+    };
+    const std::vector<uint32_t> indices = { 0, 1, 2 };
+    Mesh mesh(vertices, indices);
+
+    const Halfedge *he = mesh.halfedge(0);
+    EXPECT_NEAR(he->cotWeight(), 0.375, 1.0e-12);
+    EXPECT_NEAR(he->rev()->cotWeight(), 0.375, 1.0e-12);
+}
