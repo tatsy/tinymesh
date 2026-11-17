@@ -1,59 +1,70 @@
-[build-system]
-requires = ["setuptools", "poetry_core>=1.5.0", "pybind11>=2.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
+[project]
 name = "tinymesh"
-version = "0.2.4"
+dynamic = ["version"]
 description = "TinyMesh: a light-weight mesh processing library"
-
-license = "MPL-v2"
-
-authors = ["Tatsuya Yatagawa <tatsy.mail@gmail.com>"]
+license = "MPL-2.0"
+authors = [{ name = "Tatsuya Yatagawa", email = "tatsy.mail@gmail.com" }]
 readme = 'README.md'
-repository = "https://github.com/tatsy/tinymesh"
-homepage = "https://github.com/tatsy/tinymesh"
-
 keywords = ['graphics', 'geometry']
-exclude = ["src/*", "tests/*", "cmake/*", "data/*", "figures/*"]
+dependencies = ["numpy>=2.0.0"]
+requires-python = ">=3.10,<3.14"
 
-[tool.poetry.build]
-script = "build_exts.py"
-generate-setup-file = true
+[project.urls]
+Repository = "https://github.com/tatsy/tinymesh"
+Homepage = "https://github.com/tatsy/tinymesh"
 
-[tool.poetry.dependencies]
-python = ">=3.8,<3.13"
-setuptools = "^57"
-pybind11 = "^2.0"
-
-[tool.poetry.group.dev.dependencies]
-black = "*"
-flake8 = "*"
-mypy = "*"
-isort = "*"
-pytest = "*"
-jupyterlab = "*"
-matplotlib = "*"
-
-numpy = [
-  { version = "~1.26.0", python = "^3.12" },
-  { version = "*", python = ">=3.8,<3.12" },
+[dependency-groups]
+dev = [
+  "ty>=0.0.91",
+  "ruff>=0.17.2",
+  "pytest>=9.2.0",
+  "jupyterlab>=4.6.6",
+  "matplotlib>=3.10.9",
+  "scipy>=1.15.3",
 ]
 
-scipy = [
-  { version = "~1.11.2", python = "^3.12" },
-  { version = "*", python = ">=3.8,<3.12" },
-]
+[build-system]
+requires = ["scikit-build-core>=0.11.4", "pybind11>=2.13.0"]
+build-backend = "scikit_build_core.build"
 
-[tool.isort]
-profile = "black"
-length_sort = "True"
-line_length = 120
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.build-type = "Release"
+wheel.packages = []
+sdist.include = ["src/tinymesh/ext/**"]
 
-[tool.flake8]
-max-line-length = 120
-ignore = "Q000,E127,E203,E402,W503,W504"
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "src/tinymesh/__init__.py"
 
-[tool.black]
-target-version = ["py39", "py310", "py311"]
+[tool.scikit-build.cmake.define]
+TINYMESH_BUILD_PYTHON = true
+TINYMESH_BUILD_TESTS = false
+TINYMESH_BUILD_EXAMPLES = false
+
+[tool.ruff]
+target-version = "py312"
 line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "B", "UP", "SIM"]
+ignore = ["N806", "N812", "SIM108"]
+fixable = ["ALL"]
+unfixable = ["F401", "F841"]
+
+[tool.ruff.lint.isort]
+length-sort = true
+lines-after-imports = 2
+split-on-trailing-comma = true
+
+[tool.ty.environment]
+python = ".venv"
+python-version = "3.12"
+
+[tool.ty.terminal]
+error-on-warning = false

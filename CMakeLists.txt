@@ -3,7 +3,6 @@ project(TinyMesh LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(Macros)
-include(Dependencies)
 
 # ----------
 # Options
@@ -11,6 +10,7 @@ include(Dependencies)
 option(TINYMESH_WITH_OPENMP "Use OpenMP or not" ON)
 option(TINYMESH_BUILD_TESTS "Build unit tests." OFF)
 option(TINYMESH_BUILD_EXAMPLES "Build examples." OFF)
+option(TINYMESH_BUILD_PYTHON "Build the Python module." OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -62,6 +62,17 @@ endif()
 # ----------
 # Traverse subdirectories
 # ----------
+include(Dependencies)
+
+if (TINYMESH_BUILD_PYTHON)
+  if (TINYMESH_BUILD_TESTS OR TINYMESH_BUILD_EXAMPLES)
+    message(FATAL_ERROR "Build Python bindings separately from C++ tests and examples.")
+  endif()
+
+  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+  find_package(pybind11 CONFIG REQUIRED)
+endif()
+
 add_subdirectory(src)
 
 if(TINYMESH_BUILD_EXAMPLES)

@@ -23,6 +23,22 @@ add_library(${TINYMESH_LIBRARY} STATIC ${SOURCE_FILES})
 target_compile_features(${TINYMESH_LIBRARY} PUBLIC cxx_std_20)
 set_target_properties(${TINYMESH_LIBRARY} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+if (TINYMESH_BUILD_PYTHON)
+  target_compile_definitions(${TINYMESH_LIBRARY}
+    PUBLIC TINYMESH_PYTHON_MODULE=1)
+
+  target_link_libraries(${TINYMESH_LIBRARY} PUBLIC pybind11::module)
+
+  if (MSVC)
+    target_compile_options(${TINYMESH_LIBRARY} PUBLIC /utf-8)
+    target_compile_definitions(${TINYMESH_LIBRARY}
+      PUBLIC
+        _CRT_SECURE_NO_WARNINGS
+        _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+    )
+  endif()
+endif()
+
 if(MSVC)
   target_compile_options(${TINYMESH_LIBRARY} PRIVATE /MP /wd4251 /wd4819)
 else()
