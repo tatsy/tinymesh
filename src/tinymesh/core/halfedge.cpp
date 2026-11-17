@@ -1,9 +1,30 @@
 #include "halfedge.h"
 
+#include <algorithm>
+
 #include "core/vertex.h"
 #include "core/face.h"
 
 namespace tinymesh {
+
+namespace {
+
+double cotangent(const Halfedge *he) {
+    if (he->face()->isHole()) {
+        return 0.0;
+    }
+
+    const Vec3 p0 = he->src()->pos();
+    const Vec3 p1 = he->dst()->pos();
+    const Vec3 p2 = he->next()->dst()->pos();
+    const Vec3 e0 = p0 - p2;
+    const Vec3 e1 = p1 - p2;
+
+    const double denominator = ::length(cross(e0, e1));
+    return dot(e0, e1) / std::max(denominator, 1.0e-6);
+}
+
+}  // anonymous namespace
 
 Halfedge::Halfedge() {
 }
@@ -23,21 +44,7 @@ double Halfedge::length() const {
 }
 
 double Halfedge::cotWeight() const {
-    Vertex *v0 = this->src();
-    Vertex *v1 = this->dst();
-    Vertex *v2 = this->next()->dst();
-    Vertex *v3 = this->rev()->next()->dst();
-    const Vec3 &p0 = v0->pos();
-    const Vec3 &p1 = v1->pos();
-    const Vec3 &p2 = v2->pos();
-    const Vec3 &p3 = v3->pos();
-    const double sin_a = ::length(cross(p0 - p2, p1 - p2));
-    const double cos_a = dot(p0 - p2, p1 - p2);
-    const double cot_a = cos_a / std::max(sin_a, 1.0e-6);
-    const double sin_b = ::length(cross(p0 - p3, p1 - p3));
-    const double cos_b = dot(p0 - p3, p1 - p3);
-    const double cot_b = cos_b / std::max(sin_b, 1.0e-6);
-    return 0.5 * (cot_a + cot_b);
+    return 0.5 * (cotangent(this) + cotangent(rev()));
 }
 
 bool Halfedge::isLocked() const {
