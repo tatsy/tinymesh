@@ -296,7 +296,7 @@ void getCurvatureTensors(const Mesh &mesh, std::vector<EigenMatrix2> &tensors, s
             EigenMatrix2 Mp;
             Mp << ep, fp, fp, gp;
 
-            const double weight = vertex->volonoiArea(it.ptr());
+            const double weight = vertex->voronoiArea(it.ptr());
             M += weight * Mp;
             sumWgt += weight;
         }
@@ -465,7 +465,7 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
             Mp(2) = thirdForm(Mf, new_up, new_vp, new_vp);
             Mp(3) = thirdForm(Mf, new_vp, new_vp, new_vp);
 
-            const double weight = vertex->volonoiArea(it.ptr());
+            const double weight = vertex->voronoiArea(it.ptr());
             M += weight * Mp;
             sumWgt += weight;
         }

@@ -4,8 +4,7 @@ try:
     from .viewer import Viewer
 except ImportError as exc:
     raise ImportError(
-        'Visualization could not be imported. Install the optional dependencies with '
-        '`uv sync --extra viz` or `pip install "tinymesh[viz]"`.'
+        'Visualization could not be imported. Install the optional dependencies with `pip install tinymesh`.'
     ) from exc
 
 

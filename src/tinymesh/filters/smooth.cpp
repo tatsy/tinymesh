@@ -21,7 +21,7 @@ namespace tinymesh {
 
 void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int iterations) {
     for (int it = 0; it < iterations; it++) {
-        // Volonoi tessellation
+        // Voronoi tessellation
         const int nv = (int)mesh.numVertices();
         std::vector<Vec3> centroids(nv);
 
@@ -59,7 +59,7 @@ void smoothLaplacian(Mesh &mesh, double epsilon, bool cotangentWeight, int itera
 
 void smoothTaubin(Mesh &mesh, double shrink, double inflate, int iterations) {
     for (int it = 0; it < iterations * 2; it++) {
-        // Volonoi tessellation
+        // Voronoi tessellation
         const int nv = (int)mesh.numVertices();
         std::vector<Vec3> centroids(nv);
 

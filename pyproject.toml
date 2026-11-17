@@ -6,26 +6,16 @@ license = "MPL-2.0"
 authors = [{ name = "Tatsuya Yatagawa", email = "tatsy.mail@gmail.com" }]
 readme = 'README.md'
 keywords = ['graphics', 'geometry']
-dependencies = ["numpy>=2.0.0", "scipy>=1.15.3"]
 requires-python = ">=3.10,<3.14"
-
-[project.optional-dependencies]
-viz = ["matplotlib>=3.10.9"]
+dependencies = ["numpy>=2.0.0", "scipy>=1.15.3", "matplotlib>=3.10.9"]
 
 [project.urls]
 Repository = "https://github.com/tatsy/tinymesh"
 Homepage = "https://github.com/tatsy/tinymesh"
 
 [dependency-groups]
-dev = [
-  "ty>=0.0.91",
-  "ruff>=0.17.2",
-  "pytest>=9.2.0",
-]
-examples = [
-  "jupyterlab>=4.6.6",
-  "open3d>=0.20.0",
-]
+dev = ["ty>=0.0.91", "ruff>=0.17.2", "pytest>=9.2.0"]
+examples = ["jupyterlab>=4.6.6", "open3d>=0.20.0"]
 
 [build-system]
 requires = ["scikit-build-core>=0.11.4"]
@@ -65,6 +55,7 @@ unfixable = ["F401", "F841"]
 length-sort = true
 lines-after-imports = 2
 split-on-trailing-comma = true
+known-first-party = ["tinymesh"]
 
 [tool.ty.environment]
 python = ".venv"

@@ -213,8 +213,10 @@ void Mesh::construct() {
 
     // Setup halfedge structure
     static const int ngon = 3;
-    std::map<IndexPair, Halfedge *> pairToHalfedge;
-    std::map<uint32_t, uint32_t> vertexDegree;
+    std::unordered_map<IndexPair, Halfedge *, IndexPairHash> pairToHalfedge;
+    std::unordered_map<uint32_t, uint32_t> vertexDegree;
+    pairToHalfedge.reserve(indices_.size());
+    vertexDegree.reserve(vertices_.size());
     for (int i = 0; i < (int)indices_.size(); i += ngon) {
         // Check polygon duplication
         bool isDuplicated = false;
@@ -436,7 +438,7 @@ void Mesh::loadPLY(const std::string &filename) {
     try {
         vert_data = file.request_properties_from_element("vertex", { "x", "y", "z" });
     } catch (std::exception &e) {
-        std::cerr << "tinyply exception: " << e.what() << std::endl;
+        Error("Failed to read PLY vertex data: {}", e.what());
     }
 
     try {
@@ -454,7 +456,7 @@ void Mesh::loadPLY(const std::string &filename) {
     try {
         face_data = file.request_properties_from_element("face", { "vertex_indices" }, 3);
     } catch (std::exception &e) {
-        std::cerr << "tinyply exception: " << e.what() << std::endl;
+        Error("Failed to read PLY face data: {}", e.what());
     }
 
     // Read vertex data
@@ -462,17 +464,65 @@ void Mesh::loadPLY(const std::string &filename) {
 
     // Copy vertex data
     const size_t numVerts = vert_data->count;
-    std::vector<float> raw_vertices(numVerts * 3);
-    std::memcpy(raw_vertices.data(), vert_data->buffer.get(), sizeof(float) * numVerts * 3);
+    std::vector<uint8_t> raw_vertices;
+
+    if (vert_data->t == tinyply::Type::FLOAT32) {
+        raw_vertices.resize(numVerts * 3 * sizeof(float));
+    } else if (vert_data->t == tinyply::Type::FLOAT64) {
+        raw_vertices.resize(numVerts * 3 * sizeof(double));
+    } else {
+        Error("Unsupported vertex data type: {}", (int)vert_data->t);
+    }
+    std::memcpy(raw_vertices.data(), vert_data->buffer.get(), raw_vertices.size());
 
     const size_t numFaces = face_data->count;
-    std::vector<uint32_t> raw_indices(numFaces * 3);
-    std::memcpy(raw_indices.data(), face_data->buffer.get(), sizeof(uint32_t) * numFaces * 3);
+    std::vector<uint8_t> raw_indices;
+    if (face_data->t == tinyply::Type::UINT8) {
+        raw_indices.resize(numFaces * 3 * sizeof(uint8_t));
+    } else if (face_data->t == tinyply::Type::UINT16) {
+        raw_indices.resize(numFaces * 3 * sizeof(uint16_t));
+    } else if (face_data->t == tinyply::Type::INT32 || face_data->t == tinyply::Type::UINT32) {
+        raw_indices.resize(numFaces * 3 * sizeof(uint32_t));
+    } else {
+        Error("Unsupported face data type: {}", (int)face_data->t);
+    }
+    std::memcpy(raw_indices.data(), face_data->buffer.get(), raw_indices.size());
 
     std::unordered_map<Vec3, uint32_t> uniqueVertices;
     vertices_.clear();
-    for (uint32_t i : raw_indices) {
-        const Vec3 pos = Vec3(raw_vertices[i * 3 + 0], raw_vertices[i * 3 + 1], raw_vertices[i * 3 + 2]);
+    for (size_t i = 0; i < numFaces * 3; i++) {
+        uint32_t j = 0;
+        if (face_data->t == tinyply::Type::UINT8) {
+            j = reinterpret_cast<uint8_t *>(raw_indices.data())[i];
+        } else if (face_data->t == tinyply::Type::UINT16) {
+            j = reinterpret_cast<uint16_t *>(raw_indices.data())[i];
+        } else if (face_data->t == tinyply::Type::INT32) {
+            j = reinterpret_cast<int32_t *>(raw_indices.data())[i];
+        } else if (face_data->t == tinyply::Type::UINT32) {
+            j = reinterpret_cast<uint32_t *>(raw_indices.data())[i];
+        } else {
+            Error("Unsupported face data type: {}", (int)face_data->t);
+        }
+
+        if (j >= numVerts) {
+            Error("Vertex index {} is out of range.", j);
+        }
+
+        Vec3 pos;
+        if (vert_data->t == tinyply::Type::FLOAT32) {
+            const float x = reinterpret_cast<float *>(raw_vertices.data())[j * 3 + 0];
+            const float y = reinterpret_cast<float *>(raw_vertices.data())[j * 3 + 1];
+            const float z = reinterpret_cast<float *>(raw_vertices.data())[j * 3 + 2];
+            pos = Vec3(x, y, z);
+        } else if (vert_data->t == tinyply::Type::FLOAT64) {
+            const double x = reinterpret_cast<double *>(raw_vertices.data())[j * 3 + 0];
+            const double y = reinterpret_cast<double *>(raw_vertices.data())[j * 3 + 1];
+            const double z = reinterpret_cast<double *>(raw_vertices.data())[j * 3 + 2];
+            pos = Vec3(x, y, z);
+        } else {
+            Error("Unsupported vertex data type: {}", (int)vert_data->t);
+        }
+
         if (uniqueVertices.count(pos) == 0) {
             uniqueVertices[pos] = static_cast<uint32_t>(vertices_.size());
             vertices_.push_back(std::make_shared<Vertex>(pos));
