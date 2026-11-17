@@ -78,7 +78,7 @@ jobs:
 
       - name: Install wheel for testing
         run: |
-          uv sync --frozen --extra viz --no-install-project
+          uv sync --frozen --no-install-project
           uv pip install --no-deps dist/*.whl
 
       - name: Test
