@@ -21,7 +21,7 @@ TINYMESH_API void smoothLaplacian(Mesh &mesh, double strength = 1.0, bool cotang
 TINYMESH_API void smoothTaubin(Mesh &mesh, double shrink = 0.5, double inflate = 0.53, int iterations = 3);
 
 /**
- * Implicit fairing [Gesbrun et al. 1999]
+ * Implicit fairing [Desbrun et al. 1999]
  */
 TINYMESH_API void implicitFairing(Mesh &mesh, double lambda = 1.0, int iterations = 1);
 

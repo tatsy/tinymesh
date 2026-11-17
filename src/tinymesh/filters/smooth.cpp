@@ -1,5 +1,6 @@
 #include "filters.h"
 
+#include <cmath>
 #include <algorithm>
 #include <unordered_map>
 
@@ -118,14 +119,23 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
         for (int i = 0; i < n_verts; i++) {
             Vertex *v = mesh.vertex(i);
 
+            const Vec3 pos = v->pos();
+            X(i, 0) = pos.x();
+            X(i, 1) = pos.y();
+            X(i, 2) = pos.z();
+
+            if (v->isBoundary() || v->isLocked()) {
+                continue;
+            }
+
             // Compute weights
             double sumW = 0.0;
             std::vector<Triplet> tripletsInColumn;
             for (auto he_it = v->he_begin(); he_it != v->he_end(); ++he_it) {
                 const double W = he_it->cotWeight();
                 tripletsInColumn.emplace_back(i, he_it->dst()->index(), W);
-                if (std::isnan(W) || std::isinf(W)) {
-                    Warn("NaN of inf matrix entry is detedted!");
+                if (!std::isfinite(W)) {
+                    Warn("NaN or inf matrix entry is detected!");
                 }
                 sumW += W;
             }
@@ -134,10 +144,6 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
                 triplets.emplace_back(t.row(), t.col(), t.value() / sumW);
             }
             triplets.emplace_back(i, i, -1.0);
-
-            X(i, 0) = v->pos()[0];
-            X(i, 1) = v->pos()[1];
-            X(i, 2) = v->pos()[2];
         }
 
         // Solve sparse linear system
@@ -158,8 +164,12 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
         Xnext = cg.solve(X);
 
         for (int i = 0; i < n_verts; i++) {
-            const Vec3 newpos = Vec3(Xnext(i, 0), Xnext(i, 1), Xnext(i, 2));
-            mesh.vertex(i)->setPos(newpos);
+            Vertex *v = mesh.vertex(i);
+            if (v->isBoundary() || v->isLocked()) {
+                continue;
+            }
+
+            v->setPos(Vec3(Xnext(i, 0), Xnext(i, 1), Xnext(i, 2)));
         }
     }
 }

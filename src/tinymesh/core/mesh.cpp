@@ -1059,8 +1059,7 @@ bool Mesh::verifyVertex(Vertex *v) const {
     }
 
     Vec3 p = v->pos();
-    if (std::isinf(p[0]) || std::isnan(p[0]) || std::isinf(p[1]) || std::isnan(p[1]) || std::isinf(p[2]) ||
-        std::isnan(p[2])) {
+    if (!std::isfinite(p[0]) || !std::isfinite(p[1]) || !std::isfinite(p[2])) {
         Warn("Inf of NaN found at v[{}]: ({}, {}, {})\n", v->index(), p[0], p[1], p[2]);
         success = false;
     }
