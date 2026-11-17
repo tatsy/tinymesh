@@ -10,6 +10,7 @@ include(Macros)
 option(TINYMESH_WITH_OPENMP "Use OpenMP or not" ON)
 option(TINYMESH_BUILD_TESTS "Build unit tests." OFF)
 option(TINYMESH_BUILD_EXAMPLES "Build examples." OFF)
+option(TINYMESH_BUILD_BENCHMARKS "Build native benchmarks." OFF)
 option(TINYMESH_BUILD_SHARED "Build shared library." OFF)
 option(TINYMESH_BUILD_PYTHON "Build the Python module." OFF)
 
@@ -64,8 +65,8 @@ endif()
 # Traverse subdirectories
 # ----------
 if (TINYMESH_BUILD_PYTHON)
-  if (TINYMESH_BUILD_TESTS OR TINYMESH_BUILD_EXAMPLES)
-    message(FATAL_ERROR "Build Python bindings separately from C++ tests and examples.")
+  if (TINYMESH_BUILD_TESTS OR TINYMESH_BUILD_EXAMPLES OR TINYMESH_BUILD_BENCHMARKS)
+    message(FATAL_ERROR "Build Python bindings separately from C++ tests, examples, and benchmarks.")
   endif()
 
   find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
@@ -82,4 +83,8 @@ endif()
 if(TINYMESH_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(TINYMESH_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()

@@ -2,6 +2,7 @@
 .idea/*
 .vscode/*
 build/*
+benchmarks/results/
 Debug/*
 Release/*
 cmake-build-debug/*
