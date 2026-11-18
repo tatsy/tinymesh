@@ -131,18 +131,29 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
 
             // Compute weights
             double sumW = 0.0;
-            std::vector<Triplet> tripletsInColumn;
+            std::vector<Triplet> rowWeights;
             for (auto he_it = v->he_begin(); he_it != v->he_end(); ++he_it) {
-                const double W = he_it->cotWeight();
-                tripletsInColumn.emplace_back(i, he_it->dst()->index(), W);
-                if (!std::isfinite(W)) {
-                    Warn("NaN or inf matrix entry is detected!");
+                const double w = he_it->cotWeight();
+                if (!std::isfinite(w)) {
+                    Warn("Implicit fairing: non-finite cotangent weight at vertex {}.", i);
+                    return;
                 }
-                sumW += W;
+                rowWeights.emplace_back(i, he_it->dst()->index(), w);
+                sumW += w;
             }
 
-            for (const auto &t : tripletsInColumn) {
-                triplets.emplace_back(t.row(), t.col(), t.value() / sumW);
+            if (!std::isfinite(sumW) || sumW == 0.0) {
+                Warn("Implicit fairing: invalid cotangent weight sum at vertex {}.", i);
+                return;
+            }
+
+            for (const auto &t : rowWeights) {
+                const double w = t.value() / sumW;
+                if (!std::isfinite(w)) {
+                    Warn("Implicit fairing: non-finite normalized weight at vertex {}.", i);
+                    return;
+                }
+                triplets.emplace_back(t.row(), t.col(), w);
             }
             triplets.emplace_back(i, i, -1.0);
         }
@@ -156,13 +167,20 @@ void implicitFairing(Mesh &mesh, double epsilon, int iterations) {
 
         SparseMatrix A = I - epsilon * K;
 
-        Eigen::BiCGSTAB<SparseMatrix> cg;
-        cg.setTolerance(1.0e-6);
-        cg.setMaxIterations(50);
-        cg.compute(A);
+        Eigen::BiCGSTAB<SparseMatrix> solver;
+        solver.setTolerance(1.0e-6);
+        solver.setMaxIterations(50);
+        solver.compute(A);
+        if (solver.info() != Eigen::Success) {
+            Warn("Implicit fairing: solver setup failed at iteration {}.", it + 1);
+            return;
+        }
 
-        MatrixNx3 Xnext(n_verts, 3);
-        Xnext = cg.solve(X);
+        const MatrixNx3 Xnext = solver.solve(X);
+        if (solver.info() != Eigen::Success) {
+            Warn("Implicit fairing: solver failed at iteration {}.", it + 1);
+            return;
+        }
 
         for (int i = 0; i < n_verts; i++) {
             Vertex *v = mesh.vertex(i);

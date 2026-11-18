@@ -18,6 +18,9 @@ protected:
     }
     virtual ~TinyMeshBaseTest() {
     }
+
+protected:
+    Mesh mesh;
 };
 
 class TinyMeshBaseTestWithParam : public TinyMeshBaseTest, public ::testing::WithParamInterface<std::string> {
@@ -33,7 +36,6 @@ public:
 
 protected:
     std::string filename;
-    Mesh mesh;
 };
 
 #endif  // TINYMESH_TEST_UTILS_H
