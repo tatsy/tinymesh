@@ -6,9 +6,9 @@ matplotlib = pytest.importorskip('matplotlib')
 matplotlib.use('Agg', force=True)
 
 import matplotlib.pyplot as plt  # noqa: E402
-from tinymesh.visualization import Viewer  # noqa: E402
 
 from tinymesh import Mesh  # noqa: E402
+from tinymesh.visualization import Viewer  # noqa: E402
 
 
 def test_viewer_renders_and_saves_mesh(tmp_path, monkeypatch):
