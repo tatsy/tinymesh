@@ -545,7 +545,7 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
 
         const double c1 = e1 * dot(v2->pos() - v1->pos(), t1);
         const double c2 = e2 * dot(v1->pos() - v2->pos(), t2);
-        if (isRidge && c1 > 0.0 && c2 < 0.0) {
+        if (isRidge && c1 > 0.0 && c2 > 0.0) {
             return RIDGE;
         }
 

@@ -65,7 +65,7 @@ cd tinymesh
 uv sync
 ```
 
-The Python package exposes the C++ API as `tinymesh` and the optional viewer as
+The Python package exposes the C++ API as `tinymesh` and the viewer as
 `from tinymesh.visualization import Viewer`.
 
 ## Run examples
