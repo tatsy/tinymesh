@@ -377,19 +377,18 @@ getPrincipalCurvaturesWithDerivatives(const Mesh &mesh, bool smoothTensors) {
 
         std::array<EigenVector3, 3> Mfs;
         for (int k = 0; k < 3; k++) {
-            const Vec3 &up = ts_max[ids[k]];
-            const Vec3 &vp = ts_min[ids[k]];
-            const Vec3 &np = std::get<2>(frames[ids[k]]);
+            const int id = ids[k];
+            const auto &[up, vp, np] = frames[id];
             const EigenMatrix3 rot = rotationFromTwoVectors(nf, np);
 
-            EigenVector2 new_uf, new_vf;
             const Vec3 rot_uf = rot * uf;
             const Vec3 rot_vf = rot * vf;
+
+            EigenVector2 new_uf, new_vf;
             new_uf << dot(rot_uf, up), dot(rot_uf, vp);
             new_vf << dot(rot_vf, up), dot(rot_vf, vp);
 
-            EigenMatrix2 M;
-            M << ks_max[ids[k]], 0.0, 0.0, ks_min[ids[k]];
+            const EigenMatrix2 &M = tensors[id];
             Mfs[k] << secondForm(M, new_uf, new_uf),  //
                 secondForm(M, new_uf, new_vf),        //
                 secondForm(M, new_vf, new_vf);
@@ -509,51 +508,49 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
     const int VALLEY = 1;
     const int RIDGE = -1;
 
-    auto checkRV = [&](const Vertex *v1, const Vertex *v2) -> int {
+    auto checkRidgeValley = [&](const Vertex *v1, const Vertex *v2) -> int {
         const int i1 = v1->index();
         const int i2 = v2->index();
-        const Vec3 p1 = v1->pos();
-        const Vec3 p2 = v2->pos();
-
-        const auto t1 = tv_max.row(i1);
-        Vec3 t1_max(t1(0), t1(1), t1(2));
-        const auto t2 = tv_max.row(i2);
-        Vec3 t2_max(t2(0), t2(1), t2(2));
-
         const double k1_max = kv_max(i1);
         const double k1_min = kv_min(i1);
         const double k2_max = kv_max(i2);
         const double k2_min = kv_min(i2);
 
-        double e1_max = ev_max(i1);
-        double e2_max = ev_max(i2);
-        if (dot(t1_max, t2_max) < 0.0) {
-            t2_max = -1.0 * t2_max;
-            e2_max = -1.0 * e2_max;
-        }
-
-        // Ignore umbilical points
         if (std::abs(k1_max - k1_min) < 1.0e-2 || std::abs(k2_max - k2_min) < 1.0e-2) {
             return NONE;
         }
 
-        if (e1_max * e2_max >= 0.0) {
+        const bool isRidge = k1_max > std::abs(k1_min) && k2_max > std::abs(k2_min);
+        const bool isValley = k1_min < -std::abs(k1_max) && k2_min < -std::abs(k2_max);
+
+        if (!isRidge && !isValley) {
             return NONE;
         }
 
-        const double c1 = e1_max * dot(p2 - p1, t1_max);
-        const double c2 = e2_max * dot(p1 - p2, t2_max);
+        const EigenMatrix &directions = isRidge ? tv_max : tv_min;
+        const EigenVector &derivatives = isRidge ? ev_max : ev_min;
+        const Vec3 t1(directions(i1, 0), directions(i1, 1), directions(i1, 2));
+        Vec3 t2(directions(i2, 0), directions(i2, 1), directions(i2, 2));
+        const double e1 = derivatives(i1);
+        double e2 = derivatives(i2);
 
-        if (k1_max > std::abs(k1_min) && k2_max > std::abs(k2_min)) {
-            if (c1 > 0.0 && c2 > 0.0) {
-                return RIDGE;
-            }
+        if (dot(t1, t2) < 0.0) {
+            t2 = -t2;
+            e2 = -e2;
         }
 
-        if (k1_max < std::abs(k1_min) && k2_max < std::abs(k2_min)) {
-            if (c1 < 0.0 && c2 < 0.0) {
-                return VALLEY;
-            }
+        if (e1 * e2 >= 0.0) {
+            return NONE;
+        }
+
+        const double c1 = e1 * dot(v2->pos() - v1->pos(), t1);
+        const double c2 = e2 * dot(v1->pos() - v2->pos(), t2);
+        if (isRidge && c1 > 0.0 && c2 < 0.0) {
+            return RIDGE;
+        }
+
+        if (isValley && c1 < 0.0 && c2 < 0.0) {
+            return VALLEY;
         }
 
         return NONE;
@@ -563,15 +560,19 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
     std::vector<int> faceRVFlags(mesh.numFaces());
     for (size_t i = 0; i < mesh.numFaces(); i++) {
         const Face *f = mesh.face(i);
+        if (f->isHole()) {
+            continue;
+        }
+
         std::vector<const Vertex *> vs;
         for (auto it = f->v_begin(); it != f->v_end(); ++it) {
             vs.push_back(it.ptr());
         }
         Assertion(vs.size() == 3, "Non-triangle face detected!");
 
-        const int rv0 = checkRV(vs[0], vs[1]);
-        const int rv1 = checkRV(vs[1], vs[2]);
-        const int rv2 = checkRV(vs[2], vs[0]);
+        const int rv0 = checkRidgeValley(vs[0], vs[1]);
+        const int rv1 = checkRidgeValley(vs[1], vs[2]);
+        const int rv2 = checkRidgeValley(vs[2], vs[0]);
         if (rv0 != NONE || rv1 != NONE || rv2 != NONE) {
             if (rv0 >= 0 && rv1 >= 0 && rv2 >= 0) {
                 faceRVFlags[i] = VALLEY;
@@ -589,6 +590,10 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
     ridgeValleyFlags.setZero();
     for (size_t i = 0; i < mesh.numFaces(); i++) {
         const Face *f = mesh.face(i);
+        if (f->isHole()) {
+            continue;
+        }
+
         if (faceRVFlags[f->index()] != NONE) {
             continue;
         }
