@@ -746,18 +746,22 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
 
         EigenMatrix bb = -SS * xxRV;
         Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
-        EigenMatrix xx = solver.solve(bb);
-        if (solver.info() != Eigen::Success || !xx.allFinite()) {
-            Warn("Solving ridge/valley direction field failed!");
+        if (solver.info() != Eigen::Success) {
+            Warn("Solving ridge/valley direction field: factorization failed!");
         } else {
-            for (auto it : uniqueNonRV) {
-                const int i = it.second;
-                Vec3 v = Vec3(xx(i, 0), xx(i, 1), xx(i, 2));
-                const double norm = length(v);
-                if (std::isfinite(norm) && norm > 0.0) {
-                    v /= norm;
+            EigenMatrix xx = solver.solve(bb);
+            if (!xx.allFinite()) {
+                Warn("Solving ridge/valley direction field: non-finite solution!");
+            } else {
+                for (auto it : uniqueNonRV) {
+                    const int i = it.second;
+                    Vec3 v = Vec3(xx(i, 0), xx(i, 1), xx(i, 2));
+                    const double norm = length(v);
+                    if (std::isfinite(norm) && norm > 0.0) {
+                        v /= norm;
+                        rvDirections[it.first] = v;
+                    }
                 }
-                rvDirections[it.first] = v;
             }
         }
     }
