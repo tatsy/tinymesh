@@ -722,47 +722,44 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
         }
     }
 
-    // Skip solving if there are no ridge/valley vertices
-    if (countNonRV == 0) {
-        EigenMatrix ret(mesh.numVertices(), 3);
-        ret.setZero();
-        return std::make_tuple(ret, ridgeValleyFlags);
-    }
+    // Interpolate the ridge/valley directions to the non-ridge-valley vertices
+    if (countNonRV != 0) {
+        // Solve the linear system
+        EigenSparseMatrix LL(countNonRV, countNonRV);
+        LL.setFromTriplets(tripNonRV.begin(), tripNonRV.end());
+        EigenSparseMatrix SS(countNonRV, countRV);
+        SS.setFromTriplets(tripRV.begin(), tripRV.end());
 
-    // Solve the linear system
-    EigenSparseMatrix LL(countNonRV, countNonRV);
-    LL.setFromTriplets(tripNonRV.begin(), tripNonRV.end());
-    EigenSparseMatrix SS(countNonRV, countRV);
-    SS.setFromTriplets(tripRV.begin(), tripRV.end());
+        EigenMatrix bbNonRV(countNonRV, 3);
+        bbNonRV.setZero();
+        for (auto it : uniqueNonRV) {
+            const Vec3 &v = rvDirections[it.first];
+            bbNonRV.row(it.second) << v.x(), v.y(), v.z();
+        }
 
-    EigenMatrix bbNonRV(countNonRV, 3);
-    bbNonRV.setZero();
-    for (auto it : uniqueNonRV) {
-        const Vec3 &v = rvDirections[it.first];
-        bbNonRV.row(it.second) << v.x(), v.y(), v.z();
-    }
+        EigenMatrix xxRV(countRV, 3);
+        xxRV.setZero();
+        for (auto it : uniqueRV) {
+            const Vec3 &v = rvDirections[it.first];
+            xxRV.row(it.second) << v.x(), v.y(), v.z();
+        }
 
-    EigenMatrix xxRV(countRV, 3);
-    xxRV.setZero();
-    for (auto it : uniqueRV) {
-        const Vec3 &v = rvDirections[it.first];
-        xxRV.row(it.second) << v.x(), v.y(), v.z();
-    }
-
-    EigenMatrix bb = -SS * xxRV;
-    Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
-    EigenMatrix xx = solver.solve(bb);
-    if (solver.info() != Eigen::Success || !xx.allFinite()) {
-        Warn("Solving ridge/valley direction field failed!");
-
-        EigenMatrix ret(mesh.numVertices(), 3);
-        ret.setZero();
-        return std::make_tuple(ret, ridgeValleyFlags);
-    }
-
-    for (auto it : uniqueNonRV) {
-        const int i = it.second;
-        rvDirections[it.first] = normalize(Vec3(xx(i, 0), xx(i, 1), xx(i, 2)));
+        EigenMatrix bb = -SS * xxRV;
+        Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
+        EigenMatrix xx = solver.solve(bb);
+        if (solver.info() != Eigen::Success || !xx.allFinite()) {
+            Warn("Solving ridge/valley direction field failed!");
+        } else {
+            for (auto it : uniqueNonRV) {
+                const int i = it.second;
+                Vec3 v = Vec3(xx(i, 0), xx(i, 1), xx(i, 2));
+                const double norm = length(v);
+                if (std::isfinite(norm) && norm > 0.0) {
+                    v /= norm;
+                }
+                rvDirections[it.first] = v;
+            }
+        }
     }
 
     // Convert std::vector to EigenMatrix
