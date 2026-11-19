@@ -1,5 +1,7 @@
 #include "ops.h"
 
+#include <queue>
+
 #include <Eigen/Eigenvalues>
 #include <Eigen/Cholesky>
 #include <Eigen/SparseCholesky>
@@ -653,7 +655,31 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
         }
     }
 
-    // Solve Laplace equation
+    // Only extend directions in components with a prescribed direction
+    std::vector<uint8_t> reachable(mesh.numVertices(), 0);
+    std::queue<int> frontier;
+    for (size_t i = 0; i < ridgeValleyFlags.size(); ++i) {
+        if (ridgeValleyFlags(i) != 0.0) {
+            reachable[i] = 1;
+            frontier.push(static_cast<int>(i));
+        }
+    }
+
+    while (!frontier.empty()) {
+        const int head = frontier.front();
+        frontier.pop();
+
+        const Vertex *v = mesh.vertex(head);
+        for (auto it = v->v_begin(); it != v->v_end(); ++it) {
+            const int j = it->index();
+            if (!reachable[j]) {
+                reachable[j] = 1;
+                frontier.push(j);
+            }
+        }
+    }
+
+    // Construct the Laplacian
     std::vector<EigenTriplet> tripNonRV;
     std::vector<EigenTriplet> tripRV;
     std::unordered_map<uint32_t, uint32_t> uniqueNonRV;
@@ -662,7 +688,7 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
     int countRV = 0;
     for (size_t i = 0; i < mesh.numVertices(); i++) {
         const Vertex *v = mesh.vertex(i);
-        if (ridgeValleyFlags(i) == 0.0) {
+        if (reachable[i] != 0 && ridgeValleyFlags(i) == 0.0) {
             // non-ridge-valley vertex
             if (uniqueNonRV.count(i) == 0) {
                 uniqueNonRV[i] = countNonRV;
@@ -696,6 +722,14 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
         }
     }
 
+    // Skip solving if there are no ridge/valley vertices
+    if (countNonRV == 0) {
+        EigenMatrix ret(mesh.numVertices(), 3);
+        ret.setZero();
+        return std::make_tuple(ret, ridgeValleyFlags);
+    }
+
+    // Solve the linear system
     EigenSparseMatrix LL(countNonRV, countNonRV);
     LL.setFromTriplets(tripNonRV.begin(), tripNonRV.end());
     EigenSparseMatrix SS(countNonRV, countRV);
@@ -718,6 +752,13 @@ std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &me
     EigenMatrix bb = -SS * xxRV;
     Eigen::SimplicialLDLT<EigenSparseMatrix> solver(LL);
     EigenMatrix xx = solver.solve(bb);
+    if (solver.info() != Eigen::Success || !xx.allFinite()) {
+        Warn("Solving ridge/valley direction field failed!");
+
+        EigenMatrix ret(mesh.numVertices(), 3);
+        ret.setZero();
+        return std::make_tuple(ret, ridgeValleyFlags);
+    }
 
     for (auto it : uniqueNonRV) {
         const int i = it.second;

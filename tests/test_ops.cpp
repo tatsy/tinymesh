@@ -50,6 +50,18 @@ TEST_P(MeshOpsTest, GetFeatureLineField) {
     ASSERT_NO_FATAL_FAILURE(getFeatureLineField(mesh));
 }
 
+TEST(FeatureLineFieldTest, FlatTriangleHasNoDirections) {
+    const Mesh mesh({ Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0) }, { 0, 1, 2 });
+
+    const auto [field, flags] = getFeatureLineFieldWithFlags(mesh);
+    ASSERT_EQ(field.rows(), 3);
+    ASSERT_EQ(field.cols(), 3);
+    ASSERT_EQ(flags.size(), 3);
+    EXPECT_TRUE(field.allFinite());
+    EXPECT_TRUE(field.isZero(0.0));
+    EXPECT_TRUE(flags.isZero(0.0));
+}
+
 static std::vector<std::string> filenames = {
     "torus.obj",
     "fandisk.ply",
