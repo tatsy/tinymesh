@@ -13,6 +13,7 @@
 #include "vertex.h"
 #include "face.h"
 #include "halfedge.h"
+#include "constants.h"
 
 namespace tinymesh {
 
@@ -120,8 +121,8 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
 
             const Vec3 v01rev = he01->rev()->next()->dst()->pos();
             const Vec3 v12rev = he12->rev()->next()->dst()->pos();
-            const double a01 = Pi - dihedral(v2, v0, v1, v01rev);
-            const double a12 = Pi - dihedral(v0, v1, v2, v12rev);
+            const double a01 = kPi - dihedral(v2, v0, v1, v01rev);
+            const double a12 = kPi - dihedral(v0, v1, v2, v12rev);
             Wangle(i, i + 2) = std::max(a01, a12);
 
             O(i, i + 2) = i + 1;
@@ -154,8 +155,8 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
                     v12rev = boundary[O(m, k)]->pos();
                 }
 
-                const double a01 = Pi - dihedral(v2, v0, v1, v01rev);
-                const double a12 = Pi - dihedral(v0, v1, v2, v12rev);
+                const double a01 = kPi - dihedral(v2, v0, v1, v01rev);
+                const double a12 = kPi - dihedral(v0, v1, v2, v12rev);
                 const double D = std::max(a01, a12);
                 const double WangleNew = std::max(D, std::max(Wangle(i, m), Wangle(m, k)));
 
@@ -344,7 +345,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             const double inner = dot(e1, e2);
             double theta = std::atan2(sign * length(outer), inner);
             if (theta < 0.0) {
-                theta = theta + 2.0 * Pi;
+                theta = theta + kTwoPi;
             }
 
             if (theta < minAngle) {
@@ -355,7 +356,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
 
         // Put new triangles
         std::vector<Face *> newFaces;
-        if (minAngle <= Pi * (75.0 / 180.0)) {
+        if (minAngle <= kPi * (75.0 / 180.0)) {
             const int prev = (minIndex - 1 + N) % N;
             const int next = (minIndex + 1) % N;
 
@@ -377,7 +378,7 @@ void Mesh::holeFillAdvancingFront_(Face *face) {
             face->halfedge_ = new_he;
             new_he->face_ = face;
 
-        } else if (minAngle <= Pi * (135.0 / 180.0)) {
+        } else if (minAngle <= kPi * (135.0 / 180.0)) {
             const int prev = (minIndex - 1 + N) % N;
             const int next = (minIndex + 1) % N;
 

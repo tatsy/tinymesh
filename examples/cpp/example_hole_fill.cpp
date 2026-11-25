@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < mesh.numFaces(); i++) {
             tms::Face *f = mesh.face(i);
             if (f->isHole()) {
-                tms::holeFillMinDihedral(mesh, f, Pi / 6.0);
+                tms::holeFillMinDihedral(mesh, f, tms::kPi / 6.0);
             }
         }
         const std::string outfile = (dirpath / fs::path((basename + "_fill_minDA" + extension).c_str())).string();

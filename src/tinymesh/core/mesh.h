@@ -9,6 +9,7 @@
 #include <vector>
 #include <set>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -16,6 +17,7 @@
 #include "core/vec.h"
 #include "core/utils.h"
 #include "core/debug.h"
+#include "core/constants.h"
 
 namespace tinymesh {
 
@@ -45,7 +47,7 @@ public:
 
     bool flipHE(Halfedge *he);
     bool splitHE(Halfedge *he);
-    bool collapseHE(Halfedge *he);
+    std::optional<Vertex *> collapseHE(Halfedge *he, std::optional<Vec3> targetPos = std::nullopt);
     bool collapseFace(Face *f);
     void fillHoles();
 
@@ -100,7 +102,7 @@ private:
     Face *addNewTriangle(const std::vector<Vertex *> &boundary, const std::tuple<uint32_t, uint32_t, uint32_t> &tri,
                          std::unordered_map<IndexPair, Halfedge *, IndexPairHash> &pair2he,
                          std::unordered_map<Halfedge *, IndexPair> &he2pair);
-    void holeFillMinDihedral_(Face *face, double dihedralBound = Pi);
+    void holeFillMinDihedral_(Face *face, double dihedralBound = kPi);
     void holeFillAdvancingFront_(Face *face);
 
     // Private parameters

@@ -6,7 +6,7 @@
 
 #include "core/vec.h"
 #include "core/debug.h"
-#include "core/openmp.h"
+#include "core/constants.h"
 #include "core/mesh.h"
 #include "core/vertex.h"
 #include "core/halfedge.h"
@@ -14,6 +14,27 @@
 #include "filters/filters.h"
 
 namespace tinymesh {
+
+namespace {
+
+struct ScopedLock {
+    std::vector<Vertex *> vertices;
+
+    void add(Vertex *v) {
+        if (!v->isLocked()) {
+            v->lock();
+            vertices.push_back(v);
+        }
+    }
+
+    ~ScopedLock() {
+        for (Vertex *v : vertices) {
+            v->unlock();
+        }
+    }
+};
+
+}  // anonymous namespace
 
 void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double keepAngleLessThan, int iterations,
                       bool verbose) {
@@ -38,6 +59,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
     Lvar = Lvar / count - Lavg * Lavg;
 
     // Check whether each vertex is on feature line
+    ScopedLock locks;
     for (int i = 0; i < (int)mesh.numVertices(); i++) {
         Vertex *v = mesh.vertex(i);
         std::vector<Vec3> neighbors;
@@ -46,7 +68,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         }
 
         const auto nn = static_cast<int>(neighbors.size());
-        double minDihed = Pi;
+        double minDihed = kPi;
         for (int j = 0; j < nn; j++) {
             const int k = (j + 1) % nn;
             const int l = (j - 1 + nn) % nn;
@@ -60,7 +82,7 @@ void remeshTriangular(Mesh &mesh, double shortLength, double longLength, double 
         }
 
         if (minDihed < keepAngleLessThan) {
-            v->lock();
+            locks.add(v);
         }
     }
 

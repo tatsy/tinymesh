@@ -757,7 +757,7 @@ bool Mesh::splitHE(Halfedge *he) {
     return true;
 }
 
-bool Mesh::collapseHE(Halfedge *he) {
+std::optional<Vertex *> Mesh::collapseHE(Halfedge *he, std::optional<Vec3> targetPos) {
     /*
      *  Collapse halfedge v0->v2.
      *         v1
@@ -782,7 +782,7 @@ bool Mesh::collapseHE(Halfedge *he) {
 
     // Skip halfedge at the boundary
     if (he->face()->isBoundary() || he->rev()->face()->isBoundary()) {
-        return false;
+        return std::nullopt;
     }
 
     // Check degrees of end points
@@ -790,15 +790,17 @@ bool Mesh::collapseHE(Halfedge *he) {
     Vertex *v1 = he->prev()->src();
     Vertex *v2 = rev->src();
     Vertex *v3 = rev->prev()->src();
-
     Assertion(v0->index_ < (int)vertices_.size(), "Daemon vertex detected!");
     Assertion(v1->index_ < (int)vertices_.size(), "Daemon vertex detected!");
     Assertion(v2->index_ < (int)vertices_.size(), "Daemon vertex detected!");
     Assertion(v3->index_ < (int)vertices_.size(), "Daemon vertex detected!");
 
     if (v0->degree() <= 3 || v1->degree() <= 4 || v2->degree() <= 3 || v3->degree() <= 4) {
-        return false;
+        return std::nullopt;
     }
+
+    // Target position
+    const Vec3 newPos = targetPos.value_or(v0->pos());
 
     // Collect neighboring vertices of the one to be removed
     std::vector<Vertex *> neighbors;
@@ -820,34 +822,25 @@ bool Mesh::collapseHE(Halfedge *he) {
     }
 
     if (numUnion != 2) {
-        return false;
+        return std::nullopt;
     }
 
-    // Check unsafe collapse (face flip)
-    Vec3 norm(0.0);
-    for (size_t i = 0; i < neighbors.size(); i++) {
-        const size_t j = (i + 1) % neighbors.size();
-        const Vec3 e1 = neighbors[i]->pos() - v2->pos();
-        const Vec3 e2 = neighbors[j]->pos() - v2->pos();
-        norm += cross(e1, e2);
-    }
+    // Check a face remaining after collapse
+    for (const Vertex *v : { v0, v2 }) {
+        for (auto it = v->he_begin(); it != v->he_end(); ++it) {
+            const Face *f = it->face();
+            if (f == he->face() || f == rev->face() || f->isHole()) {
+                continue;
+            }
 
-    // Degenerated face if norm is zero-length
-    if (length(norm) == 0.0) {
-        return false;
-    }
-    norm = normalize(norm);
-
-    double sign = 0.0;
-    for (size_t i = 0; i < neighbors.size(); i++) {
-        const size_t j = (i + 1) % neighbors.size();
-        const Vec3 e1 = neighbors[i]->pos() - v0->pos();
-        const Vec3 e2 = neighbors[j]->pos() - v0->pos();
-        const double s = dot(norm, cross(e1, e2));
-        if (sign * s < 0.0) {
-            return false;
+            const Vec3 a = it->dst()->pos();
+            const Vec3 b = it->next()->dst()->pos();
+            const Vec3 p = v->pos();
+            const double alignment = dot(cross(a - p, b - p), cross(a - newPos, b - newPos));
+            if (!std::isfinite(alignment) || alignment <= 0.0) {
+                return std::nullopt;
+            }
         }
-        sign = s;
     }
 
     // Update origins of all outward halfedges
@@ -904,8 +897,9 @@ bool Mesh::collapseHE(Halfedge *he) {
 
     // Remove vertices
     removeVertex(v_remove);
+    v_remain->setPos(newPos);
 
-    return true;
+    return v_remain;
 }
 
 bool Mesh::collapseFace(Face *f) {
@@ -917,18 +911,11 @@ bool Mesh::collapseFace(Face *f) {
 
     Halfedge *he1 = hes[0];
     Halfedge *he2 = he1->next_->rev_;
-    bool ret = collapseHE(he1);
+    const bool first = collapseHE(he1).has_value();
     Assertion(he2->index() >= 0 && he2->index() < numHalfedges(), "Error!!");
+    const bool second = collapseHE(he2).has_value();
 
-    ret &= collapseHE(he2);
-
-    return ret;
-
-    // if (!collapseHE(he1) || !collapseHE(he2)) {
-    //     return false;
-    // }
-
-    // return true;
+    return first && second;
 }
 
 bool Mesh::flipHE(Halfedge *he) {

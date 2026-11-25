@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/debug.h"
+#include "core/constants.h"
 #include "core/face.h"
 #include "core/halfedge.h"
 
@@ -141,7 +142,7 @@ double Vertex::K() const {
         sumAngles += std::atan2(length(cross(e0, e1)), dot(e0, e1));
     }
 
-    return (2.0 * Pi - sumAngles) / voronoiArea();
+    return (kTwoPi - sumAngles) / voronoiArea();
 }
 
 double Vertex::H() const {

@@ -5,6 +5,7 @@
 #include "core/debug.h"
 #include "core/vertex.h"
 #include "core/halfedge.h"
+#include "core/constants.h"
 
 namespace tinymesh {
 
@@ -64,7 +65,7 @@ void getMeshLaplacianBelkin08(const Mesh &mesh, EigenSparseMatrix &L) {
             Vertex *u = it->dst();
             const double h = avgEdgeLength;
             const double norm = length(v->pos() - u->pos());
-            const double weight = std::exp(-norm * norm / (4 * h)) / (4.0 * Pi * h);
+            const double weight = std::exp(-norm * norm / (4 * h)) / (kFourPi * h);
             const int j = u->index();
             triplets.emplace_back(i, j, -weight);
             sumWgt += weight;

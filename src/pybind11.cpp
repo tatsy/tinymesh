@@ -149,8 +149,8 @@ PYBIND11_MODULE(_core, m) {
     /*
      * Hole filling 
      */
-    m.def("hole_fill_min_dihedral", &holeFillMinDihedral, "Max-area hole filling", py::arg("mesh"), py::arg("face"),
-          py::arg("dihedral_bound") = Pi);
+    m.def("hole_fill_min_dihedral", &holeFillMinDihedral, "Minimum dihedral angle hole filling", py::arg("mesh"),
+          py::arg("face"), py::arg("dihedral_bound") = kPi);
     m.def("hole_fill_advancing_front", &holeFillAdvancingFront, "Advancing front hole filling", py::arg("mesh"),
           py::arg("face"));
     m.def("hole_fill_context_coherent", &holeFillContextCoherent, "Context-based coherent surface completion",

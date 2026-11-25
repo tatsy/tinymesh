@@ -123,17 +123,9 @@ void smoothingTensors(std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame
 }  // anonymous namespace
 
 EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTimes) {
-    Assertion(K < L.rows(), "Eigenvalues less than matrix size can only be requested!");
+    Assertion(2 <= K && K < L.rows(), "Eigenvalues less than matrix size can only be requested!");
+    Assertion(nTimes >= 1, "Number of time steps must be at least 1!");
     const int ncv = std::min(K * 8, (int)L.rows());
-
-    // Spectra::SparseSymMatProd<FloatType> op(L);
-    // Spectra::SymEigsSolver<Spectra::SparseSymMatProd<FloatType>> eigs(op, K, ncv);
-    // eigs.init();
-
-    // eigs.compute(Spectra::SortRule::SmallestMagn, 200, 1.0e-4, Spectra::SortRule::SmallestMagn);
-    // if (eigs.info() != Spectra::CompInfo::Successful) {
-    //     Error("Eigen decomposition failed!");
-    // }
 
     Spectra::SparseSymShiftSolve<FloatType> op(L);
     Spectra::SymEigsShiftSolver<Spectra::SparseSymShiftSolve<FloatType>> eigs(op, K, ncv, -1.0e-8);
@@ -151,7 +143,8 @@ EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTime
 
     const double log_t_min = std::log(t_min);
     const double log_t_max = std::log(t_max);
-    const double inc = (log_t_max - log_t_min) / (nTimes - 1);
+
+    const double inc = nTimes > 1 ? (log_t_max - log_t_min) / (nTimes - 1) : 0.0;
     EigenVector times(nTimes);
     for (int i = 0; i < nTimes; i++) {
         times(i) = std::exp(log_t_min + i * inc);
@@ -499,12 +492,7 @@ EigenMatrix getFeatureLineField(const Mesh &mesh, bool smoothTensors) {
 
 std::tuple<EigenMatrix, EigenVector> getFeatureLineFieldWithFlags(const Mesh &mesh, bool smoothTensors) {
     const auto cuv = getPrincipalCurvaturesWithDerivatives(mesh, smoothTensors);
-    const EigenVector kv_max = std::get<0>(cuv);
-    const EigenVector kv_min = std::get<1>(cuv);
-    const EigenVector ev_max = std::get<2>(cuv);
-    const EigenVector ev_min = std::get<3>(cuv);
-    const EigenMatrix tv_max = std::get<4>(cuv);
-    const EigenMatrix tv_min = std::get<5>(cuv);
+    const auto [kv_max, kv_min, ev_max, ev_min, tv_max, tv_min] = cuv;
 
     const int NONE = 0;
     const int VALLEY = 1;

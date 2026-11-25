@@ -129,7 +129,7 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
     std::vector<double> mus = { 0.0, 0.5 * maxK, maxK };
     std::vector<double> vars = { 1.0, 1.0, 1.0 };
 
-    auto gauss = [](double x, double v) -> double { return std::exp(-0.5 * x * x / v) / std::sqrt(2.0 * Pi * v); };
+    auto gauss = [](double x, double v) -> double { return std::exp(-0.5 * x * x / v) / std::sqrt(kTwoPi * v); };
 
     for (int kIter = 0; kIter < 20; kIter++) {
         // E step
@@ -548,7 +548,7 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
                     const Vec3 vr = it->rev()->next()->dst()->pos();
                     const double al = angle(v0, vl, v1);
                     const double ar = angle(v0, vr, v1);
-                    if (al + ar > Pi) {
+                    if (al + ar > kPi) {
                         if (mesh.flipHE(it.ptr())) {
                             isRepaired = true;
                             update = true;
@@ -576,7 +576,7 @@ void holeFillContextCoherent(Mesh &mesh, int maxiters) {
                     const Vec3 vr = it->rev()->next()->dst()->pos();
                     const double al = angle(v0, vl, v1);
                     const double ar = angle(v0, vr, v1);
-                    if (al < Pi / 10.0 || ar < Pi / 10.0) {
+                    if (al < 0.1 * kPi || ar < 0.1 * kPi) {
                         if (mesh.collapseHE(it.ptr())) {
                             isRepaired = true;
                             update = true;

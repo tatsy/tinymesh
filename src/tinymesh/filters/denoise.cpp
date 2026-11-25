@@ -8,6 +8,7 @@
 #include "core/vertex.h"
 #include "core/halfedge.h"
 #include "core/face.h"
+#include "core/constants.h"
 
 #include "core/eigen.h"
 #include <Eigen/IterativeLinearSolvers>
@@ -16,8 +17,10 @@
 namespace {
 
 inline double gaussKernel(double x, double sigma) {
+    using tinymesh::kTwoPi;
+
     const double sigma2 = sigma * sigma;
-    const double coef = 1.0 / (std::sqrt(2.0 * Pi) * sigma);
+    const double coef = 1.0 / (std::sqrt(kTwoPi) * sigma);
     if (x < 2.0 * sigma) {
         return coef * std::exp(-0.5 * x * x / sigma2);
     }

@@ -9,8 +9,8 @@
 namespace tinymesh {
 
 double getHausdorffDistance(const Mesh &m0, const Mesh &m1) {
-    EigenVector dist01 = getPerVertexShortestDistances(m0, m1);
-    EigenVector dist10 = getPerVertexShortestDistances(m1, m0);
+    const EigenVector dist01 = getPerVertexShortestDistances(m0, m1);
+    const EigenVector dist10 = getPerVertexShortestDistances(m1, m0);
 
     const double dist01max = dist01.maxCoeff();
     const double dist10max = dist10.maxCoeff();
@@ -18,7 +18,7 @@ double getHausdorffDistance(const Mesh &m0, const Mesh &m1) {
 }
 
 EigenVector getPerVertexShortestDistances(const Mesh &src, const Mesh &dst) {
-    const int N = (int)src.numVertices();
+    const int N = static_cast<int>(src.numVertices());
     EigenVector distances(N);
 
     BVH bvh(dst);

@@ -15,7 +15,8 @@
 namespace tinymesh {
 
 /**
- * Hausdorff distance of two meshes 
+ * Hausdorff distance of two meshes
+ * @details This is calculated using sampling points, so it's an approximation.
  */
 TINYMESH_API double getHausdorffDistance(const Mesh &m0, const Mesh &m1);
 

@@ -9,9 +9,9 @@
 #include <tuple>
 #include <functional>
 
-#include "api.h"
 #include "vec.h"
 #include "eigen.h"
+#include "constants.h"
 
 namespace tinymesh {
 
@@ -64,7 +64,7 @@ inline EigenMatrix3 rotationFromTwoVectors(const Vec3 &v0, const Vec3 &v1) {
                 axis = Vec3{ -v0.z(), 0.0, v0.x() };
             }
             axis = normalize(axis);
-            return rotationAxisAngle(Pi, axis);
+            return rotationAxisAngle(kPi, axis);
         }
     }
 

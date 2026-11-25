@@ -1,9 +1,11 @@
 #include "remesh.h"
 
+#include <cstdint>
 #include <vector>
 #include <queue>
 #include <set>
 #include <array>
+#include <unordered_set>
 
 #include <Eigen/Core>
 #include <Eigen/LU>
@@ -65,9 +67,9 @@ struct UnionFindTree {
 namespace tinymesh {
 
 struct QEMNode {
-    QEMNode(double value, Halfedge *he, const Vec3 &v)
+    QEMNode(double value, std::uintptr_t key, const Vec3 &v)
         : value{ value }
-        , he{ he }
+        , key{ key }
         , v{ v } {
     }
 
@@ -80,7 +82,7 @@ struct QEMNode {
     }
 
     double value;
-    Halfedge *he;
+    std::uintptr_t key;
     Vec3 v;
 };
 
@@ -135,7 +137,7 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
         const int numVertices = (int)mesh.numVertices();
         const int numHalfedges = (int)mesh.numHalfedges();
         const int numFaces = (int)mesh.numFaces();
-        std::vector<int> checked(numVertices, 0);
+        std::unordered_set<Vertex *> checked;
 
         // Compute quadric metric tensor for current vertices.
         std::vector<Matrix4> Qs(numVertices, Matrix4::Zero());
@@ -175,6 +177,7 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
 
         // Push QEMs
         std::priority_queue<QEMNode, std::vector<QEMNode>, std::greater<QEMNode>> que;
+        std::unordered_map<std::uintptr_t, Halfedge *> activeHEs;
         for (int i = 0; i < numHalfedges; i++) {
             Halfedge *he = mesh.halfedge(i);
 
@@ -187,7 +190,10 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
             Matrix4 &q2 = Qs[i2];
             Vec3 v;
             const double qem = computeQEM(q1, q2, *v1, *v2, &v);
-            que.push(QEMNode(qem, he, v));
+
+            const auto key = reinterpret_cast<std::uintptr_t>(he);
+            que.push(QEMNode(qem, key, v));
+            activeHEs.emplace(key, he);
         }
 
         // Remove halfedges
@@ -196,89 +202,27 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
             QEMNode qn = que.top();
             que.pop();
 
-            if (removedHalfedges.find(qn.he) != removedHalfedges.end()) {
+            const auto it = activeHEs.find(qn.key);
+            if (it == activeHEs.end()) {
                 continue;
             }
 
-            const int ii = qn.he->src()->index();
-            const int jj = qn.he->dst()->index();
-            const Vec3 v_bar = qn.v;
-
-            Vertex *v_i = mesh.vertex(ii);
-            Vertex *v_j = mesh.vertex(jj);
+            Halfedge *he = it->second;
+            Vertex *v_i = he->src();
+            Vertex *v_j = he->dst();
 
             // Skip checked vertices
-            if (checked[v_i->index()] || checked[v_j->index()]) {
+            if (checked.count(v_i) != 0 || checked.count(v_j) != 0) {
                 continue;
             }
 
             // Skip boundary vertices
-            if (v_i->isBoundary() || v_j->isBoundary()) {
+            if (v_i->isBoundary() || v_j->isBoundary() || v_i->isLocked() || v_j->isLocked()) {
                 continue;
             }
 
             // Vertices with degree < 4 cannot be contracted
             if (v_i->degree() <= 3 || v_j->degree() <= 3) {
-                continue;
-            }
-
-            // Check face flip
-            bool isFlip = false;
-            std::vector<Face *> faces;
-            for (auto it = v_i->f_begin(); it != v_i->f_end(); ++it) {
-                faces.push_back(it.ptr());
-            }
-
-            for (auto it = v_j->f_begin(); it != v_j->f_end(); ++it) {
-                faces.push_back(it.ptr());
-            }
-
-            for (Face *f : faces) {
-                bool has_i = false;
-                bool has_j = false;
-                std::vector<Vertex *> vs;
-                std::vector<Vec3> ps;
-                for (auto it = f->v_begin(); it != f->v_end(); ++it) {
-                    vs.push_back(it.ptr());
-                    ps.push_back(it->pos());
-                    if (it.ptr() == v_i) {
-                        has_i = true;
-                    }
-                    if (it.ptr() == v_j) {
-                        has_j = true;
-                    }
-                }
-
-                if (!has_i || !has_j) {
-                    // This is contracted face
-                    continue;
-                }
-
-                const Vec3 n0 = cross(ps[2] - ps[0], ps[1] - ps[0]);
-                bool isFound = false;
-                for (size_t i = 0; i < vs.size(); i++) {
-                    if (vs[i] == v_i || vs[i] == v_j) {
-                        ps[i] = v_bar;
-                        isFound = true;
-                        break;
-                    }
-                }
-
-                if (!isFound) {
-                    Warn("Contractible vertex not found!");
-                    break;
-                }
-
-                const Vec3 n1 = cross(ps[2] - ps[0], ps[1] - ps[0]);
-
-                const double cos = dot(n0, n1) / (length(n0) * length(n1));
-                if (cos <= 1.0e-12) {
-                    isFlip = true;
-                }
-            }
-
-            // Face flips if target vertex is contracted
-            if (isFlip) {
                 continue;
             }
 
@@ -306,18 +250,22 @@ void simplifyQEM(Mesh &mesh, int numTarget, int maxTrials, bool verbose) {
                 continue;
             }
 
-            // Update removed halfedges
-            removedHalfedges.insert(qn.he);
-            removedHalfedges.insert(qn.he->next());
-            removedHalfedges.insert(qn.he->next()->next());
-            removedHalfedges.insert(qn.he->rev());
-            removedHalfedges.insert(qn.he->rev()->next());
-            removedHalfedges.insert(qn.he->rev()->next()->next());
+            // Collect removed halfedges
+            const std::array<std::uintptr_t, 6> keyToRemove = {
+                reinterpret_cast<std::uintptr_t>(he),
+                reinterpret_cast<std::uintptr_t>(he->next()),
+                reinterpret_cast<std::uintptr_t>(he->next()->next()),
+                reinterpret_cast<std::uintptr_t>(he->rev()),
+                reinterpret_cast<std::uintptr_t>(he->rev()->next()),
+                reinterpret_cast<std::uintptr_t>(he->rev()->next()->next()),
+            };
 
-            // Collapse halfedge
-            qn.he->src()->setPos(qn.v);
-            checked[qn.he->src()->index()] = 1;
-            if (mesh.collapseHE(qn.he)) {
+            if (const auto kept = mesh.collapseHE(he, qn.v)) {
+                for (const auto key : keyToRemove) {
+                    activeHEs.erase(key);
+                }
+
+                checked.insert(*kept);
                 numRemoved += 2;
                 if (verbose) pbar.step(2);
             }
