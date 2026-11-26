@@ -4,6 +4,7 @@
 #include <fstream>
 #include <utility>
 #include <queue>
+#include <limits>
 #include <unordered_set>
 
 #include <Eigen/SparseCholesky>
@@ -100,11 +101,11 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
         count++;
     }
 
-    Eigen::MatrixXd Warea(n_verts, n_verts);
-    Eigen::MatrixXd Wangle(n_verts, n_verts);
+    EigenMatrix Warea(n_verts, n_verts);
+    EigenMatrix Wangle(n_verts, n_verts);
     Eigen::MatrixXi O(n_verts, n_verts);
-    Warea.setConstant(1.0e12);
-    Wangle.setConstant(1.0e12);
+    Warea.setConstant(std::numeric_limits<double>::infinity());
+    Wangle.setConstant(std::numeric_limits<double>::infinity());
     O.setConstant(-1);
     for (int i = 0; i < n_verts - 1; i++) {
         Warea(i, i + 1) = 0.0;
@@ -160,8 +161,15 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
                 const double D = std::max(a01, a12);
                 const double WangleNew = std::max(D, std::max(Wangle(i, m), Wangle(m, k)));
 
-                if (WangleNew < Wangle(i, k) ||
-                    (abs(WangleNew - Wangle(i, k)) < dihedralBound && WareaNew < Warea(i, k))) {
+                const double currentAngle = Wangle(i, k);
+                const bool betterArea = WareaNew < Warea(i, k);
+                const bool betterAngle = WangleNew < currentAngle;
+                const bool sameAngle = WangleNew == currentAngle;
+                const bool withinBound = std::abs(WangleNew - currentAngle) < dihedralBound;
+
+                const bool isBetter =
+                    dihedralBound >= kPi ? betterArea : (betterAngle || (betterArea && (sameAngle || withinBound)));
+                if (isBetter) {
                     Warea(i, k) = WareaNew;
                     Wangle(i, k) = WangleNew;
                     O(i, k) = m;
@@ -205,10 +213,9 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
 
     for (auto f : new_faces) {
         for (auto it = f->he_begin(); it != f->he_end(); ++it) {
-            if (it->rev_ == NULL) {
+            if (it->rev_ == nullptr) {
                 auto e = he2pair[it.ptr()];
-                int i = std::get<0>(e);
-                int j = std::get<1>(e);
+                const auto [i, j] = e;
 
                 auto r = E(j, i);
                 if (pair2he.count(r) != 0) {
@@ -221,6 +228,11 @@ void Mesh::holeFillMinDihedral_(Face *face, double dihedralBound) {
                 } else {
                     Debug("{} {} {}\n", i, j, (void *)it.ptr());
                 }
+            }
+
+            if (it->rev_ != nullptr) {
+                it->isBoundary_ = false;
+                it->rev_->isBoundary_ = false;
             }
         }
     }

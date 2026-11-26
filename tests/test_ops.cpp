@@ -62,6 +62,17 @@ TEST(FeatureLineFieldTest, FlatTriangleHasNoDirections) {
     EXPECT_TRUE(flags.isZero(0.0));
 }
 
+TEST(HeatKernelSignaturesTest, DefaultKWorksForSmallLaplacian) {
+    const Mesh mesh({ Vec3{ 0, 0, 0 }, Vec3{ 1, 0, 0 }, Vec3{ 0, 1, 0 } }, { 0, 1, 2 });
+    const auto L = getMeshLaplacian(mesh, MeshLaplace::Cotangent);
+
+    const auto hks = getHeatKernelSignatures(L);
+    EXPECT_EQ(hks.rows(), 3);
+    EXPECT_EQ(hks.cols(), 100);
+    EXPECT_TRUE(hks.allFinite());
+    EXPECT_TRUE(hks.isApprox(getHeatKernelSignatures(L, 2)));
+}
+
 static std::vector<std::string> filenames = {
     "torus.obj",
     "fandisk.ply",

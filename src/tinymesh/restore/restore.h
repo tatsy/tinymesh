@@ -13,11 +13,14 @@
 namespace tinymesh {
 
 /**
- * Minimum direhdral hole filling [Leipa 2003]
- * @details The triangulation algorithm is based on the following papers.
+ * Minimum direhdral hole filling [Liepa 2003]
+ * @details The triangulation algorithm is based on the following papers:
  * Barequet and Sharir, "Filling Gaps in the Boundary of a Polyhedron", 1995.
- * Liepa, "Filling Holes in Meshes", 2003. If "dihedralBound" is specified as "kPi",
- * then this method works as Barequet's method; otherwise, it works as Liepa's method.
+ * Liepa, "Filling Holes in Meshes", 2003.
+ * 
+ * This method works as Barequet's method if "dihedralBound == kPi",
+ * and as Liepa's method if dihedralBound == 0.0.
+ * Otherwise, the method uses "dihedralBound" as possible dihedral angle increase.
  */
 TINYMESH_API void holeFillMinDihedral(Mesh &mesh, Face *face, double dihedralBound = kPi);
 

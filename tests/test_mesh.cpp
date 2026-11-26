@@ -145,6 +145,23 @@ TEST(MeshValidationDeathTest, RejectsInvalidMeshes) {
     }
 }
 
+TEST(MeshValidationTest, RejectsIncorrectBoundaryFlags) {
+    Mesh mesh(validationVertices, { 0, 1, 2 });
+    ASSERT_TRUE(mesh.verify());
+
+    Halfedge *he = mesh.halfedge(0);
+    Halfedge *rev = he->rev();
+    ASSERT_NE(rev, nullptr);
+    ASSERT_TRUE(he->isBoundary());
+    ASSERT_TRUE(rev->isBoundary());
+
+    he->setIsBoundary(false);
+    EXPECT_FALSE(mesh.verify());
+
+    rev->setIsBoundary(false);
+    EXPECT_FALSE(mesh.verify());
+}
+
 TEST(MeshGeometryTest, BoundaryCotangentWeight) {
     const std::vector<Vec3> vertices = {
         Vec3{ 0.0, 0.0, 0.0 },

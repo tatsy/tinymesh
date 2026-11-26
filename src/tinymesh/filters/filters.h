@@ -31,7 +31,7 @@ TINYMESH_API void implicitFairing(Mesh &mesh, double lambda = 1.0, int iteration
 TINYMESH_API void denoiseNormalGaussian(Mesh &mesh, double sigma = 0.2, int iterations = 5);
 
 /**
- * Denoising by normal bilateral filter [Zhen et al. 2011]
+ * Denoising by normal bilateral filter [Zheng et al. 2011]
  */
 TINYMESH_API void denoiseNormalBilateral(Mesh &mesh, double sigmaCenter = 0.2, double sigmaNormal = 0.1,
                                          int iterations = 5);

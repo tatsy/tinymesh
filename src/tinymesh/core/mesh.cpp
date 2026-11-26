@@ -66,23 +66,19 @@ size_t Mesh::numFaces() const {
 }
 
 void Mesh::load(const std::string &filename) {
-    // Clear existing elements
-    vertices_.clear();
-    halfedges_.clear();
-    faces_.clear();
-    indices_.clear();
-
     // Load new mesh
+    Mesh newMesh;
     const std::string ext = fs::path(filename.c_str()).extension().string();
     if (ext == ".obj") {
-        loadOBJ(filename);
+        newMesh.loadOBJ(filename);
     } else if (ext == ".ply") {
-        loadPLY(filename);
+        newMesh.loadPLY(filename);
     } else {
-        Error("Unsupported file extension: {}", ext.c_str());
+        Error("Unsupported file extension: {}", ext);
     }
 
-    construct();
+    newMesh.construct();
+    *this = std::move(newMesh);
 }
 
 void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32_t> &indices) {
@@ -111,7 +107,40 @@ void Mesh::construct(const std::vector<Vec3> &vertices, const std::vector<uint32
 }
 
 Mesh Mesh::clone() {
-    return Mesh(this->getVertices(), this->getVertexIndices());
+    Mesh cloned;
+    cloned.indices_ = indices_;
+    cloned.vertices_.reserve(vertices_.size());
+    cloned.halfedges_.reserve(halfedges_.size());
+    cloned.faces_.reserve(faces_.size());
+
+    for (const auto &v : vertices_) {
+        cloned.vertices_.push_back(std::make_shared<Vertex>(*v));
+    }
+    for (const auto &he : halfedges_) {
+        cloned.halfedges_.push_back(std::make_shared<Halfedge>(*he));
+    }
+    for (const auto &f : faces_) {
+        cloned.faces_.push_back(std::make_shared<Face>(*f));
+    }
+
+    const auto remap = [](const auto *source, const auto &elements) {
+        return source == nullptr ? nullptr : elements.at(source->index()).get();
+    };
+
+    for (auto &v : cloned.vertices_) {
+        v->halfedge_ = remap(v->halfedge_, cloned.halfedges_);
+    }
+    for (auto &he : cloned.halfedges_) {
+        he->src_ = remap(he->src_, cloned.vertices_);
+        he->next_ = remap(he->next_, cloned.halfedges_);
+        he->rev_ = remap(he->rev_, cloned.halfedges_);
+        he->face_ = remap(he->face_, cloned.faces_);
+    }
+    for (auto &f : cloned.faces_) {
+        f->halfedge_ = remap(f->halfedge_, cloned.halfedges_);
+    }
+
+    return cloned;
 }
 
 std::vector<Vec3> Mesh::getVertices() const {
@@ -224,7 +253,6 @@ void Mesh::construct() {
     vertexDegree.reserve(vertices_.size());
     for (int i = 0; i < (int)indices_.size(); i += ngon) {
         // Check polygon duplication
-        bool isDuplicated = false;
         for (int j = 0; j < ngon; j++) {
             const uint32_t a = indices_[i + j];
             const uint32_t b = indices_[i + (j + 1) % ngon];
@@ -1005,7 +1033,7 @@ void Mesh::triangulate(Face *face) {
 
 bool Mesh::verify() const {
     bool success = true;
-    for (int i = 0; i < (int)vertices_.size(); i++) {
+    for (int i = 0; i < (int)vertices_.size(); ++i) {
         Vertex *v = vertices_[i].get();
         if (v->index() != i) {
             Warn("Vertex index does not match array index: v[{}].index = {}", i, v->index());
@@ -1014,15 +1042,33 @@ bool Mesh::verify() const {
         success &= verifyVertex(v);
     }
 
-    for (int i = 0; i < (int)halfedges_.size(); i++) {
-        auto he = halfedges_[i];
+    for (int i = 0; i < (int)halfedges_.size(); ++i) {
+        const Halfedge *he = halfedges_[i].get();
+        if (he == nullptr || he->src() == nullptr || he->next() == nullptr || he->rev() == nullptr ||
+            he->face() == nullptr) {
+            Warn("Incomplete halfedge links at index {}.", i);
+            return false;
+        }
+
+        const Halfedge *rev = he->rev();
+        if (rev->rev() != he) {
+            Warn("Reverse pairing is not reciprocal at halfedge {}.", i);
+            return false;
+        }
+
         if (he->index() != i) {
             Warn("Halfedge index does not match array index: he[{}].index = {}", i, he->index());
             success = false;
         }
+
+        const bool expectedBoundary = (he->face()->isHole() || rev->face()->isHole());
+        if (he->isBoundary() != expectedBoundary) {
+            Warn("Incorrect boundary flag at halfedge {}.", i);
+            success = false;
+        }
     }
 
-    for (int i = 0; i < (int)faces_.size(); i++) {
+    for (int i = 0; i < (int)faces_.size(); ++i) {
         auto f = faces_[i];
         if (f->index() != i) {
             Warn("Face index does not match array index: f[{}].index = {}", i, f->index());

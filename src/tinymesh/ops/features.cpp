@@ -1,6 +1,7 @@
 #include "ops.h"
 
 #include <queue>
+#include <algorithm>
 
 #include <Eigen/Eigenvalues>
 #include <Eigen/Cholesky>
@@ -42,7 +43,7 @@ void getPrincipalCurvaturesFromTensors(std::vector<double> &ks_max, std::vector<
     ts_max.resize(Nv);
     ts_min.resize(Nv);
 
-    for (size_t i = 0; i < Nv; i++) {
+    for (int i = 0; i < Nv; i++) {
         const EigenMatrix2 M = tensors[i];
         const LocalFrame F = frames[i];
         const Vec3 up = std::get<0>(F);
@@ -78,7 +79,7 @@ void smoothingTensors(std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame
     const int Nv = (int)tensors.size();
     const double avgLen = mesh.getMeanEdgeLength();
     std::vector<EigenMatrix2> smoothTensors(Nv);
-    for (size_t i = 0; i < Nv; i++) {
+    for (int i = 0; i < Nv; i++) {
         const Vertex *vertex = mesh.vertex(i);
         const LocalFrame &F = frames[i];
         const Vec3 &u = std::get<0>(F);
@@ -123,9 +124,13 @@ void smoothingTensors(std::vector<EigenMatrix2> &tensors, std::vector<LocalFrame
 }  // anonymous namespace
 
 EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTimes) {
-    Assertion(2 <= K && K < L.rows(), "Eigenvalues less than matrix size can only be requested!");
+    const Eigen::Index N = L.rows();
+    Assertion(N == L.cols() && N >= 3, "HKS requires a square Laplacian of size at least 3.");
+    Assertion(K >= 2, "At least two eigenpairs must be requested.");
     Assertion(nTimes >= 1, "Number of time steps must be at least 1!");
-    const int ncv = std::min(K * 8, (int)L.rows());
+
+    K = static_cast<int>(std::min<Eigen::Index>(K, N - 1));
+    const Eigen::Index ncv = std::min<Eigen::Index>(8LL * K, N);
 
     Spectra::SparseSymShiftSolve<FloatType> op(L);
     Spectra::SymEigsShiftSolver<Spectra::SparseSymShiftSolve<FloatType>> eigs(op, K, ncv, -1.0e-8);
@@ -150,7 +155,6 @@ EigenMatrix getHeatKernelSignatures(const EigenSparseMatrix &L, int K, int nTime
         times(i) = std::exp(log_t_min + i * inc);
     }
 
-    const int N = L.rows();
     EigenMatrix HKS(N, nTimes);
     HKS.setZero();
     for (int i = 0; i < K; i++) {
